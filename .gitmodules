@@ -1,0 +1,3 @@
+[submodule "firemountain/external/vk-bootstrap"]
+	path = firemountain/external/vk-bootstrap
+	url = https://github.com/charles-lunarg/vk-bootstrap

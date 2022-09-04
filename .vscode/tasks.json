@@ -1,0 +1,11 @@
+{
+    "tasks": [
+        {
+            "label": "cmake-build",
+            "command": "cmake",
+            "args": ["--build", "."],
+            "group": "build"
+        }
+    ],
+    "version": "2.0.0"
+}

@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(Windows) Build and Launch",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/build/Debug/FirePlateau.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceRoot}/build/Debug/",
+            "environment": [],
+            "console": "newExternalWindow",
+            "preLaunchTask": "cmake-build",
+        }
+    ]
+}

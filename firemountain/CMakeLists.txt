@@ -1,0 +1,33 @@
+cmake_minimum_required(VERSION 3.13)
+project(LibFireMountain)
+set(CMAKE_CXX_STANDARD 20)
+
+add_library(${PROJECT_NAME} STATIC)
+
+# External dependencies
+add_subdirectory(external/vk-bootstrap)
+
+find_package(Vulkan REQUIRED)
+
+target_link_libraries(${PROJECT_NAME} 
+  Vulkan::Vulkan
+  vk-bootstrap::vk-bootstrap
+)
+
+# Internal sources, inclues and targets
+target_sources(${PROJECT_NAME}
+  PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/firemountain.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_init.cpp
+)
+
+target_include_directories(${PROJECT_NAME}
+  PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+set_target_properties(${PROJECT_NAME} 
+  PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build/lib
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build/lib
+)
