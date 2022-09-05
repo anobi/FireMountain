@@ -3,7 +3,7 @@
 #include "display.hpp"
 
 
-int Display::Init(const uint8_t width, const uint8_t height) {
+int Display::Init(const int width, const int height) {
     this->window = SDL_CreateWindow(
         "FireMountain",
         SDL_WINDOWPOS_CENTERED,

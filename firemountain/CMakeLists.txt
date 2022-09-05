@@ -14,6 +14,9 @@ target_link_libraries(${PROJECT_NAME}
   vk-bootstrap::vk-bootstrap
 )
 
+find_package(SDL2 REQUIRED)
+include_directories(${SDL2_INCLUDE_DIRS})
+
 # Internal sources, inclues and targets
 target_sources(${PROJECT_NAME}
   PUBLIC

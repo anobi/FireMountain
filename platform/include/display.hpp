@@ -8,7 +8,7 @@ public:
     Display() {};
     ~Display() {};
 
-    int Init(const uint8_t width, const uint8_t height);
+    int Init(const int width, const int height);
     void Destroy();
 
     SDL_Window* window;
