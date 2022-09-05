@@ -19,6 +19,7 @@ target_sources(${PROJECT_NAME}
   PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/firemountain.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_init.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_renderer.cpp
 )
 
 target_include_directories(${PROJECT_NAME}

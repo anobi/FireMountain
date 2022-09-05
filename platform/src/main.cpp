@@ -3,12 +3,17 @@
 #include "firemountain.hpp"
 #include "display.hpp"
 
+const uint8_t WIDTH = 1920;
+const uint8_t HEIGHT = 1080;
+
 int RunApp() {
     Firemountain fm;
     Display display;
 
     SDL_Init(SDL_INIT_VIDEO);
-    display.Init(1920, 1080);
+    display.Init(WIDTH, HEIGHT);
+
+    fm.Init(WIDTH, HEIGHT, (void*)display.window);
 
     bool running = true;
     SDL_Event event;
