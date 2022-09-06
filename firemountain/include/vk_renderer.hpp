@@ -16,7 +16,7 @@ namespace fmVK {
         void Destroy();
 
     private:
-        bool _initialized = false;
+        bool _is_initialized = false;
 
         VkExtent2D _window_extent;
         VkInstance _instance;
@@ -29,7 +29,12 @@ namespace fmVK {
         VkFormat _swapchain_image_format;
         std::vector<VkImage> _swapchain_images;
         std::vector<VkImageView> _swapchain_image_views;
-
         void init_swapchain();
+
+        VkQueue _queue;
+        uint32_t _graphics_queue_family;
+        VkCommandPool _command_pool;
+        VkCommandBuffer _command_buffer;
+        void init_commands();
     };
 }

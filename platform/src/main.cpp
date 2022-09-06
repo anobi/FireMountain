@@ -1,4 +1,5 @@
-#include <SDL.h>
+#include <string>
+#include <SDL2/SDL.h>
 
 #include "firemountain.hpp"
 #include "display.hpp"
@@ -12,7 +13,6 @@ int RunApp() {
 
     SDL_Init(SDL_INIT_VIDEO);
     display.Init(WIDTH, HEIGHT);
-
     firemountain.Init(WIDTH, HEIGHT, (void*)display.window);
 
     bool running = true;
