@@ -24,6 +24,7 @@ namespace fmVK {
         VkDevice _device;
         VkSurfaceKHR _surface;
         VkDebugUtilsMessengerEXT _debug_messenger;
+        void init_vulkan();
 
         VkSwapchainKHR _swapchain;
         VkFormat _swapchain_image_format;
@@ -36,5 +37,10 @@ namespace fmVK {
         VkCommandPool _command_pool;
         VkCommandBuffer _command_buffer;
         void init_commands();
+
+        VkRenderPass _render_pass;
+        std::vector<VkFramebuffer> _framebuffers;
+        void init_default_renderpass();
+        void init_framebuffers();
     };
 }
