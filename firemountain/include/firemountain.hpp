@@ -8,7 +8,7 @@ public:
     Firemountain() {};
     ~Firemountain() {};
 
-    int Init(const uint8_t width, const uint8_t height, void* window);
+    int Init(const int width, const int height, SDL_Window* window);
     void Frame();
     void Destroy();  
 

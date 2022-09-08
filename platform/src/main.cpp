@@ -13,7 +13,7 @@ int RunApp() {
 
     SDL_Init(SDL_INIT_VIDEO);
     display.Init(WIDTH, HEIGHT);
-    firemountain.Init(WIDTH, HEIGHT, (void*)display.window);
+    firemountain.Init(WIDTH, HEIGHT, display.window);
 
     bool running = true;
     SDL_Event event;
@@ -34,6 +34,7 @@ int RunApp() {
                 break;
             }
         }
+        firemountain.Frame();
     }
 
     firemountain.Destroy();

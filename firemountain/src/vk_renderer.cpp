@@ -18,7 +18,7 @@
 
 using namespace fmVK;
 
-int Vulkan::Init(const uint8_t width, const uint8_t height, void* window) {
+int Vulkan::Init(const uint32_t width, const uint32_t height, SDL_Window* window) {
 
     // Initialized Vulkan instance and debug messenger
     vkb::InstanceBuilder builder;
@@ -30,10 +30,14 @@ int Vulkan::Init(const uint8_t width, const uint8_t height, void* window) {
     vkb::Instance vkb_instance = build.value();
     this->_instance = vkb_instance.instance;
     this->_debug_messenger = vkb_instance.debug_messenger;
+    this->_window_extent = {
+        .width = width,
+        .height = height
+    };
 
     // Create surface but how? I don't want to include SDL or it's members
     // in this renderer project.
-    SDL_Vulkan_CreateSurface((SDL_Window*) window, this->_instance, &this->_surface);
+    SDL_Vulkan_CreateSurface(window, this->_instance, &this->_surface);
 
     // Initialize device and physical device
     vkb::PhysicalDeviceSelector selector { vkb_instance };
@@ -54,13 +58,82 @@ int Vulkan::Init(const uint8_t width, const uint8_t height, void* window) {
     this->init_commands();
     this->init_default_renderpass();
     this->init_framebuffers();
-
+    this->init_sync_structures();
     this->_is_initialized = true;
+
     return 0;
 }
 
-void Vulkan::Frame() {
+void Vulkan::Draw() {
+    VK_CHECK(vkWaitForFences(this->_device, 1, &this->_render_fence, true, 1000000000));
+    VK_CHECK(vkResetFences(this->_device, 1, &this->_render_fence));
 
+    // Request image from the swapchain
+    uint32_t swapchain_image_index;
+    VK_CHECK(vkAcquireNextImageKHR(
+        this->_device, 
+        this->_swapchain, 
+        1000000000, 
+        this->_present_semaphore, 
+        nullptr, 
+        &swapchain_image_index
+    ));
+
+    VK_CHECK(vkResetCommandBuffer(this->_command_buffer, 0));
+    VkCommandBufferBeginInfo command_buffer_begin = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .pNext = nullptr,
+        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+        .pInheritanceInfo = nullptr
+    };
+    VK_CHECK(vkBeginCommandBuffer(this->_command_buffer, &command_buffer_begin));
+
+    VkRenderPassBeginInfo render_pass_info = {
+        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+        .pNext = nullptr,
+        .renderPass = this->_render_pass,
+        .framebuffer = this->_framebuffers[swapchain_image_index],
+        .renderArea = {
+            .offset = {
+                .x = 0,
+                .y = 0
+            },
+            .extent = this->_window_extent
+        },
+        .clearValueCount = 1,
+        .pClearValues = &this->_clear_value
+    };
+    vkCmdBeginRenderPass(this->_command_buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdEndRenderPass(this->_command_buffer);
+    VK_CHECK(vkEndCommandBuffer(this->_command_buffer));
+
+    // Submit the framebuffer to the GPU
+    VkPipelineStageFlags wait_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkSubmitInfo submit_info = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .pNext = nullptr,
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &this->_present_semaphore,
+        .pWaitDstStageMask = &wait_stage_flags,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &this->_command_buffer,
+        .signalSemaphoreCount = 1,
+        .pSignalSemaphores = &this->_render_semaphore
+    };
+    VK_CHECK(vkQueueSubmit(this->_queue, 1, &submit_info, this->_render_fence));
+
+    // Present the image to the screen
+    VkPresentInfoKHR present_info = {
+        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        .pNext = nullptr,
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &this->_render_semaphore,
+        .swapchainCount = 1,
+        .pSwapchains = &this->_swapchain,
+        .pImageIndices = &swapchain_image_index
+    };
+    VK_CHECK(vkQueuePresentKHR(this->_queue, &present_info));
+    this->_frame += 1;
 }
 
 void Vulkan::Destroy() {
@@ -83,6 +156,7 @@ void Vulkan::init_swapchain() {
     vkb::Swapchain vkb_swapchain = swapchain_builder
         .use_default_format_selection()
         .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
+        .set_desired_extent(this->_window_extent.width, this->_window_extent.height)
         .build()
         .value();
     this->_swapchain = vkb_swapchain.swapchain;
@@ -176,4 +250,21 @@ void Vulkan::init_framebuffers() {
             &this->_framebuffers[i]
         ));
     }
+}
+
+void Vulkan::init_sync_structures() {
+    VkFenceCreateInfo fence_create_info = {
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT
+    };
+    VK_CHECK(vkCreateFence(this->_device, &fence_create_info, nullptr, &this->_render_fence));
+
+    VkSemaphoreCreateInfo semaphore_create_info = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0
+    };
+    VK_CHECK(vkCreateSemaphore(this->_device, &semaphore_create_info, nullptr, &this->_present_semaphore));
+    VK_CHECK(vkCreateSemaphore(this->_device, &semaphore_create_info, nullptr, &this->_render_semaphore));
 }

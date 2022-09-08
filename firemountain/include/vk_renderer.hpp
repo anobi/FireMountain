@@ -11,12 +11,16 @@ namespace fmVK {
         Vulkan() {};
         ~Vulkan() {};
 
-        int Init(const uint8_t width, const uint8_t height, void* window);
-        void Frame();
+        int Init(const uint32_t width, const uint32_t height, SDL_Window* window);
+        void Draw();
         void Destroy();
 
     private:
+        int _frame = 0;
         bool _is_initialized = false;
+        VkClearValue _clear_value = {
+            .color = {{0.02f, 0.02f, 0.02f, 1.0f}}
+        };
 
         VkExtent2D _window_extent;
         VkInstance _instance;
@@ -42,5 +46,10 @@ namespace fmVK {
         std::vector<VkFramebuffer> _framebuffers;
         void init_default_renderpass();
         void init_framebuffers();
+
+        VkSemaphore _present_semaphore;
+        VkSemaphore _render_semaphore;
+        VkFence _render_fence;
+        void init_sync_structures();
     };
 }
