@@ -51,5 +51,9 @@ namespace fmVK {
         VkSemaphore _render_semaphore;
         VkFence _render_fence;
         void init_sync_structures();
+
+        void init_pipelines();
+        
+        bool load_shader_module(const char* file_path, VkShaderModule* out);
     };
 }

@@ -65,6 +65,8 @@ _deps
 *.sln
 *.vcxproj*
 *.dir
+*.vs
+*.tlog
 
 # User-specific files
 *.rsuser

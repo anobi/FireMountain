@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
 #include <VkBootstrap.h>
@@ -16,9 +17,8 @@
 		}                                                               \
 	} while (0)
 
-using namespace fmVK;
 
-int Vulkan::Init(const uint32_t width, const uint32_t height, SDL_Window* window) {
+int fmVK::Vulkan::Init(const uint32_t width, const uint32_t height, SDL_Window* window) {
 
     // Initialized Vulkan instance and debug messenger
     vkb::InstanceBuilder builder;
@@ -59,12 +59,13 @@ int Vulkan::Init(const uint32_t width, const uint32_t height, SDL_Window* window
     this->init_default_renderpass();
     this->init_framebuffers();
     this->init_sync_structures();
+    this->init_pipelines();
     this->_is_initialized = true;
 
     return 0;
 }
 
-void Vulkan::Draw() {
+void fmVK::Vulkan::Draw() {
     VK_CHECK(vkWaitForFences(this->_device, 1, &this->_render_fence, true, 1000000000));
     VK_CHECK(vkResetFences(this->_device, 1, &this->_render_fence));
 
@@ -136,7 +137,7 @@ void Vulkan::Draw() {
     this->_frame += 1;
 }
 
-void Vulkan::Destroy() {
+void fmVK::Vulkan::Destroy() {
     if(this->_is_initialized) {
         vkDestroyCommandPool(this->_device, this->_command_pool, nullptr);
         vkDestroySwapchainKHR(this->_device, this->_swapchain, nullptr);
@@ -151,7 +152,7 @@ void Vulkan::Destroy() {
     }
 }
 
-void Vulkan::init_swapchain() {
+void fmVK::Vulkan::init_swapchain() {
     vkb::SwapchainBuilder swapchain_builder{ this->_gpu, this->_device, this->_surface };
     vkb::Swapchain vkb_swapchain = swapchain_builder
         .use_default_format_selection()
@@ -165,7 +166,7 @@ void Vulkan::init_swapchain() {
     this->_swapchain_image_format = vkb_swapchain.image_format;
 }
 
-void Vulkan::init_commands() {
+void fmVK::Vulkan::init_commands() {
     // Init command pool
     VkCommandPoolCreateInfo command_pool_info = VKInit::command_pool_create_info(
         this->_graphics_queue_family,
@@ -189,7 +190,7 @@ void Vulkan::init_commands() {
     ));
 }
 
-void Vulkan::init_default_renderpass() {
+void fmVK::Vulkan::init_default_renderpass() {
     VkAttachmentDescription color_attachment = {
         .format = this->_swapchain_image_format,
         .samples = VK_SAMPLE_COUNT_1_BIT,
@@ -228,7 +229,7 @@ void Vulkan::init_default_renderpass() {
     ));
 }
 
-void Vulkan::init_framebuffers() {
+void fmVK::Vulkan::init_framebuffers() {
     VkFramebufferCreateInfo framebuffer_info = {
         .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
         .pNext = nullptr,
@@ -252,7 +253,7 @@ void Vulkan::init_framebuffers() {
     }
 }
 
-void Vulkan::init_sync_structures() {
+void fmVK::Vulkan::init_sync_structures() {
     VkFenceCreateInfo fence_create_info = {
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
         .pNext = nullptr,
@@ -267,4 +268,55 @@ void Vulkan::init_sync_structures() {
     };
     VK_CHECK(vkCreateSemaphore(this->_device, &semaphore_create_info, nullptr, &this->_present_semaphore));
     VK_CHECK(vkCreateSemaphore(this->_device, &semaphore_create_info, nullptr, &this->_render_semaphore));
+}
+
+void fmVK::Vulkan::init_pipelines() {
+    VkShaderModule fragment_shader;
+    if (!load_shader_module("shaders/triangle.frag.spv", &fragment_shader)) {
+        std::cout << "Error building fragment shader module" << std::endl;
+    }
+    else {
+        std::cout << "Fragment shader module loaded." << std::endl;
+    }
+
+    VkShaderModule vertex_shader;
+    if (!load_shader_module("shaders/triangle.vert.spv", &vertex_shader)) {
+        std::cout << "Error building vertex shader module" << std::endl;
+    } 
+    else {
+        std::cout << "Vertex shader module loaded." << std::endl;
+    }
+}
+
+
+bool fmVK::Vulkan::load_shader_module(const char *file_path, VkShaderModule *out)
+{
+    // TODO: Move this to a file reading utility function
+    std::ifstream file(file_path, std::ios::ate | std::ios::binary);
+    if(!file.is_open()) {
+        return false;
+    }
+
+    size_t file_size = (size_t) file.tellg();
+    std::vector<uint32_t> buffer(file_size / sizeof(uint32_t));
+
+    file.seekg(0);
+    file.read((char*) buffer.data(), file_size);
+    file.close();
+    // End of TODO
+
+    VkShaderModuleCreateInfo create_info = {
+        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        .pNext = nullptr,
+        .codeSize = buffer.size() * sizeof(uint32_t),
+        .pCode = buffer.data()
+    };
+
+    VkShaderModule shader_module;
+    if (vkCreateShaderModule(this->_device, &create_info, nullptr, &shader_module) != VK_SUCCESS) {
+        return false;
+    }
+
+    *out = shader_module;
+    return true;
 }

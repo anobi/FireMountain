@@ -10,7 +10,7 @@ public:
 
     int Init(const int width, const int height, SDL_Window* window);
     void Frame();
-    void Destroy();  
+    void Destroy();
 
     fmVK::Vulkan vulkan;
 };

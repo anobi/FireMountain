@@ -1,4 +1,5 @@
 #include <iostream>
+
 #include <SDL2/SDL.h>
 
 #include "firemountain.hpp"
@@ -16,3 +17,4 @@ void Firemountain::Frame() {
 void Firemountain::Destroy() {
     this->vulkan.Destroy();
 }
+
