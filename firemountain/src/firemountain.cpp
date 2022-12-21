@@ -17,4 +17,3 @@ void Firemountain::Frame() {
 void Firemountain::Destroy() {
     this->vulkan.Destroy();
 }
-

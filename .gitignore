@@ -1,6 +1,9 @@
 # Build target directory
 build/
 
+# Don't ship pre-built SPIR-V shaders
+*.spv
+
 
 #########
 ## C++ ##

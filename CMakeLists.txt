@@ -23,11 +23,11 @@ foreach(SHADER IN LISTS SHADER_SOURCE_FILES)
   message(STATUS "BUILDING SHADER")
   get_filename_component(FILE_NAME ${SHADER} NAME)
   message(STATUS ${SHADER})
-  add_custom_command(OUTPUT ${SHADER_DIR}/${FILE_NAME}.spv
-    COMMAND ${GLSL_VALIDATOR} -V ${SHADER} -o ${SHADER_DIR}/${FILE_NAME}.spv
+  add_custom_command(OUTPUT ${SHADER_DIR}/spv/${FILE_NAME}.spv
+    COMMAND ${GLSL_VALIDATOR} -V ${SHADER} -o ${SHADER_DIR}/spv/${FILE_NAME}.spv
     DEPENDS ${SHADER}
     COMMENT "Compiling ${FILE_NAME}")
-  list(APPEND SPV_SHADERS ${SHADER_DIR}/${FILE_NAME}.spv)
+  list(APPEND SPV_SHADERS ${SHADER_DIR}/spv/${FILE_NAME}.spv)
 endforeach(SHADER)
 
 add_custom_target(Shaders ALL DEPENDS ${SPV_SHADERS})
