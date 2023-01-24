@@ -141,12 +141,9 @@ void fmVK::Vulkan::Draw() {
 
 void fmVK::Vulkan::Destroy() {
     if(this->_is_initialized) {
-        vkDestroyCommandPool(this->_device, this->_command_pool, nullptr);
-        vkDestroySwapchainKHR(this->_device, this->_swapchain, nullptr);
-        vkDestroyRenderPass(this->_device, this->_render_pass, nullptr);
-        for (auto i = 0; i < this->_swapchain_image_views.size(); i++) {
-            vkDestroyImageView(this->_device, this->_swapchain_image_views[i], nullptr);
-        }
+        vkWaitForFences(this->_device, 1, &this->_render_fence, true, 1000000000);
+        this->_deletion_queue.flush();
+
         vkDestroyDevice(this->_device, nullptr);
         vkDestroySurfaceKHR(this->_instance, this->_surface, nullptr);
         vkb::destroy_debug_utils_messenger(this->_instance, this->_debug_messenger);
@@ -166,6 +163,10 @@ void fmVK::Vulkan::init_swapchain() {
     this->_swapchain_images = vkb_swapchain.get_images().value();
     this->_swapchain_image_views = vkb_swapchain.get_image_views().value();
     this->_swapchain_image_format = vkb_swapchain.image_format;
+
+    this->_deletion_queue.push_function([=]() {
+        vkDestroySwapchainKHR(this->_device, this->_swapchain, nullptr);
+    });
 }
 
 void fmVK::Vulkan::init_commands() {
@@ -190,6 +191,10 @@ void fmVK::Vulkan::init_commands() {
         &cmd_buffer_alloc_info,
         &this->_command_buffer
     ));
+
+    this->_deletion_queue.push_function([=]() {
+        vkDestroyCommandPool(this->_device, this->_command_pool, nullptr);
+    });
 }
 
 void fmVK::Vulkan::init_default_renderpass() {
@@ -229,6 +234,10 @@ void fmVK::Vulkan::init_default_renderpass() {
         nullptr, 
         &this->_render_pass
     ));
+
+    this->_deletion_queue.push_function([=]() {
+        vkDestroyRenderPass(this->_device, this->_render_pass, nullptr);
+    });
 }
 
 void fmVK::Vulkan::init_framebuffers() {
@@ -252,6 +261,11 @@ void fmVK::Vulkan::init_framebuffers() {
             nullptr, 
             &this->_framebuffers[i]
         ));
+
+        this->_deletion_queue.push_function([=]() {
+            vkDestroyFramebuffer(this->_device, this->_framebuffers[i], nullptr);
+            vkDestroyImageView(this->_device, this->_swapchain_image_views[i], nullptr);
+        });
     }
 }
 
@@ -270,11 +284,16 @@ void fmVK::Vulkan::init_sync_structures() {
     };
     VK_CHECK(vkCreateSemaphore(this->_device, &semaphore_create_info, nullptr, &this->_present_semaphore));
     VK_CHECK(vkCreateSemaphore(this->_device, &semaphore_create_info, nullptr, &this->_render_semaphore));
+
+    this->_deletion_queue.push_function([=]() {
+        vkDestroySemaphore(this->_device, this->_present_semaphore, nullptr);
+        vkDestroySemaphore(this->_device, this->_render_semaphore, nullptr);
+    });
 }
 
 void fmVK::Vulkan::init_pipelines() {
     VkShaderModule fragment_shader;
-    if (!load_shader_module("shaders/triangle.frag.spv", &fragment_shader)) {
+    if (!load_shader_module("shaders/colored_triangle.frag.spv", &fragment_shader)) {
         std::cout << "Error building fragment shader module" << std::endl;
     }
     else {
@@ -282,7 +301,7 @@ void fmVK::Vulkan::init_pipelines() {
     }
 
     VkShaderModule vertex_shader;
-    if (!load_shader_module("shaders/triangle.vert.spv", &vertex_shader)) {
+    if (!load_shader_module("shaders/colored_triangle.vert.spv", &vertex_shader)) {
         std::cout << "Error building vertex shader module" << std::endl;
     } 
     else {
@@ -321,6 +340,12 @@ void fmVK::Vulkan::init_pipelines() {
 
     this->_pipeline = pipeline_builder.build_pipeline(this->_device, this->_render_pass);
 
+    vkDestroyShaderModule(this->_device, fragment_shader, nullptr);
+    vkDestroyShaderModule(this->_device, vertex_shader, nullptr);
+    this->_deletion_queue.push_function([=]() {
+        vkDestroyPipeline(this->_device, this->_pipeline, nullptr);
+        vkDestroyPipelineLayout(this->_device, this->_pipeline_layout, nullptr);
+    });
 }
 
 

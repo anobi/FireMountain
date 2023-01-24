@@ -33,4 +33,7 @@ namespace VKInit {
     VkPipelineColorBlendAttachmentState color_blend_attachment_state();
 
     VkPipelineLayoutCreateInfo pipeline_layout_create_info();
+
+    VkFenceCreateInfo fence_create_info(VkFenceCreateFlags flags = 0);
+    VkSemaphoreCreateInfo samephore_create_info(VkSemaphoreCreateFlags flags = 0);
 }

@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "fm_utils.hpp"
 #include "vk_types.hpp"
 
 
@@ -58,6 +59,8 @@ namespace fmVK {
 
         VkPipelineLayout _pipeline_layout;
         VkPipeline _pipeline;
+
+        DeletionQueue _deletion_queue;
     };
 
     class PipelineBuilder {

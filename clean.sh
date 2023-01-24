@@ -1,9 +1,2 @@
-find . -iwholename '*CmakeFiles*' -delete
-find . -iwholename '*CMakeCache.txt*' -delete
-find . -iwholename '*cmake_install.cmake*' -delete
-find . -iwholename '*ninja*' -delete
-find . -iwholename '*_deps*' -delete
-find . -iwholename '*vcxproj*' -delete
-find . -iwholename '*sln*' -delete
-find . -iwholename '*Debug*' -delete
-find . -iwholename '*x64*' -delete
+find . -type d \( -name "Debug" -o -name "x64" -o -name "CMakeFiles" -o -name "build" \) | xargs rm -r
+find . -type f \( -name "CMakeCache.txt" -o -name "Makefile" -o -name "*ninja*" -name "*vcxproj*" -o -name "*.sln" \) -delete

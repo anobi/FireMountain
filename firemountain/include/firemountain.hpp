@@ -1,7 +1,9 @@
 #pragma once
 
+#include "fm_utils.hpp"
 #include "vk_types.hpp"
 #include "vk_renderer.hpp"
+
 
 class Firemountain {
 public:
@@ -13,4 +15,7 @@ public:
     void Destroy();
 
     fmVK::Vulkan vulkan;
+
+private:
+    DeletionQueue _deletion_queue;
 };
