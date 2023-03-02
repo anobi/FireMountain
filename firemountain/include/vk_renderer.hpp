@@ -1,7 +1,9 @@
 #pragma once
 
 #include <vector>
+#include <vk_mem_alloc.h>
 
+#include "vk_mesh.hpp"
 #include "fm_utils.hpp"
 #include "vk_types.hpp"
 
@@ -15,6 +17,10 @@ namespace fmVK {
         int Init(const uint32_t width, const uint32_t height, SDL_Window* window);
         void Draw();
         void Destroy();
+        void UploadMesh(Mesh &mesh);
+
+        // Testing
+        Mesh _triangle_mesh;
 
     private:
         int _frame = 0;
@@ -61,6 +67,8 @@ namespace fmVK {
         VkPipeline _pipeline;
 
         DeletionQueue _deletion_queue;
+
+        VmaAllocator _allocator;
     };
 
     class PipelineBuilder {

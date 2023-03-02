@@ -7,13 +7,15 @@ add_library(${PROJECT_NAME} STATIC)
 # ---------------------------------------------------------------
 # External dependencies
 # ---------------------------------------------------------------
-add_subdirectory(external/vk-bootstrap)
-
 find_package(Vulkan REQUIRED)
+
+add_subdirectory(external/vk-bootstrap)
+add_subdirectory(external/VulkanMemoryAllocator)
 
 target_link_libraries(${PROJECT_NAME} 
   Vulkan::Vulkan
   vk-bootstrap::vk-bootstrap
+  VulkanMemoryAllocator
 )
 
 find_package(SDL2 REQUIRED)
@@ -27,6 +29,8 @@ target_sources(${PROJECT_NAME}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/firemountain.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_init.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_renderer.cpp
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_mesh.cpp
 )
 
 target_include_directories(${PROJECT_NAME}

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "fm_utils.hpp"
+#include "vk_mesh.hpp"
 #include "vk_types.hpp"
 #include "vk_renderer.hpp"
 

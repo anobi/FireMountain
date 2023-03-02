@@ -4,6 +4,9 @@
 #include <SDL2/SDL_vulkan.h>
 #include <VkBootstrap.h>
 
+#define VMA_IMPLEMENTATION
+#include <vk_mem_alloc.h>
+
 #include <vk_renderer.hpp>
 #include <vk_init.hpp>
 
@@ -60,6 +63,14 @@ int fmVK::Vulkan::Init(const uint32_t width, const uint32_t height, SDL_Window* 
     this->init_framebuffers();
     this->init_sync_structures();
     this->init_pipelines();
+
+    VmaAllocatorCreateInfo allocator_info = {
+        .physicalDevice = this->_gpu,
+        .device = this->_device,
+        .instance = this->_instance
+    };
+    vmaCreateAllocator(&allocator_info, &this->_allocator);
+
     this->_is_initialized = true;
 
     return 0;
@@ -104,9 +115,13 @@ void fmVK::Vulkan::Draw() {
         .clearValueCount = 1,
         .pClearValues = &this->_clear_value
     };
+    
     vkCmdBeginRenderPass(this->_command_buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(this->_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_pipeline);
-    vkCmdDraw(this->_command_buffer, 3, 1, 0, 0);
+
+    VkDeviceSize offset = 0;
+    vkCmdBindVertexBuffers(this->_command_buffer, 0, 1, &this->_triangle_mesh._vertex_buffer._buffer, &offset);
+    vkCmdDraw(this->_command_buffer, this->_triangle_mesh._vertices.size(), 1, 0, 0);
     vkCmdEndRenderPass(this->_command_buffer);
     VK_CHECK(vkEndCommandBuffer(this->_command_buffer));
 
@@ -150,6 +165,41 @@ void fmVK::Vulkan::Destroy() {
         vkDestroyInstance(this->_instance, nullptr);
     }
 }
+
+void fmVK::Vulkan::UploadMesh(Mesh &mesh) {
+    VkBufferCreateInfo buffer_info = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = mesh._vertices.size() * sizeof(Vertex),
+        .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
+    };
+
+    VmaAllocationCreateInfo vma_alloc_info = {
+        .usage = VMA_MEMORY_USAGE_CPU_TO_GPU
+    };
+
+    VK_CHECK(vmaCreateBuffer(
+        this->_allocator, 
+        &buffer_info, 
+        &vma_alloc_info,
+        &mesh._vertex_buffer._buffer,
+        &mesh._vertex_buffer._allocation,
+        nullptr
+    ));
+
+    this->_deletion_queue.push_function([=]() {
+        vmaDestroyBuffer(this->_allocator, mesh._vertex_buffer._buffer, mesh._vertex_buffer._allocation);
+    });
+
+    void* data;
+    vmaMapMemory(this->_allocator, mesh._vertex_buffer._allocation, &data);
+    memcpy(data, mesh._vertices.data(), mesh._vertices.size() * sizeof(Vertex));
+    vmaUnmapMemory(this->_allocator, mesh._vertex_buffer._allocation);
+}
+
+
+// =======================================================================================================
+// Private methods
+// =======================================================================================================
 
 void fmVK::Vulkan::init_swapchain() {
     vkb::SwapchainBuilder swapchain_builder{ this->_gpu, this->_device, this->_surface };
@@ -292,22 +342,6 @@ void fmVK::Vulkan::init_sync_structures() {
 }
 
 void fmVK::Vulkan::init_pipelines() {
-    VkShaderModule fragment_shader;
-    if (!load_shader_module("shaders/colored_triangle.frag.spv", &fragment_shader)) {
-        std::cout << "Error building fragment shader module" << std::endl;
-    }
-    else {
-        std::cout << "Fragment shader module loaded." << std::endl;
-    }
-
-    VkShaderModule vertex_shader;
-    if (!load_shader_module("shaders/colored_triangle.vert.spv", &vertex_shader)) {
-        std::cout << "Error building vertex shader module" << std::endl;
-    } 
-    else {
-        std::cout << "Vertex shader module loaded." << std::endl;
-    }
-
     VkPipelineLayoutCreateInfo pipeline_layout_info = VKInit::pipeline_layout_create_info();
     VK_CHECK(vkCreatePipelineLayout(this->_device, &pipeline_layout_info, nullptr, &this->_pipeline_layout));
 
@@ -331,12 +365,47 @@ void fmVK::Vulkan::init_pipelines() {
         .vertex_input_info = VKInit::vertex_input_state_create_info(),
         .multisampling = VKInit::multisampling_state_create_info(),
     };
-    pipeline_builder.shader_stages.push_back(VKInit::pipeline_shader_stage_create_info(
-        VK_SHADER_STAGE_VERTEX_BIT, vertex_shader
-    ));
-    pipeline_builder.shader_stages.push_back(VKInit::pipeline_shader_stage_create_info(
-        VK_SHADER_STAGE_FRAGMENT_BIT, fragment_shader
-    ));
+
+
+    // Build mesh pipeline
+
+    VertexInputDescription vertex_description = Vertex::get_vertex_description();
+    pipeline_builder.vertex_input_info = {
+        .vertexBindingDescriptionCount = (uint32_t) vertex_description.bindings.size(),
+        .pVertexBindingDescriptions = vertex_description.bindings.data(),
+        .vertexAttributeDescriptionCount = (uint32_t) vertex_description.attributes.size(),
+        .pVertexAttributeDescriptions = vertex_description.attributes.data()
+    };
+    pipeline_builder.shader_stages.clear();
+
+    VkShaderModule fragment_shader;
+    if (!load_shader_module("shaders/mesh.frag.spv", &fragment_shader)) {
+        std::cout << "Error building fragment shader module" << std::endl;
+    }
+    else {
+        std::cout << "Fragment shader module loaded." << std::endl;
+    }
+
+    VkShaderModule vertex_shader;
+    if (!load_shader_module("shaders/mesh.vert.spv", &vertex_shader)) {
+        std::cout << "Error building vertex shader module" << std::endl;
+    } 
+    else {
+        std::cout << "Vertex shader module loaded." << std::endl;
+    }
+
+    pipeline_builder.shader_stages.push_back(
+        VKInit::pipeline_shader_stage_create_info(
+            VK_SHADER_STAGE_VERTEX_BIT,
+            vertex_shader
+        )
+    );
+    pipeline_builder.shader_stages.push_back(
+        VKInit::pipeline_shader_stage_create_info(
+            VK_SHADER_STAGE_FRAGMENT_BIT,
+            fragment_shader
+        )
+    );
 
     this->_pipeline = pipeline_builder.build_pipeline(this->_device, this->_render_pass);
 
