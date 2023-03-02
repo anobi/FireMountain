@@ -1,3 +1,6 @@
 [submodule "firemountain/external/vk-bootstrap"]
 	path = firemountain/external/vk-bootstrap
 	url = https://github.com/charles-lunarg/vk-bootstrap
+[submodule "firemountain/external/VulkanMemoryAllocator"]
+	path = firemountain/external/VulkanMemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
