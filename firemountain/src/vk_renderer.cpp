@@ -7,6 +7,8 @@
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
 
+#include <glm/gtx/transform.hpp>
+
 #include <vk_renderer.hpp>
 #include <vk_init.hpp>
 
@@ -121,6 +123,36 @@ void fmVK::Vulkan::Draw() {
 
     VkDeviceSize offset = 0;
     vkCmdBindVertexBuffers(this->_command_buffer, 0, 1, &this->_triangle_mesh._vertex_buffer._buffer, &offset);
+
+    // Update and push constants
+    glm::vec3 camera_position = {0.0f, 0.0f, -2.0f};
+    glm::mat4 view = glm::translate(glm::mat4(1.0f), camera_position);
+    glm::mat4 projection = glm::perspective(
+        glm::radians(70.0f), 
+        (float) this->_window_extent.width / (float) this->_window_extent.height,
+        0.1f,
+        200.0f
+    );
+    projection[1][1] *= -1;
+    glm::mat4 model = glm::rotate(
+        glm::mat4(1.0f), 
+        glm::radians(this->_frame * 0.4f),
+        glm::vec3(0.0f, 1.0f, 0.0f)
+    );
+    glm::mat4 mvp = projection * view * model;
+
+    MeshPushConstants constants = {
+        .render_matrix = mvp
+    };
+    vkCmdPushConstants(
+        this->_command_buffer, 
+        this->_mesh_pipeline_layout, 
+        VK_SHADER_STAGE_VERTEX_BIT,
+        0,
+        sizeof(MeshPushConstants),
+        &constants
+    );
+
     vkCmdDraw(this->_command_buffer, this->_triangle_mesh._vertices.size(), 1, 0, 0);
     vkCmdEndRenderPass(this->_command_buffer);
     VK_CHECK(vkEndCommandBuffer(this->_command_buffer));
@@ -369,6 +401,21 @@ void fmVK::Vulkan::init_pipelines() {
 
     // Build mesh pipeline
 
+    VkPipelineLayoutCreateInfo mesh_pipeline_layout_info = VKInit::pipeline_layout_create_info();
+    VkPushConstantRange push_constant = {
+        .offset = 0,
+        .size = sizeof(MeshPushConstants),
+        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT
+    };
+    mesh_pipeline_layout_info.pPushConstantRanges = &push_constant;
+    mesh_pipeline_layout_info.pushConstantRangeCount = 1;
+    VK_CHECK(vkCreatePipelineLayout(
+        this->_device, 
+        &mesh_pipeline_layout_info,
+        nullptr,
+        &this->_mesh_pipeline_layout
+    ));
+
     VertexInputDescription vertex_description = Vertex::get_vertex_description();
     pipeline_builder.vertex_input_info = {
         .vertexBindingDescriptionCount = (uint32_t) vertex_description.bindings.size(),
@@ -407,6 +454,7 @@ void fmVK::Vulkan::init_pipelines() {
         )
     );
 
+    pipeline_builder.pipeline_layout = this->_mesh_pipeline_layout;
     this->_pipeline = pipeline_builder.build_pipeline(this->_device, this->_render_pass);
 
     vkDestroyShaderModule(this->_device, fragment_shader, nullptr);
@@ -414,6 +462,7 @@ void fmVK::Vulkan::init_pipelines() {
     this->_deletion_queue.push_function([=]() {
         vkDestroyPipeline(this->_device, this->_pipeline, nullptr);
         vkDestroyPipelineLayout(this->_device, this->_pipeline_layout, nullptr);
+        vkDestroyPipelineLayout(this->_device, this->_mesh_pipeline_layout, nullptr);
     });
 }
 

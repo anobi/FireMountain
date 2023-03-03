@@ -64,6 +64,7 @@ namespace fmVK {
         bool load_shader_module(const char* file_path, VkShaderModule* out);
 
         VkPipelineLayout _pipeline_layout;
+        VkPipelineLayout _mesh_pipeline_layout;
         VkPipeline _pipeline;
 
         DeletionQueue _deletion_queue;

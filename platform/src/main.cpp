@@ -4,8 +4,8 @@
 #include "firemountain.hpp"
 #include "display.hpp"
 
-int WIDTH = 1920;
-int HEIGHT = 1080;
+int WIDTH = 800;
+int HEIGHT = 600;
 
 int RunApp() {
     Firemountain firemountain;
