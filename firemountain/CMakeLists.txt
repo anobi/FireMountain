@@ -11,11 +11,13 @@ find_package(Vulkan REQUIRED)
 
 add_subdirectory(external/vk-bootstrap)
 add_subdirectory(external/VulkanMemoryAllocator)
+add_subdirectory(external/tinyobjloader)
 
 target_link_libraries(${PROJECT_NAME} 
   Vulkan::Vulkan
   vk-bootstrap::vk-bootstrap
   VulkanMemoryAllocator
+  tinyobjloader
 )
 
 find_package(SDL2 REQUIRED)

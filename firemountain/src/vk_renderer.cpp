@@ -122,10 +122,10 @@ void fmVK::Vulkan::Draw() {
     vkCmdBindPipeline(this->_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_pipeline);
 
     VkDeviceSize offset = 0;
-    vkCmdBindVertexBuffers(this->_command_buffer, 0, 1, &this->_triangle_mesh._vertex_buffer._buffer, &offset);
+    vkCmdBindVertexBuffers(this->_command_buffer, 0, 1, &this->_monke_mesh._vertex_buffer._buffer, &offset);
 
     // Update and push constants
-    glm::vec3 camera_position = {0.0f, 0.0f, -2.0f};
+    glm::vec3 camera_position = {0.0f, 0.0f, -2.5f};
     glm::mat4 view = glm::translate(glm::mat4(1.0f), camera_position);
     glm::mat4 projection = glm::perspective(
         glm::radians(70.0f), 
@@ -153,7 +153,7 @@ void fmVK::Vulkan::Draw() {
         &constants
     );
 
-    vkCmdDraw(this->_command_buffer, this->_triangle_mesh._vertices.size(), 1, 0, 0);
+    vkCmdDraw(this->_command_buffer, this->_monke_mesh.vertices.size(), 1, 0, 0);
     vkCmdEndRenderPass(this->_command_buffer);
     VK_CHECK(vkEndCommandBuffer(this->_command_buffer));
 
@@ -201,7 +201,7 @@ void fmVK::Vulkan::Destroy() {
 void fmVK::Vulkan::UploadMesh(Mesh &mesh) {
     VkBufferCreateInfo buffer_info = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = mesh._vertices.size() * sizeof(Vertex),
+        .size = mesh.vertices.size() * sizeof(Vertex),
         .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
     };
 
@@ -224,7 +224,7 @@ void fmVK::Vulkan::UploadMesh(Mesh &mesh) {
 
     void* data;
     vmaMapMemory(this->_allocator, mesh._vertex_buffer._allocation, &data);
-    memcpy(data, mesh._vertices.data(), mesh._vertices.size() * sizeof(Vertex));
+    memcpy(data, mesh.vertices.data(), mesh.vertices.size() * sizeof(Vertex));
     vmaUnmapMemory(this->_allocator, mesh._vertex_buffer._allocation);
 }
 

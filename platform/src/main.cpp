@@ -3,12 +3,9 @@
 
 #include "firemountain.hpp"
 #include "display.hpp"
-#include "mesh.hpp"
 
 int WIDTH = 800;
 int HEIGHT = 600;
-
-Mesh monke;
 
 int RunApp() {
     Firemountain firemountain;
@@ -17,8 +14,6 @@ int RunApp() {
     SDL_Init(SDL_INIT_VIDEO);
     display.Init(WIDTH, HEIGHT);
     firemountain.Init(WIDTH, HEIGHT, display.window);
-
-    monke.load_from_obj("assets/monke.obj");
 
     bool running = true;
     SDL_Event event;

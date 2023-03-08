@@ -16,7 +16,6 @@ build/
 *.slo
 *.lo
 *.o
-*.obj
 
 # Precompiled Headers
 *.gch
@@ -113,3 +112,4 @@ ipch/
 # !.vscode/launch.json
 # !.vscode/extensions.json
 # *.code-workspace
+.DS_Store

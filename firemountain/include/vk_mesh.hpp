@@ -22,6 +22,8 @@ struct Vertex {
 };
 
 struct Mesh {
-    std::vector<Vertex> _vertices;
+    std::vector<Vertex> vertices;
     AllocatedBuffer _vertex_buffer;
+
+    bool load_from_obj(const char* path);
 };

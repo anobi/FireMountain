@@ -10,7 +10,7 @@ else()
 endif()
 
 find_package(SDL2 REQUIRED)
-add_subdirectory(external/tinyobjloader)
+# add_subdirectory(external/tinyobjloader)
 
 
 include_directories(${SDL2_INCLUDE_DIRS})
@@ -19,7 +19,6 @@ include_directories(${CMAKE_BINARY_DIR}/firemountain/include/)
 target_sources(${PROJECT_NAME}
   PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/display.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/mesh.cpp
 )
 target_include_directories(${PROJECT_NAME}
   PUBLIC
@@ -29,7 +28,6 @@ target_include_directories(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME} 
   PUBLIC 
     ${SDL2_LIBRARIES}
-    tinyobjloader
     LibFireMountain
 )
 
@@ -40,4 +38,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_BINARY_DIR}/shaders/spv/ $<TARGET_FILE_DIR:${PROJECT_NAME}>/shaders/
+)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_BINARY_DIR}/assets/ $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets/
 )

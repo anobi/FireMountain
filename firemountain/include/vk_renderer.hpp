@@ -21,6 +21,7 @@ namespace fmVK {
 
         // Testing
         Mesh _triangle_mesh;
+        Mesh _monke_mesh;
 
     private:
         int _frame = 0;

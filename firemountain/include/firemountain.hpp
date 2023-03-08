@@ -15,6 +15,8 @@ public:
     void Frame();
     void Destroy();
 
+    void LoadMesh();
+
     fmVK::Vulkan vulkan;
 
 private:
