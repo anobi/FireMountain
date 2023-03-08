@@ -191,6 +191,7 @@ void fmVK::Vulkan::Destroy() {
         vkWaitForFences(this->_device, 1, &this->_render_fence, true, 1000000000);
         this->_deletion_queue.flush();
 
+        vmaDestroyAllocator(this->_allocator);
         vkDestroyDevice(this->_device, nullptr);
         vkDestroySurfaceKHR(this->_instance, this->_surface, nullptr);
         vkb::destroy_debug_utils_messenger(this->_instance, this->_debug_messenger);
@@ -368,8 +369,9 @@ void fmVK::Vulkan::init_sync_structures() {
     VK_CHECK(vkCreateSemaphore(this->_device, &semaphore_create_info, nullptr, &this->_render_semaphore));
 
     this->_deletion_queue.push_function([=]() {
-        vkDestroySemaphore(this->_device, this->_present_semaphore, nullptr);
         vkDestroySemaphore(this->_device, this->_render_semaphore, nullptr);
+        vkDestroySemaphore(this->_device, this->_present_semaphore, nullptr);
+        vkDestroyFence(this->_device, this->_render_fence, nullptr);
     });
 }
 
@@ -418,6 +420,7 @@ void fmVK::Vulkan::init_pipelines() {
 
     VertexInputDescription vertex_description = Vertex::get_vertex_description();
     pipeline_builder.vertex_input_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
         .vertexBindingDescriptionCount = (uint32_t) vertex_description.bindings.size(),
         .pVertexBindingDescriptions = vertex_description.bindings.data(),
         .vertexAttributeDescriptionCount = (uint32_t) vertex_description.attributes.size(),
