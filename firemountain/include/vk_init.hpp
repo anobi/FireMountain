@@ -36,4 +36,8 @@ namespace VKInit {
 
     VkFenceCreateInfo fence_create_info(VkFenceCreateFlags flags = 0);
     VkSemaphoreCreateInfo samephore_create_info(VkSemaphoreCreateFlags flags = 0);
+
+    VkImageCreateInfo image_create_info(VkFormat format, VkImageUsageFlags usage_flags, VkExtent3D extent);
+    VkImageViewCreateInfo imageview_create_info(VkFormat format, VkImage image, VkImageAspectFlags aspect_flags);
+    VkPipelineDepthStencilStateCreateInfo depth_stencil_create_info(bool depth_test, bool depth_write, VkCompareOp compare_op);
 }

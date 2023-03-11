@@ -36,6 +36,8 @@ namespace fmVK {
         VkDevice _device;
         VkSurfaceKHR _surface;
         VkDebugUtilsMessengerEXT _debug_messenger;
+        DeletionQueue _deletion_queue;
+        VmaAllocator _allocator;
         void init_vulkan();
 
         VkSwapchainKHR _swapchain;
@@ -60,17 +62,17 @@ namespace fmVK {
         VkFence _render_fence;
         void init_sync_structures();
 
-        void init_pipelines();
-        
-        bool load_shader_module(const char* file_path, VkShaderModule* out);
-
+        // Pipelines
         VkPipelineLayout _pipeline_layout;
         VkPipelineLayout _mesh_pipeline_layout;
         VkPipeline _pipeline;
+        void init_pipelines();
+        bool load_shader_module(const char* file_path, VkShaderModule* out);
 
-        DeletionQueue _deletion_queue;
-
-        VmaAllocator _allocator;
+        // Depth buffer
+        VkFormat _depth_format;
+        VkImageView _depth_image_view;
+        AllocatedImage _depth_image;
     };
 
     class PipelineBuilder {
@@ -83,6 +85,7 @@ namespace fmVK {
             VkPipelineColorBlendAttachmentState color_blend_attachment;
             VkPipelineVertexInputStateCreateInfo vertex_input_info;
             VkPipelineMultisampleStateCreateInfo multisampling;
+            VkPipelineDepthStencilStateCreateInfo depth_stencil;
             std::vector<VkPipelineShaderStageCreateInfo> shader_stages;
             
 

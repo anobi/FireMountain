@@ -4,8 +4,13 @@
 #include <glm/glm.hpp>
 
 struct AllocatedBuffer {
-    VkBuffer _buffer;
-    VmaAllocation _allocation;
+    VkBuffer buffer;
+    VmaAllocation allocation;
+};
+
+struct AllocatedImage {
+    VkImage image;
+    VmaAllocation allocation;
 };
 
 struct MeshPushConstants {
