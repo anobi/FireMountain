@@ -132,7 +132,7 @@ void fmVK::Vulkan::Draw() {
     };
     
     vkCmdBeginRenderPass(this->_command_buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdBindPipeline(this->_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_pipeline);
+    vkCmdBindPipeline(this->_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_mesh_pipeline);
 
     VkDeviceSize offset = 0;
     vkCmdBindVertexBuffers(this->_command_buffer, 0, 1, &this->_monke_mesh._vertex_buffer.buffer, &offset);
@@ -554,12 +554,12 @@ void fmVK::Vulkan::init_pipelines() {
     );
 
     pipeline_builder.pipeline_layout = this->_mesh_pipeline_layout;
-    this->_pipeline = pipeline_builder.build_pipeline(this->_device, this->_render_pass);
+    this->_mesh_pipeline = pipeline_builder.build_pipeline(this->_device, this->_render_pass);
 
     vkDestroyShaderModule(this->_device, fragment_shader, nullptr);
     vkDestroyShaderModule(this->_device, vertex_shader, nullptr);
     this->_deletion_queue.push_function([=]() {
-        vkDestroyPipeline(this->_device, this->_pipeline, nullptr);
+        vkDestroyPipeline(this->_device, this->_mesh_pipeline, nullptr);
         vkDestroyPipelineLayout(this->_device, this->_pipeline_layout, nullptr);
         vkDestroyPipelineLayout(this->_device, this->_mesh_pipeline_layout, nullptr);
     });

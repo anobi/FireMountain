@@ -15,6 +15,8 @@ int RunApp() {
     display.Init(WIDTH, HEIGHT);
     firemountain.Init(WIDTH, HEIGHT, display.window);
 
+    auto monke_mesh = firemountain.AddMesh("monke", "assets/monke.obj");
+
     bool running = true;
     SDL_Event event;
     while(running) {

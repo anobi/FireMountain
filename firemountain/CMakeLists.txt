@@ -29,10 +29,11 @@ include_directories(${SDL2_INCLUDE_DIRS})
 target_sources(${PROJECT_NAME}
   PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/firemountain.cpp
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/fm_scene.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_mesh.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_init.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_renderer.cpp
-  PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_mesh.cpp
 )
 
 target_include_directories(${PROJECT_NAME}

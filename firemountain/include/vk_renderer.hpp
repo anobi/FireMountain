@@ -20,8 +20,9 @@ namespace fmVK {
         void UploadMesh(Mesh &mesh);
 
         // Testing
-        Mesh _triangle_mesh;
-        Mesh _monke_mesh;
+        // TODO: oh yea the renderer has it's own copies of the meshes
+        // Mesh _triangle_mesh;
+        // Mesh _monke_mesh;
 
     private:
         int _frame = 0;
@@ -65,7 +66,7 @@ namespace fmVK {
         // Pipelines
         VkPipelineLayout _pipeline_layout;
         VkPipelineLayout _mesh_pipeline_layout;
-        VkPipeline _pipeline;
+        VkPipeline _mesh_pipeline;
         void init_pipelines();
         bool load_shader_module(const char* file_path, VkShaderModule* out);
 
