@@ -20,8 +20,32 @@
             "program": "${workspaceRoot}/build/FirePlateau",
             "args": [],
             "cwd": "${workspaceRoot}/build/",
-            "MIMode": "lldb",
             "preLaunchTask": "cmake-build"
+        },
+        {
+            "name": "(gdb) Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/build/FirePlateau",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceRoot}/build/",
+            "environment": [],
+            "preLaunchTask": "cmake-build",
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
         }
     ]
 }

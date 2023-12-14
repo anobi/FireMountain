@@ -136,7 +136,7 @@ void fmVK::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
     VkDeviceSize offset = 0;
 
     // Update and push constants
-    glm::vec3 camera_position = {0.0f, -6.0f, -10.0f};
+    glm::vec3 camera_position = {0.0f, 0.0f, -5.0f};
     glm::mat4 view = glm::translate(glm::mat4(1.0f), camera_position);
     glm::mat4 projection = glm::perspective(
         glm::radians(70.0f), 

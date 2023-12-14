@@ -44,18 +44,18 @@ void Firemountain::Destroy() {
 
 
 Mesh* Firemountain::AddMesh(const std::string& name, const char* path) {
-    auto mesh = this->_meshes[name];
+    Mesh mesh;
     mesh.load_from_obj(path);
     this->vulkan.UploadMesh(mesh);
+    this->_meshes[name] = mesh;
 
-    RenderObject render_object = {
-        .material = this->get_material("mesh"),
-        .mesh = this->get_mesh(name),
-        .transform = glm::mat4{ 1.0f }
-    };
+    RenderObject render_object;
+    render_object.mesh = this->get_mesh(name);
+    render_object.material = this->get_material("mesh");
+    render_object.transform = glm::mat4{ 1.0f };
     this->_renderables.push_back(render_object);
     
-    return &mesh;
+    return &this->_meshes[name];
 }
 
 Material* Firemountain::create_material(const std::string& name) {
