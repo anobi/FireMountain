@@ -4,8 +4,9 @@
 #include <vk_mem_alloc.h>
 
 #include "vk_mesh.hpp"
-#include "fm_utils.hpp"
 #include "vk_types.hpp"
+#include "fm_utils.hpp"
+#include "fm_renderable.hpp"
 
 
 namespace fmVK {
@@ -15,14 +16,19 @@ namespace fmVK {
         ~Vulkan() {};
 
         int Init(const uint32_t width, const uint32_t height, SDL_Window* window);
-        void Draw();
+        void Draw(RenderObject* first_render_object, int render_object_count);
         void Destroy();
         void UploadMesh(Mesh &mesh);
+
+        void CreateMaterial();
 
         // Testing
         // TODO: oh yea the renderer has it's own copies of the meshes
         // Mesh _triangle_mesh;
         // Mesh _monke_mesh;
+
+        VkPipelineLayout _mesh_pipeline_layout;
+        VkPipeline _mesh_pipeline;
 
     private:
         int _frame = 0;
@@ -65,8 +71,7 @@ namespace fmVK {
 
         // Pipelines
         VkPipelineLayout _pipeline_layout;
-        VkPipelineLayout _mesh_pipeline_layout;
-        VkPipeline _mesh_pipeline;
+        // Note to self: mesh pipelines were here
         void init_pipelines();
         bool load_shader_module(const char* file_path, VkShaderModule* out);
 

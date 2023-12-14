@@ -78,7 +78,7 @@ int fmVK::Vulkan::Init(const uint32_t width, const uint32_t height, SDL_Window* 
     return 0;
 }
 
-void fmVK::Vulkan::Draw() {
+void fmVK::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
     VK_CHECK(vkWaitForFences(this->_device, 1, &this->_render_fence, true, 1000000000));
     VK_CHECK(vkResetFences(this->_device, 1, &this->_render_fence));
 
@@ -132,13 +132,11 @@ void fmVK::Vulkan::Draw() {
     };
     
     vkCmdBeginRenderPass(this->_command_buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdBindPipeline(this->_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_mesh_pipeline);
 
     VkDeviceSize offset = 0;
-    vkCmdBindVertexBuffers(this->_command_buffer, 0, 1, &this->_monke_mesh._vertex_buffer.buffer, &offset);
 
     // Update and push constants
-    glm::vec3 camera_position = {0.0f, 0.0f, -2.5f};
+    glm::vec3 camera_position = {0.0f, -6.0f, -10.0f};
     glm::mat4 view = glm::translate(glm::mat4(1.0f), camera_position);
     glm::mat4 projection = glm::perspective(
         glm::radians(70.0f), 
@@ -147,26 +145,48 @@ void fmVK::Vulkan::Draw() {
         200.0f
     );
     projection[1][1] *= -1;
-    glm::mat4 model = glm::rotate(
-        glm::mat4(1.0f), 
-        glm::radians(this->_frame * 0.4f),
-        glm::vec3(0.0f, 1.0f, 0.0f)
-    );
-    glm::mat4 mvp = projection * view * model;
 
-    MeshPushConstants constants = {
-        .render_matrix = mvp
-    };
-    vkCmdPushConstants(
-        this->_command_buffer, 
-        this->_mesh_pipeline_layout, 
-        VK_SHADER_STAGE_VERTEX_BIT,
-        0,
-        sizeof(MeshPushConstants),
-        &constants
-    );
+    Mesh* bound_mesh = nullptr;
+    Material* bound_material = nullptr;
+    for (int i = 0; i < render_object_count; i++) {
+        RenderObject& object = render_objects[i];
+        if (object.material != bound_material) {
+            vkCmdBindPipeline(
+                this->_command_buffer,
+                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                object.material->pipeline
+            );
+            bound_material = object.material;
+        }
 
-    vkCmdDraw(this->_command_buffer, (uint32_t) this->_monke_mesh.vertices.size(), 1, 0, 0);
+        glm::mat4 model = object.transform;
+        glm::mat4 mvp = projection * view * model;
+        MeshPushConstants constants = { .render_matrix = mvp};
+
+        vkCmdPushConstants(
+            this->_command_buffer, 
+            object.material->pipeline_layout, 
+            VK_SHADER_STAGE_VERTEX_BIT,
+            0,
+            sizeof(MeshPushConstants),
+            &constants
+        );
+
+        if (object.mesh != bound_mesh) {
+            VkDeviceSize offset = 0;
+            vkCmdBindVertexBuffers(
+                this->_command_buffer, 
+                0, 
+                1, 
+                &object.mesh->_vertex_buffer.buffer,
+                &offset
+            );
+            bound_mesh = object.mesh;
+        }
+        
+        vkCmdDraw(this->_command_buffer, object.mesh->vertices.size(), 1, 0, 0);
+    }
+    
     vkCmdEndRenderPass(this->_command_buffer);
     VK_CHECK(vkEndCommandBuffer(this->_command_buffer));
 
@@ -513,6 +533,7 @@ void fmVK::Vulkan::init_pipelines() {
         nullptr,
         &this->_mesh_pipeline_layout
     ));
+    pipeline_builder.pipeline_layout = this->_mesh_pipeline_layout;
 
     VertexInputDescription vertex_description = Vertex::get_vertex_description();
     pipeline_builder.vertex_input_info = {
@@ -553,7 +574,6 @@ void fmVK::Vulkan::init_pipelines() {
         )
     );
 
-    pipeline_builder.pipeline_layout = this->_mesh_pipeline_layout;
     this->_mesh_pipeline = pipeline_builder.build_pipeline(this->_device, this->_render_pass);
 
     vkDestroyShaderModule(this->_device, fragment_shader, nullptr);

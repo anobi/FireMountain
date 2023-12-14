@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
 project(FirePlateau)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 
 
 if(WIN32)
@@ -10,8 +10,6 @@ else()
 endif()
 
 find_package(SDL2 REQUIRED)
-# add_subdirectory(external/tinyobjloader)
-
 
 include_directories(${SDL2_INCLUDE_DIRS})
 include_directories(${CMAKE_BINARY_DIR}/firemountain/include/)

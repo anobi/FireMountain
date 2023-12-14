@@ -15,14 +15,11 @@
         },
         {
             "name": "(lldb) Launch",
-            "type": "cppdbg",
+            "type": "lldb",
             "request": "launch",
             "program": "${workspaceRoot}/build/FirePlateau",
             "args": [],
-            "stopAtEntry": false,
             "cwd": "${workspaceRoot}/build/",
-            "environment": [],
-            "externalConsole": false,
             "MIMode": "lldb",
             "preLaunchTask": "cmake-build"
         }

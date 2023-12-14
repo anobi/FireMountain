@@ -27,10 +27,10 @@ private:
     DeletionQueue _deletion_queue;
 
     std::vector<RenderObject> _renderables;
-    std::unordered_map<std::string, Material> _material;
+    std::unordered_map<std::string, Material> _materials;
     std::unordered_map<std::string, Mesh> _meshes;
 
-    Material* create_material();
-    Material* get_material();
+    Material* create_material(const std::string& name);
+    Material* get_material(const std::string& name);
     Mesh* get_mesh(const std::string& name);
 };

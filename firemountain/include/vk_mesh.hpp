@@ -1,8 +1,8 @@
 #pragma once
 
-#include <vk_types.hpp>
 #include <vector>
 #include <glm/vec3.hpp>
+#include "vk_types.hpp"
 
 
 struct VertexInputDescription {

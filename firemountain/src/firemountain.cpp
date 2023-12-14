@@ -7,7 +7,7 @@
 
 int Firemountain::Init(const int width, const int height, SDL_Window* window) {
     this->vulkan.Init(width, height, window);
-    this->scene.Init();
+    this->create_material("mesh");
 
     // this->_triangle_mesh.vertices.resize(3);
     // this->_triangle_mesh.vertices[0] = {
@@ -34,19 +34,53 @@ int Firemountain::Init(const int width, const int height, SDL_Window* window) {
 }
 
 void Firemountain::Frame() {
-    this->vulkan.Draw();
+    this->vulkan.Draw(this->_renderables.data(), this->_renderables.size());
 }
 
 void Firemountain::Destroy() {
     this->vulkan.Destroy();
 }
 
+
+
 Mesh* Firemountain::AddMesh(const std::string& name, const char* path) {
     auto mesh = this->_meshes[name];
     mesh.load_from_obj(path);
-
     this->vulkan.UploadMesh(mesh);
-    this->scene.AddMesh(name, mesh);
+
+    RenderObject render_object = {
+        .material = this->get_material("mesh"),
+        .mesh = this->get_mesh(name),
+        .transform = glm::mat4{ 1.0f }
+    };
+    this->_renderables.push_back(render_object);
     
     return &mesh;
+}
+
+Material* Firemountain::create_material(const std::string& name) {
+    Material mat = {
+        .pipeline = this->vulkan._mesh_pipeline,
+        .pipeline_layout = this->vulkan._mesh_pipeline_layout
+    };
+    this->_materials[name] = mat;
+    return &this->_materials[name];
+}
+
+Material* Firemountain::get_material(const std::string& name) {
+    auto i = this->_materials.find(name);
+    if (i == this->_materials.end()) {
+        return nullptr;
+    } else {
+        return &(*i).second;
+    }
+}
+
+Mesh* Firemountain::get_mesh(const std::string& name) {
+    auto i = this->_meshes.find(name);
+    if (i == this->_meshes.end()) {
+        return nullptr;
+    } else {
+        return &(*i).second;
+    }
 }

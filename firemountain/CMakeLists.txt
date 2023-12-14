@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
 project(LibFireMountain)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 
 add_library(${PROJECT_NAME} STATIC)
 
@@ -9,15 +9,12 @@ add_library(${PROJECT_NAME} STATIC)
 # ---------------------------------------------------------------
 find_package(Vulkan REQUIRED)
 
-add_subdirectory(external/vk-bootstrap)
-add_subdirectory(external/VulkanMemoryAllocator)
-add_subdirectory(external/tinyobjloader)
-
 target_link_libraries(${PROJECT_NAME} 
   Vulkan::Vulkan
   vk-bootstrap::vk-bootstrap
   VulkanMemoryAllocator
   tinyobjloader
+  glm
 )
 
 find_package(SDL2 REQUIRED)

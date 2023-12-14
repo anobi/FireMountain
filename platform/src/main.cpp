@@ -7,7 +7,9 @@
 int WIDTH = 800;
 int HEIGHT = 600;
 
-int RunApp() {
+
+int RunApp()
+{
     Firemountain firemountain;
     Display display;
 
