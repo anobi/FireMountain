@@ -19,9 +19,6 @@ int fmVK::Pipeline::Init(
     this->_device = device;
     this->_render_pass = render_pass;
 
-    VkPipelineLayoutCreateInfo pipeline_layout_info = VKInit::pipeline_layout_create_info();
-    VK_CHECK(vkCreatePipelineLayout(this->_device, &pipeline_layout_info, nullptr, &this->layout));
-
     PipelineBuilder pipeline_builder = {
         .viewport = VkViewport {
             .x = 0.0f,
@@ -45,7 +42,9 @@ int fmVK::Pipeline::Init(
     };
 
 
-    // Build mesh pipeline
+    // Pipeline layout
+    
+    VkPipelineLayoutCreateInfo pipeline_layout_info = VKInit::pipeline_layout_create_info();
     VkPushConstantRange push_constant = {
         .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
         .offset = 0,
@@ -60,6 +59,9 @@ int fmVK::Pipeline::Init(
         &this->layout
     ));
     pipeline_builder.pipeline_layout = this->layout;
+
+
+    // Shaders
 
     VertexInputDescription vertex_description = Vertex::get_vertex_description();
     pipeline_builder.vertex_input_info = {

@@ -30,7 +30,6 @@ namespace fmVK {
         VkPipeline GetPipeline(const char* name) { return this->pipelines[name].pipeline; }
         VkPipelineLayout GetPipelineLayout(const char* name) { return this->pipelines[name].layout; }
 
-        // TODO: Create a pipeline class
         std::unordered_map<std::string, fmVK::Pipeline> pipelines;
 
     private:

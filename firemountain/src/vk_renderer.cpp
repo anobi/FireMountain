@@ -481,7 +481,6 @@ void fmVK::Vulkan::init_sync_structures() {
 }
 
 void fmVK::Vulkan::init_pipelines() {
-
     fmVK::Pipeline mesh_pipeline;
     mesh_pipeline.Init(this->_device, this->_window_extent, this->_render_pass, "mesh");
 
