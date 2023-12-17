@@ -41,8 +41,6 @@ void Firemountain::Destroy() {
     this->vulkan.Destroy();
 }
 
-
-
 Mesh* Firemountain::AddMesh(const std::string& name, const char* path) {
     Mesh mesh;
     mesh.load_from_obj(path);
@@ -60,8 +58,8 @@ Mesh* Firemountain::AddMesh(const std::string& name, const char* path) {
 
 Material* Firemountain::create_material(const std::string& name) {
     Material mat = {
-        .pipeline = this->vulkan._mesh_pipeline,
-        .pipeline_layout = this->vulkan._mesh_pipeline_layout
+        .pipeline = this->vulkan.GetPipeline("mesh"),
+        .pipeline_layout = this->vulkan.GetPipelineLayout("mesh")
     };
     this->_materials[name] = mat;
     return &this->_materials[name];

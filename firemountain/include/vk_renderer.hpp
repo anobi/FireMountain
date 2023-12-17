@@ -1,10 +1,14 @@
 #pragma once
 
+#include <string>
 #include <vector>
+#include <unordered_map>
 #include <vk_mem_alloc.h>
 
 #include "vk_mesh.hpp"
 #include "vk_types.hpp"
+#include "vk_pipeline.hpp"
+
 #include "fm_utils.hpp"
 #include "fm_renderable.hpp"
 
@@ -21,14 +25,13 @@ namespace fmVK {
         void UploadMesh(Mesh &mesh);
 
         void CreateMaterial();
+        void CreatePipeline(const char* shader_name);
 
-        // Testing
-        // TODO: oh yea the renderer has it's own copies of the meshes
-        // Mesh _triangle_mesh;
-        // Mesh _monke_mesh;
+        VkPipeline GetPipeline(const char* name) { return this->pipelines[name].pipeline; }
+        VkPipelineLayout GetPipelineLayout(const char* name) { return this->pipelines[name].layout; }
 
-        VkPipelineLayout _mesh_pipeline_layout;
-        VkPipeline _mesh_pipeline;
+        // TODO: Create a pipeline class
+        std::unordered_map<std::string, fmVK::Pipeline> pipelines;
 
     private:
         int _frame = 0;
@@ -70,31 +73,11 @@ namespace fmVK {
         void init_sync_structures();
 
         // Pipelines
-        VkPipelineLayout _pipeline_layout;
-        // Note to self: mesh pipelines were here
         void init_pipelines();
-        bool load_shader_module(const char* file_path, VkShaderModule* out);
 
         // Depth buffer
         VkFormat _depth_format;
         VkImageView _depth_image_view;
         AllocatedImage _depth_image;
-    };
-
-    class PipelineBuilder {
-        public:
-            VkViewport viewport;
-            VkRect2D scissor;
-            VkPipelineLayout pipeline_layout;
-            VkPipelineInputAssemblyStateCreateInfo input_assembly;
-            VkPipelineRasterizationStateCreateInfo rasterizer;
-            VkPipelineColorBlendAttachmentState color_blend_attachment;
-            VkPipelineVertexInputStateCreateInfo vertex_input_info;
-            VkPipelineMultisampleStateCreateInfo multisampling;
-            VkPipelineDepthStencilStateCreateInfo depth_stencil;
-            std::vector<VkPipelineShaderStageCreateInfo> shader_stages;
-            
-
-            VkPipeline build_pipeline(VkDevice device, VkRenderPass pass);
     };
 }

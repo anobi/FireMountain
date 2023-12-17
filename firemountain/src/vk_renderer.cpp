@@ -13,16 +13,6 @@
 #include <vk_init.hpp>
 
 
-#define VK_CHECK(x)                                                     \
-    do {                                                                \
-		VkResult err = x;                                               \
-		if (err) {                                                      \
-			std::cout <<"Detected Vulkan error: " << err << std::endl;  \
-			abort();                                                    \
-		}                                                               \
-	} while (0)
-
-
 int fmVK::Vulkan::Init(const uint32_t width, const uint32_t height, SDL_Window* window) {
 
     // Initialized Vulkan instance and debug messenger
@@ -252,7 +242,7 @@ void fmVK::Vulkan::UploadMesh(Mesh &mesh) {
         nullptr
     ));
 
-    this->_deletion_queue.push_function([=]() {
+    this->_deletion_queue.push_function([=, this]() {
         vmaDestroyBuffer(this->_allocator, mesh._vertex_buffer.buffer, mesh._vertex_buffer.allocation);
     });
 
@@ -310,7 +300,7 @@ void fmVK::Vulkan::init_swapchain() {
     VK_CHECK(vkCreateImageView(this->_device, &depth_view_info, nullptr, &this->_depth_image_view));
 
 
-    this->_deletion_queue.push_function([=]() {
+    this->_deletion_queue.push_function([=, this]() {
         vkDestroyImageView(this->_device, this->_depth_image_view, nullptr);
         vmaDestroyImage(this->_allocator, this->_depth_image.image, this->_depth_image.allocation);
         vkDestroySwapchainKHR(this->_device, this->_swapchain, nullptr);
@@ -340,7 +330,7 @@ void fmVK::Vulkan::init_commands() {
         &this->_command_buffer
     ));
 
-    this->_deletion_queue.push_function([=]() {
+    this->_deletion_queue.push_function([=, this]() {
         vkDestroyCommandPool(this->_device, this->_command_pool, nullptr);
     });
 }
@@ -428,7 +418,7 @@ void fmVK::Vulkan::init_default_renderpass() {
         &this->_render_pass
     ));
 
-    this->_deletion_queue.push_function([=]() {
+    this->_deletion_queue.push_function([=, this]() {
         vkDestroyRenderPass(this->_device, this->_render_pass, nullptr);
     });
 }
@@ -460,7 +450,7 @@ void fmVK::Vulkan::init_framebuffers() {
             &this->_framebuffers[i]
         ));
 
-        this->_deletion_queue.push_function([=]() {
+        this->_deletion_queue.push_function([=, this]() {
             vkDestroyFramebuffer(this->_device, this->_framebuffers[i], nullptr);
             vkDestroyImageView(this->_device, this->_swapchain_image_views[i], nullptr);
         });
@@ -483,7 +473,7 @@ void fmVK::Vulkan::init_sync_structures() {
     VK_CHECK(vkCreateSemaphore(this->_device, &semaphore_create_info, nullptr, &this->_present_semaphore));
     VK_CHECK(vkCreateSemaphore(this->_device, &semaphore_create_info, nullptr, &this->_render_semaphore));
 
-    this->_deletion_queue.push_function([=]() {
+    this->_deletion_queue.push_function([=, this]() {
         vkDestroySemaphore(this->_device, this->_render_semaphore, nullptr);
         vkDestroySemaphore(this->_device, this->_present_semaphore, nullptr);
         vkDestroyFence(this->_device, this->_render_fence, nullptr);
@@ -491,175 +481,10 @@ void fmVK::Vulkan::init_sync_structures() {
 }
 
 void fmVK::Vulkan::init_pipelines() {
-    VkPipelineLayoutCreateInfo pipeline_layout_info = VKInit::pipeline_layout_create_info();
-    VK_CHECK(vkCreatePipelineLayout(this->_device, &pipeline_layout_info, nullptr, &this->_pipeline_layout));
 
-    PipelineBuilder pipeline_builder = {
-        .viewport = VkViewport {
-            .x = 0.0f,
-            .y = 0.0f,
-            .width = (float) this->_window_extent.width,
-            .height = (float) this->_window_extent.height,
-            .minDepth = 0.0f,
-            .maxDepth = 1.0f
-        },
-        .scissor = VkRect2D {
-            .offset = {0, 0},
-            .extent = this->_window_extent
-        },
-        .pipeline_layout = this->_pipeline_layout,
-        .input_assembly = VKInit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST),
-        .rasterizer = VKInit::rasterization_state_create_info(VK_POLYGON_MODE_FILL),
-        .color_blend_attachment = VKInit::color_blend_attachment_state(),
-        .vertex_input_info = VKInit::vertex_input_state_create_info(),
-        .multisampling = VKInit::multisampling_state_create_info(),
-        .depth_stencil = VKInit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL)
-    };
+    fmVK::Pipeline mesh_pipeline;
+    mesh_pipeline.Init(this->_device, this->_window_extent, this->_render_pass, "mesh");
 
-
-    // Build mesh pipeline
-
-    VkPipelineLayoutCreateInfo mesh_pipeline_layout_info = VKInit::pipeline_layout_create_info();
-    VkPushConstantRange push_constant = {
-        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-        .offset = 0,
-        .size = sizeof(MeshPushConstants)
-    };
-    mesh_pipeline_layout_info.pPushConstantRanges = &push_constant;
-    mesh_pipeline_layout_info.pushConstantRangeCount = 1;
-    VK_CHECK(vkCreatePipelineLayout(
-        this->_device, 
-        &mesh_pipeline_layout_info,
-        nullptr,
-        &this->_mesh_pipeline_layout
-    ));
-    pipeline_builder.pipeline_layout = this->_mesh_pipeline_layout;
-
-    VertexInputDescription vertex_description = Vertex::get_vertex_description();
-    pipeline_builder.vertex_input_info = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-        .vertexBindingDescriptionCount = (uint32_t) vertex_description.bindings.size(),
-        .pVertexBindingDescriptions = vertex_description.bindings.data(),
-        .vertexAttributeDescriptionCount = (uint32_t) vertex_description.attributes.size(),
-        .pVertexAttributeDescriptions = vertex_description.attributes.data()
-    };
-    pipeline_builder.shader_stages.clear();
-
-    VkShaderModule fragment_shader;
-    if (!load_shader_module("shaders/mesh.frag.spv", &fragment_shader)) {
-        std::cout << "Error building fragment shader module" << std::endl;
-    }
-    else {
-        std::cout << "Fragment shader module loaded." << std::endl;
-    }
-
-    VkShaderModule vertex_shader;
-    if (!load_shader_module("shaders/mesh.vert.spv", &vertex_shader)) {
-        std::cout << "Error building vertex shader module" << std::endl;
-    } 
-    else {
-        std::cout << "Vertex shader module loaded." << std::endl;
-    }
-
-    pipeline_builder.shader_stages.push_back(
-        VKInit::pipeline_shader_stage_create_info(
-            VK_SHADER_STAGE_VERTEX_BIT,
-            vertex_shader
-        )
-    );
-    pipeline_builder.shader_stages.push_back(
-        VKInit::pipeline_shader_stage_create_info(
-            VK_SHADER_STAGE_FRAGMENT_BIT,
-            fragment_shader
-        )
-    );
-
-    this->_mesh_pipeline = pipeline_builder.build_pipeline(this->_device, this->_render_pass);
-
-    vkDestroyShaderModule(this->_device, fragment_shader, nullptr);
-    vkDestroyShaderModule(this->_device, vertex_shader, nullptr);
-    this->_deletion_queue.push_function([=]() {
-        vkDestroyPipeline(this->_device, this->_mesh_pipeline, nullptr);
-        vkDestroyPipelineLayout(this->_device, this->_pipeline_layout, nullptr);
-        vkDestroyPipelineLayout(this->_device, this->_mesh_pipeline_layout, nullptr);
-    });
-}
-
-
-bool fmVK::Vulkan::load_shader_module(const char *file_path, VkShaderModule *out)
-{
-    // TODO: Move this to a file reading utility function
-    std::ifstream file(file_path, std::ios::ate | std::ios::binary);
-    if(!file.is_open()) {
-        return false;
-    }
-
-    size_t file_size = (size_t) file.tellg();
-    std::vector<uint32_t> buffer(file_size / sizeof(uint32_t));
-
-    file.seekg(0);
-    file.read((char*) buffer.data(), file_size);
-    file.close();
-    // End of TODO
-
-    VkShaderModuleCreateInfo create_info = {
-        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-        .pNext = nullptr,
-        .codeSize = buffer.size() * sizeof(uint32_t),
-        .pCode = buffer.data()
-    };
-
-    VkShaderModule shader_module;
-    if (vkCreateShaderModule(this->_device, &create_info, nullptr, &shader_module) != VK_SUCCESS) {
-        return false;
-    }
-
-    *out = shader_module;
-    return true;
-}
-
-VkPipeline fmVK::PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass)
-{
-    VkPipelineViewportStateCreateInfo viewport_state = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-        .pNext = nullptr,
-        .viewportCount = 1,
-        .pViewports = &this->viewport,
-        .scissorCount = 1,
-        .pScissors = &this->scissor,
-    };
-
-    VkPipelineColorBlendStateCreateInfo color_blending = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-        .pNext = nullptr,
-        .logicOpEnable = VK_FALSE,
-        .logicOp = VK_LOGIC_OP_COPY,
-        .attachmentCount = 1,
-        .pAttachments = &this->color_blend_attachment
-    };
-
-    VkGraphicsPipelineCreateInfo pipeline_info = {
-        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .pNext = nullptr,
-        .stageCount = (uint32_t) this->shader_stages.size(),
-        .pStages = this->shader_stages.data(),
-        .pVertexInputState = &this->vertex_input_info,
-        .pInputAssemblyState = &this->input_assembly,
-        .pViewportState = &viewport_state,
-        .pRasterizationState = &this->rasterizer,
-        .pMultisampleState = &this->multisampling,
-        .pDepthStencilState = &this->depth_stencil,
-        .pColorBlendState = &color_blending,
-        .layout = this->pipeline_layout,
-        .renderPass = pass,
-        .subpass = 0,
-        .basePipelineHandle = VK_NULL_HANDLE
-    };
-
-    VkPipeline pipeline;
-    if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline) != VK_SUCCESS) {
-        std::cout << "failed to create pipeline" << std::endl;
-        return VK_NULL_HANDLE;
-    }
-    return pipeline;
+    this->pipelines["mesh"] = mesh_pipeline;
+    this->_deletion_queue.push_function([=, this]() { this->pipelines["mesh"].Cleanup(); });
 }
