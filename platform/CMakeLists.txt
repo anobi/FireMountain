@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
 project(FirePlateau)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 
 
 if(WIN32)
@@ -10,6 +10,7 @@ else()
 endif()
 
 find_package(SDL2 REQUIRED)
+
 include_directories(${SDL2_INCLUDE_DIRS})
 include_directories(${CMAKE_BINARY_DIR}/firemountain/include/)
 
@@ -35,4 +36,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_BINARY_DIR}/shaders/spv/ $<TARGET_FILE_DIR:${PROJECT_NAME}>/shaders/
+)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_BINARY_DIR}/assets/ $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets/
 )

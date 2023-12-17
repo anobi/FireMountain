@@ -1,8 +1,8 @@
 #pragma once
 
-#include <vk_types.hpp>
 #include <vector>
 #include <glm/vec3.hpp>
+#include "vk_types.hpp"
 
 
 struct VertexInputDescription {
@@ -22,6 +22,8 @@ struct Vertex {
 };
 
 struct Mesh {
-    std::vector<Vertex> _vertices;
+    std::vector<Vertex> vertices;
     AllocatedBuffer _vertex_buffer;
+
+    bool load_from_obj(const char* path);
 };

@@ -1,11 +1,16 @@
 #pragma once
 
+#include <string>
 #include <vector>
+#include <unordered_map>
 #include <vk_mem_alloc.h>
 
 #include "vk_mesh.hpp"
-#include "fm_utils.hpp"
 #include "vk_types.hpp"
+#include "vk_pipeline.hpp"
+
+#include "fm_utils.hpp"
+#include "fm_renderable.hpp"
 
 
 namespace fmVK {
@@ -15,12 +20,18 @@ namespace fmVK {
         ~Vulkan() {};
 
         int Init(const uint32_t width, const uint32_t height, SDL_Window* window);
-        void Draw();
+        void Draw(RenderObject* first_render_object, int render_object_count);
         void Destroy();
         void UploadMesh(Mesh &mesh);
 
-        // Testing
-        Mesh _triangle_mesh;
+        void CreateMaterial();
+        void CreatePipeline(const char* shader_name);
+
+        VkPipeline GetPipeline(const char* name) { return this->pipelines[name].pipeline; }
+        VkPipelineLayout GetPipelineLayout(const char* name) { return this->pipelines[name].layout; }
+
+        // TODO: Create a pipeline class
+        std::unordered_map<std::string, fmVK::Pipeline> pipelines;
 
     private:
         int _frame = 0;
@@ -35,6 +46,8 @@ namespace fmVK {
         VkDevice _device;
         VkSurfaceKHR _surface;
         VkDebugUtilsMessengerEXT _debug_messenger;
+        DeletionQueue _deletion_queue;
+        VmaAllocator _allocator;
         void init_vulkan();
 
         VkSwapchainKHR _swapchain;
@@ -59,32 +72,12 @@ namespace fmVK {
         VkFence _render_fence;
         void init_sync_structures();
 
+        // Pipelines
         void init_pipelines();
-        
-        bool load_shader_module(const char* file_path, VkShaderModule* out);
 
-        VkPipelineLayout _pipeline_layout;
-        VkPipelineLayout _mesh_pipeline_layout;
-        VkPipeline _pipeline;
-
-        DeletionQueue _deletion_queue;
-
-        VmaAllocator _allocator;
-    };
-
-    class PipelineBuilder {
-        public:
-            VkViewport viewport;
-            VkRect2D scissor;
-            VkPipelineLayout pipeline_layout;
-            VkPipelineInputAssemblyStateCreateInfo input_assembly;
-            VkPipelineRasterizationStateCreateInfo rasterizer;
-            VkPipelineColorBlendAttachmentState color_blend_attachment;
-            VkPipelineVertexInputStateCreateInfo vertex_input_info;
-            VkPipelineMultisampleStateCreateInfo multisampling;
-            std::vector<VkPipelineShaderStageCreateInfo> shader_stages;
-            
-
-            VkPipeline build_pipeline(VkDevice device, VkRenderPass pass);
+        // Depth buffer
+        VkFormat _depth_format;
+        VkImageView _depth_image_view;
+        AllocatedImage _depth_image;
     };
 }

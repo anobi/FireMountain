@@ -3,9 +3,24 @@
 #include <vk_mem_alloc.h>
 #include <glm/glm.hpp>
 
+
+#define VK_CHECK(x)                                                     \
+    do {                                                                \
+		VkResult err = x;                                               \
+		if (err) {                                                      \
+			std::cout <<"Detected Vulkan error: " << err << std::endl;  \
+			abort();                                                    \
+		}                                                               \
+	} while (0)
+
 struct AllocatedBuffer {
-    VkBuffer _buffer;
-    VmaAllocation _allocation;
+    VkBuffer buffer;
+    VmaAllocation allocation;
+};
+
+struct AllocatedImage {
+    VkImage image;
+    VmaAllocation allocation;
 };
 
 struct MeshPushConstants {

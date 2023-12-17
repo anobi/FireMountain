@@ -7,13 +7,17 @@
 int WIDTH = 800;
 int HEIGHT = 600;
 
-int RunApp() {
+
+int RunApp()
+{
     Firemountain firemountain;
     Display display;
 
     SDL_Init(SDL_INIT_VIDEO);
     display.Init(WIDTH, HEIGHT);
     firemountain.Init(WIDTH, HEIGHT, display.window);
+
+    auto monke_mesh = firemountain.AddMesh("monke", "assets/monke.obj");
 
     bool running = true;
     SDL_Event event;

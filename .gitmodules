@@ -4,3 +4,9 @@
 [submodule "firemountain/external/VulkanMemoryAllocator"]
 	path = firemountain/external/VulkanMemoryAllocator
 	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
+[submodule "platform/external/tinyobjloader"]
+	path = platform/external/tinyobjloader
+	url = https://github.com/tinyobjloader/tinyobjloader
+[submodule "firemountain/external/tinyobjloader"]
+	path = firemountain/external/tinyobjloader
+	url = https://github.com/tinyobjloader/tinyobjloader

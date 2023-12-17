@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
 project(LibFireMountain)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 
 add_library(${PROJECT_NAME} STATIC)
 
@@ -9,13 +9,12 @@ add_library(${PROJECT_NAME} STATIC)
 # ---------------------------------------------------------------
 find_package(Vulkan REQUIRED)
 
-add_subdirectory(external/vk-bootstrap)
-add_subdirectory(external/VulkanMemoryAllocator)
-
 target_link_libraries(${PROJECT_NAME} 
   Vulkan::Vulkan
   vk-bootstrap::vk-bootstrap
   VulkanMemoryAllocator
+  tinyobjloader
+  glm
 )
 
 find_package(SDL2 REQUIRED)
@@ -27,10 +26,13 @@ include_directories(${SDL2_INCLUDE_DIRS})
 target_sources(${PROJECT_NAME}
   PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/firemountain.cpp
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/fm_scene.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_mesh.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_init.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_renderer.cpp
-  PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_mesh.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_pipeline_builder.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_pipeline.cpp
 )
 
 target_include_directories(${PROJECT_NAME}
