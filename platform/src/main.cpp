@@ -4,8 +4,8 @@
 #include "firemountain.hpp"
 #include "display.hpp"
 
-int WIDTH = 800;
-int HEIGHT = 600;
+int WIDTH = 1920;
+int HEIGHT = 1080;
 
 
 int RunApp()
@@ -17,7 +17,11 @@ int RunApp()
     display.Init(WIDTH, HEIGHT);
     firemountain.Init(WIDTH, HEIGHT, display.window);
 
-    auto monke_mesh = firemountain.AddMesh("monke", "assets/monke.obj");
+    auto monke_1 = firemountain.AddMesh("monke", "assets/monke.obj");
+    // firemountain.AddToScene(monke_1, "mesh");
+
+    // auto monke_2 = firemountain.AddMesh("monke", "assets/monke.obj");
+    // firemountain.AddToScene(monke_1, "noise");
 
     bool running = true;
     SDL_Event event;

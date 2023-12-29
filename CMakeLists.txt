@@ -8,7 +8,7 @@ include(FetchContent)
 FetchContent_Declare(
   vk-bootstrap
   GIT_REPOSITORY https://github.com/charles-lunarg/vk-bootstrap.git
-  GIT_TAG        99be60aa1901007d6e4112592dec73d2ebc75efe  # v1.3.269
+  GIT_TAG        v1.3.274
 )
 FetchContent_Declare(
   VulkanMemoryAllocator
