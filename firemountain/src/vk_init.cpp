@@ -28,6 +28,27 @@ VkCommandBufferAllocateInfo VKInit::command_buffer_allocate_info(
     return info;
 }
 
+VkCommandBufferBeginInfo VKInit::command_buffer_begin_info(VkCommandBufferUsageFlags flags)
+{
+    VkCommandBufferBeginInfo info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .pNext = nullptr,
+        .flags = flags,
+        .pInheritanceInfo = nullptr
+    };
+    return info;
+}
+
+VkCommandBufferSubmitInfo VKInit::command_buffer_submit_info(VkCommandBuffer cmd) {
+    VkCommandBufferSubmitInfo info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+        .pNext = nullptr,
+        .commandBuffer = cmd,
+        .deviceMask = 0
+    };
+    return info;
+}
+
 VkPipelineShaderStageCreateInfo VKInit::pipeline_shader_stage_create_info(
         VkShaderStageFlagBits stage,
         VkShaderModule shader_module
@@ -141,6 +162,41 @@ VkSemaphoreCreateInfo VKInit::samephore_create_info(VkSemaphoreCreateFlags flags
     return info;
 }
 
+VkSemaphoreSubmitInfo VKInit::semaphore_submit_info(VkPipelineStageFlags2 stage_mask, VkSemaphore semaphore) {
+    VkSemaphoreSubmitInfo info = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+        .pNext = nullptr,
+        .semaphore = semaphore,
+        .value = 1,
+        .stageMask = stage_mask,
+        .deviceIndex = 0
+    };
+    return info;
+}
+
+VkSubmitInfo2 VKInit::submit_info(
+    VkCommandBufferSubmitInfo* cmd, 
+    VkSemaphoreSubmitInfo* signal_semaphore_info,
+    VkSemaphoreSubmitInfo* wait_semaphore_info
+) {
+    uint32_t wait_semaphore_info_count = wait_semaphore_info == nullptr ? 0 : 1;
+    uint32_t signal_semaphore_info_count = signal_semaphore_info == nullptr ? 0 : 1;
+    VkSubmitInfo2 info = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+        .pNext = nullptr,
+
+        .waitSemaphoreInfoCount = wait_semaphore_info_count,
+        .pWaitSemaphoreInfos = wait_semaphore_info,
+
+        .commandBufferInfoCount = 1,
+        .pCommandBufferInfos = cmd,
+
+        .signalSemaphoreInfoCount = signal_semaphore_info_count,
+        .pSignalSemaphoreInfos = signal_semaphore_info
+    };
+    return info;
+}
+
 VkImageCreateInfo VKInit::image_create_info(VkFormat format, VkImageUsageFlags usage_flags, VkExtent3D extent) {
     VkImageCreateInfo info = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -173,6 +229,17 @@ VkImageViewCreateInfo VKInit::imageview_create_info(VkFormat format, VkImage ima
         }
     };
     return info;
+}
+
+VkImageSubresourceRange image_subresource_range(VkImageAspectFlags aspect_mask) {
+    VkImageSubresourceRange sub_image = {
+        .aspectMask = aspect_mask,
+        .baseMipLevel = 0,
+        .levelCount = VK_REMAINING_MIP_LEVELS,
+        .baseArrayLayer = 0,
+        .layerCount = VK_REMAINING_ARRAY_LAYERS
+    };
+    return sub_image;
 }
 
 VkPipelineDepthStencilStateCreateInfo VKInit::depth_stencil_create_info(bool depth_test, bool depth_write, VkCompareOp compare_op) {

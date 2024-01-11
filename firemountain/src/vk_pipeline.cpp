@@ -12,38 +12,35 @@
 int fmVK::Pipeline::Init(
     const VkDevice device, 
     const VkExtent2D window_extent,
-    const VkRenderPass render_pass,
     const char* shader_name
-    ) 
+    )
 {
     this->_device = device;
-    this->_render_pass = render_pass;
 
-    PipelineBuilder pipeline_builder = {
-        .viewport = VkViewport {
+    PipelineBuilder pipeline_builder;
+    pipeline_builder.viewport = VkViewport {
             .x = 0.0f,
             .y = 0.0f,
             .width = (float) window_extent.width,
             .height = (float) window_extent.height,
             .minDepth = 0.0f,
             .maxDepth = 1.0f
-        },
-        .scissor = VkRect2D {
+    };
+    pipeline_builder.scissor = VkRect2D {
             .offset = {0, 0},
             .extent = window_extent
-        },
-        .pipeline_layout = this->layout,
-        .input_assembly = VKInit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST),
-        .rasterizer = VKInit::rasterization_state_create_info(VK_POLYGON_MODE_FILL),
-        .color_blend_attachment = VKInit::color_blend_attachment_state(),
-        .vertex_input_info = VKInit::vertex_input_state_create_info(),
-        .multisampling = VKInit::multisampling_state_create_info(),
-        .depth_stencil = VKInit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL)
     };
+    pipeline_builder._pipeline_layout = this->layout;
+    pipeline_builder._input_assembly = VKInit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+    pipeline_builder._rasterizer = VKInit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
+    pipeline_builder._color_blend_attachment = VKInit::color_blend_attachment_state();
+    pipeline_builder._vertex_input_info = VKInit::vertex_input_state_create_info();
+    pipeline_builder._multisampling = VKInit::multisampling_state_create_info();
+    pipeline_builder._depth_stencil = VKInit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
 
 
     // Pipeline layout
-    
+    // -------------------------------------------------------------------------
     VkPipelineLayoutCreateInfo pipeline_layout_info = VKInit::pipeline_layout_create_info();
     VkPushConstantRange push_constant = {
         .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
@@ -58,20 +55,20 @@ int fmVK::Pipeline::Init(
         nullptr,
         &this->layout
     ));
-    pipeline_builder.pipeline_layout = this->layout;
+    pipeline_builder._pipeline_layout = this->layout;
 
 
     // Shaders
-
+    // -------------------------------------------------------------------------
     VertexInputDescription vertex_description = Vertex::get_vertex_description();
-    pipeline_builder.vertex_input_info = {
+    pipeline_builder._vertex_input_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
         .vertexBindingDescriptionCount = (uint32_t) vertex_description.bindings.size(),
         .pVertexBindingDescriptions = vertex_description.bindings.data(),
         .vertexAttributeDescriptionCount = (uint32_t) vertex_description.attributes.size(),
         .pVertexAttributeDescriptions = vertex_description.attributes.data()
     };
-    pipeline_builder.shader_stages.clear();
+    pipeline_builder._shader_stages.clear();
 
     // TODO: Get shader paths from pipeline name
     if (!load_shader_module("shaders/mesh.frag.spv", &this->fragment_shader)) {
@@ -88,20 +85,9 @@ int fmVK::Pipeline::Init(
         std::cout << "Vertex shader module loaded." << std::endl;
     }
 
-    pipeline_builder.shader_stages.push_back(
-        VKInit::pipeline_shader_stage_create_info(
-            VK_SHADER_STAGE_VERTEX_BIT,
-            this->vertex_shader
-        )
-    );
-    pipeline_builder.shader_stages.push_back(
-        VKInit::pipeline_shader_stage_create_info(
-            VK_SHADER_STAGE_FRAGMENT_BIT,
-            this->fragment_shader
-        )
-    );
+    pipeline_builder.set_shaders(this->vertex_shader, this->fragment_shader);
 
-    this->pipeline = pipeline_builder.build_pipeline(this->_device, this->_render_pass);
+    this->pipeline = pipeline_builder.build_pipeline(this->_device);
 
     return true;
 }

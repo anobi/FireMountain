@@ -16,11 +16,15 @@
 struct AllocatedBuffer {
     VkBuffer buffer;
     VmaAllocation allocation;
+    VmaAllocationInfo info;
 };
 
 struct AllocatedImage {
     VkImage image;
+    VkImageView view;
     VmaAllocation allocation;
+    VkExtent3D extent;
+    VkFormat format;
 };
 
 struct MeshPushConstants {

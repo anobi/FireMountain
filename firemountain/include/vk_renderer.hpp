@@ -14,6 +14,18 @@
 
 
 namespace fmVK {
+
+    struct FrameData {
+        VkCommandPool _command_pool;
+        VkCommandBuffer _main_command_buffer;
+        VkSemaphore _render_semaphore;
+        VkSemaphore _swapchain_semaphore;
+        VkFence _render_fence;
+        DeletionQueue _deletion_queue;
+    };
+
+    constexpr unsigned int FRAME_OVERLAP = 2;
+
     class Vulkan {
     public:
         Vulkan() {};
@@ -33,7 +45,7 @@ namespace fmVK {
         std::unordered_map<std::string, fmVK::Pipeline> pipelines;
 
     private:
-        int _frame = 0;
+        int _frame_number = 0;
         bool _is_initialized = false;
         VkClearValue _clear_value = {
             .color = {{0.02f, 0.02f, 0.02f, 1.0f}}
@@ -47,36 +59,43 @@ namespace fmVK {
         VkDebugUtilsMessengerEXT _debug_messenger;
         DeletionQueue _deletion_queue;
         VmaAllocator _allocator;
-        void init_vulkan();
+        void init_vulkan(SDL_Window *window);
 
         VkSwapchainKHR _swapchain;
+        VkExtent2D _swapchain_extent;
         VkFormat _swapchain_image_format;
         std::vector<VkImage> _swapchain_images;
         std::vector<VkImageView> _swapchain_image_views;
         void init_swapchain();
+        void create_swapchain();
+        void destroy_swapchain();
 
-        VkQueue _queue;
+        VkQueue _graphics_queue;
         uint32_t _graphics_queue_family;
         VkCommandPool _command_pool;
         VkCommandBuffer _command_buffer;
         void init_commands();
 
-        VkRenderPass _render_pass;
-        std::vector<VkFramebuffer> _framebuffers;
-        void init_default_renderpass();
-        void init_framebuffers();
-
-        VkSemaphore _present_semaphore;
-        VkSemaphore _render_semaphore;
-        VkFence _render_fence;
+        FrameData _frames[FRAME_OVERLAP];
+        FrameData& get_current_frame() { return this->_frames[this->_frame_number % FRAME_OVERLAP]; }
         void init_sync_structures();
 
         // Pipelines
         void init_pipelines();
 
-        // Depth buffer
+        // Draw resources
+        AllocatedImage _draw_image;
+        VkExtent2D _draw_extent;
+
+        // Depth buffer resources
         VkFormat _depth_format;
         VkImageView _depth_image_view;
         AllocatedImage _depth_image;
+
+        void draw_background(VkCommandBuffer cmd):
+
+
+        // New stuff, where these go?
+        AllocatedBuffer create_buffer(size_t alloc_size, VkBufferUsageFlags usage, VmaMemoryUsate memory_usage);
     };
 }
