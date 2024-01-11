@@ -2,7 +2,7 @@
 #include "vk_init.hpp"
 
 
-void transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout) {
+void VKUtil::transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout) {
     
     VkImageAspectFlags aspect_mask = (new_layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL)
         ? VK_IMAGE_ASPECT_DEPTH_BIT
@@ -31,44 +31,44 @@ void transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout current_
     vkCmdPipelineBarrier2(cmd, &dependency_info);
 }
 
-void copy_image_to_image(VkCommandBuffer cmd, VkImage src, VkImage dst, VkExtent2D src_size, VkExtent2D dst_size) {
+void VKUtil::copy_image_to_image(VkCommandBuffer cmd, VkImage src, VkImage dst, VkExtent2D src_size, VkExtent2D dst_size) {
     VkImageBlit2 blit_region = { 
         .sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2,
         .pNext = nullptr,
-        .srcSubresource = {
+        .srcSubresource = (VkImageSubresourceLayers) {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .mipLevel = 0,
             .baseArrayLayer = 0,
-            .layerCount = 1,
-            .mipLevel = 0
+            .layerCount = 1
         },
         .srcOffsets[1] = VkOffset3D {
             .x = static_cast<int32_t>(src_size.width),
             .y = static_cast<int32_t>(src_size.height),
             .z = 1
         },
+        .dstSubresource = (VkImageSubresourceLayers) {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .mipLevel = 0,
+            .baseArrayLayer = 0,
+            .layerCount = 1
+        },
         .dstOffsets[1] = VkOffset3D {
             .x = static_cast<int32_t>(dst_size.width),
             .y = static_cast<int32_t>(dst_size.height),
             .z = 1
-        },
-        .dstSubresource = {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .baseArrayLayer = 0,
-            .layerCount = 1,
-            .mipLevel = 0
         }
     };
 
     VkBlitImageInfo2 blit_info = {
         .sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2,
         .pNext = nullptr,
-        .dstImage = dst,
-        .dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         .srcImage = src,
         .srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-        .filter = VK_FILTER_LINEAR,
+        .dstImage = dst,
+        .dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         .regionCount = 1,
-        .pRegions = &blit_region
+        .pRegions = &blit_region,
+        .filter = VK_FILTER_LINEAR
     };
 
     vkCmdBlitImage2(cmd, &blit_info);

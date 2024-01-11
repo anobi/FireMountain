@@ -231,7 +231,7 @@ VkImageViewCreateInfo VKInit::imageview_create_info(VkFormat format, VkImage ima
     return info;
 }
 
-VkImageSubresourceRange image_subresource_range(VkImageAspectFlags aspect_mask) {
+VkImageSubresourceRange VKInit::image_subresource_range(VkImageAspectFlags aspect_mask) {
     VkImageSubresourceRange sub_image = {
         .aspectMask = aspect_mask,
         .baseMipLevel = 0,

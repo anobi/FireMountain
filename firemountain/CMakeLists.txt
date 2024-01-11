@@ -29,6 +29,7 @@ target_sources(${PROJECT_NAME}
   PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/fm_scene.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_mesh.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_images.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_init.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_renderer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_pipeline_builder.cpp

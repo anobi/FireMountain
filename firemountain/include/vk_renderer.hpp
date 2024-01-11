@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
-#include <vk_mem_alloc.h>
+#include "vk_mem_alloc.h"
 
 #include "vk_mesh.hpp"
 #include "vk_types.hpp"
@@ -92,10 +92,11 @@ namespace fmVK {
         VkImageView _depth_image_view;
         AllocatedImage _depth_image;
 
-        void draw_background(VkCommandBuffer cmd):
+        void draw_background(VkCommandBuffer cmd);
 
 
         // New stuff, where these go?
-        AllocatedBuffer create_buffer(size_t alloc_size, VkBufferUsageFlags usage, VmaMemoryUsate memory_usage);
+        AllocatedBuffer create_buffer(size_t alloc_size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage);
+        void destroy_buffer(const AllocatedBuffer &buffer);
     };
 }

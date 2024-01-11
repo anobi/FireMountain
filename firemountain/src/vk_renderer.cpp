@@ -59,8 +59,8 @@ void fmVK::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
     VK_CHECK(vkBeginCommandBuffer(command_buffer, &command_buffer_begin));
 
     VKUtil::transition_image(
-        command_buffer, 
-        this->_draw_image,
+        command_buffer,
+        this->_draw_image.image,
         VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_GENERAL
     );
@@ -69,7 +69,7 @@ void fmVK::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
 
     VKUtil::transition_image(
         command_buffer, 
-        this->_draw_image,
+        this->_draw_image.image,
         VK_IMAGE_LAYOUT_GENERAL,
         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
     );
@@ -82,7 +82,7 @@ void fmVK::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
 
     VKUtil::copy_image_to_image(
         command_buffer,
-        _draw_image.image,
+        this->_draw_image.image,
         _swapchain_images[swapchain_image_index],
         this->_draw_extent,
         this->_swapchain_extent
@@ -207,24 +207,28 @@ void fmVK::Vulkan::Destroy() {
 }
 
 void fmVK::Vulkan::UploadMesh(Mesh &mesh) {
-    VkBufferCreateInfo buffer_info = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = mesh.vertices.size() * sizeof(Vertex),
-        .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
-    };
 
-    VmaAllocationCreateInfo vma_alloc_info = {
-        .usage = VMA_MEMORY_USAGE_CPU_TO_GPU
-    };
+    const size_t vertex_buffer_size = mesh.vertices.size() * sizeof(Vertex);
+    const size_t index_buffer_size = mesh.indices.size() * sizeof(uint32_t);
 
-    VK_CHECK(vmaCreateBuffer(
-        this->_allocator, 
-        &buffer_info, 
-        &vma_alloc_info,
-        &mesh._vertex_buffer.buffer,
-        &mesh._vertex_buffer.allocation,
-        nullptr
-    ));
+    GPUMeshBuffers surface;
+
+    VkBufferUsageFlags vertex_buffer_flags = 
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
+        | VK_BUFFER_USAGE_TRANSFER_DST_BIT
+        | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+    surface.vertex_buffer = create_buffer(vertex_buffer_size, vertex_buffer_flags, VMA_MEMORY_USAGE_GPU_ONLY);
+
+    VkBufferDeviceAddressInfo device_address_info  {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+        .buffer = surface.vertex_buffer.buffer
+    };
+    surface.vertex_buffer_address = vkGetBufferDeviceAddress(this->_device, &device_address_info);
+
+    VkBufferUsageFlags index_buffer_flags = 
+         VK_BUFFER_USAGE_INDEX_BUFFER_BIT 
+         | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    surface.index_buffer = create_buffer(index_buffer_size, index_buffer_flags, VMA_MEMORY_USAGE_GPU_ONLY);
 
     this->_deletion_queue.push_function([=, this]() {
         vmaDestroyBuffer(this->_allocator, mesh._vertex_buffer.buffer, mesh._vertex_buffer.allocation);
@@ -475,15 +479,23 @@ void fmVK::Vulkan::draw_background(VkCommandBuffer cmd) {
     vkCmdClearColorImage(cmd, this->_draw_image.image, VK_IMAGE_LAYOUT_GENERAL, &clear_value.color, 1, &clear_range);
 }
 
+AllocatedBuffer fmVK::Vulkan::create_buffer(size_t alloc_size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage) {
+    VkBufferCreateInfo buffer_info = { 
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .pNext = nullptr,
+        .size = alloc_size,
+        .usage = usage
+    };
+    VmaAllocationCreateInfo vma_malloc_info = {
+        .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT,
+        .usage = memory_usage
+    };
 
-// AllocatedBuffer create_buffer(size_t alloc_size, VkBufferUsageFlags usage, VmaMemoryUsate memory_usage) {
-//     VkBufferCreateInfo buffer_info = { 
-//         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-//         .pNext = nullptr,
-//         .size = alloc_size,
-//         .usage = usage
-//     };
-//     // VmaAllocationCreateInfo vma_malloc_info = {
-//     //     .
-//     // }
-// }
+    AllocatedBuffer buffer;
+    VK_CHECK(vmaCreateBuffer(this->_allocator, &buffer_info, &vma_malloc_info, &buffer.buffer, &buffer.allocation, &buffer.info));
+    return buffer;
+}
+
+void fmVK::Vulkan::destroy_buffer(const AllocatedBuffer &buffer) {
+    vmaDestroyBuffer(this->_allocator, buffer.buffer, buffer.allocation);
+}
