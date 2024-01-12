@@ -8,6 +8,7 @@
 #include "vk_mesh.hpp"
 #include "vk_types.hpp"
 #include "vk_pipeline.hpp"
+#include "vk_descriptors.hpp"
 
 #include "fm_utils.hpp"
 #include "fm_renderable.hpp"
@@ -22,6 +23,13 @@ namespace fmVK {
         VkSemaphore _swapchain_semaphore;
         VkFence _render_fence;
         DeletionQueue _deletion_queue;
+    };
+
+    struct ComputePushConstants {
+        glm::fvec4 data_1;
+        glm::fvec4 data_2;
+        glm::fvec4 data_3;
+        glm::fvec4 data_4;
     };
 
     constexpr unsigned int FRAME_OVERLAP = 2;
@@ -80,6 +88,12 @@ namespace fmVK {
         FrameData& get_current_frame() { return this->_frames[this->_frame_number % FRAME_OVERLAP]; }
         void init_sync_structures();
 
+        // Immediate submit structures
+        VkFence _immediate_fence;
+        VkCommandBuffer _immediate_command_buffer;
+        VkCommandPool _immediate_command_pool;
+        void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
+
         // Pipelines
         void init_pipelines();
 
@@ -93,10 +107,16 @@ namespace fmVK {
         AllocatedImage _depth_image;
 
         void draw_background(VkCommandBuffer cmd);
-
+        void draw_geometry(VkCommandBuffer cmd);
 
         // New stuff, where these go?
         AllocatedBuffer create_buffer(size_t alloc_size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage);
         void destroy_buffer(const AllocatedBuffer &buffer);
+
+        // Descriptor sets
+        DescriptorAllocator global_descriptor_allocator;
+        VkDescriptorSet _draw_image_descriptors;
+        VkDescriptorSetLayout _draw_image_descriptor_layout;
+        void init_descriptors();
     };
 }

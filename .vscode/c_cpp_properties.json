@@ -22,7 +22,10 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/_deps/**"
+                "${workspaceFolder}/_deps/",
+                "${workspaceFolder}/_deps/vk-bootstrap-src/src/",
+                "${workspaceFolder}/_deps/tinyobjloader-src",
+                "${workspaceFolder}/_deps/vulkanmemoryallocator-src/include"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang++",

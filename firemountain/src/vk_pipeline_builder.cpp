@@ -130,3 +130,34 @@ void fmVK::PipelineBuilder::disable_depth_test() {
     this->_depth_stencil.minDepthBounds = 0.0f;
     this->_depth_stencil.maxDepthBounds = 1.0f;
 }
+
+
+void fmVK::PipelineBuilder::enable_blending_additive() {
+    this->_color_blend_attachment.colorWriteMask =
+        VK_COLOR_COMPONENT_R_BIT
+        | VK_COLOR_COMPONENT_G_BIT
+        | VK_COLOR_COMPONENT_B_BIT
+        | VK_COLOR_COMPONENT_A_BIT;
+    this->_color_blend_attachment.blendEnable = VK_TRUE;
+    this->_color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+    this->_color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
+    this->_color_blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
+    this->_color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    this->_color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    this->_color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
+}
+
+void fmVK::PipelineBuilder::enable_blending_alphablend() {
+    this->_color_blend_attachment.colorWriteMask =
+        VK_COLOR_COMPONENT_R_BIT
+        | VK_COLOR_COMPONENT_G_BIT
+        | VK_COLOR_COMPONENT_B_BIT
+        | VK_COLOR_COMPONENT_A_BIT;
+    this->_color_blend_attachment.blendEnable = VK_TRUE;
+    this->_color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+    this->_color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
+    this->_color_blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
+    this->_color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    this->_color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    this->_color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
+}

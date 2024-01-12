@@ -1,4 +1,4 @@
-#include <vk_init.hpp>
+#include "vk_init.hpp"
 
 VkCommandPoolCreateInfo VKInit::command_pool_create_info(
     uint32_t queue_family_index,
@@ -255,4 +255,26 @@ VkPipelineDepthStencilStateCreateInfo VKInit::depth_stencil_create_info(bool dep
         .maxDepthBounds = 1.0f,
     };
     return info;
+}
+
+VkRenderingAttachmentInfo VKInit::attachment_info(VkImageView view, VkClearValue *clear, VkImageLayout layout)
+{
+    VkRenderingAttachmentInfo attachment = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .pNext = nullptr,
+        .imageView = view,
+        .imageLayout = layout,
+        .loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD
+    };
+
+    if (clear) {
+        attachment.clearValue = *clear;
+    }
+
+    return attachment;
+}
+
+VkRenderingAttachmentInfo VKInit::depth_attachment_info(VkImageView view, VkImageLayout layout)
+{
+    return VkRenderingAttachmentInfo();
 }

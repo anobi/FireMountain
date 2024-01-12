@@ -9,14 +9,8 @@
 #include "vk_pipeline_builder.hpp"
 
 
-int fmVK::Pipeline::Init(
-    const VkDevice device, 
-    const VkExtent2D window_extent,
-    const char* shader_name
-    )
+int fmVK::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, const char* shader_name)
 {
-    this->_device = device;
-
     PipelineBuilder pipeline_builder;
     pipeline_builder.viewport = VkViewport {
             .x = 0.0f,
@@ -39,6 +33,19 @@ int fmVK::Pipeline::Init(
     pipeline_builder._depth_stencil = VKInit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
 
 
+    // Compute layout
+    // -------------------------------------------------------------------------
+    VkPipelineLayoutCreateInfo compute_layout = VKInit::pipeline_layout_create_info();
+    compute_layout.pSetLayouts = &this->_draw_image_descriptor_layout;
+    compute_layout.setLayoutCount = 1;
+    VkPushConstantRange compute_constants = {
+        .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+        .offset = 0,
+        .size = sizeof(ComputePushConstants)
+    };
+    VK_CHECK(vkCreatePipelineLayout(device, &compute_layout, nullptr, &this->layout));
+
+
     // Pipeline layout
     // -------------------------------------------------------------------------
     VkPipelineLayoutCreateInfo pipeline_layout_info = VKInit::pipeline_layout_create_info();
@@ -50,7 +57,7 @@ int fmVK::Pipeline::Init(
     pipeline_layout_info.pPushConstantRanges = &push_constant;
     pipeline_layout_info.pushConstantRangeCount = 1;
     VK_CHECK(vkCreatePipelineLayout(
-        this->_device,
+        device,
         &pipeline_layout_info,
         nullptr,
         &this->layout
@@ -71,36 +78,46 @@ int fmVK::Pipeline::Init(
     pipeline_builder._shader_stages.clear();
 
     // TODO: Get shader paths from pipeline name
-    if (!load_shader_module("shaders/mesh.frag.spv", &this->fragment_shader)) {
+    if (!load_shader_module("shaders/mesh.frag.spv", device, &this->fragment_shader)) {
         std::cout << "Error building fragment shader module" << std::endl;
     }
     else {
         std::cout << "Fragment shader module loaded." << std::endl;
     }
 
-    if (!load_shader_module("shaders/mesh.vert.spv", &this->vertex_shader)) {
+    if (!load_shader_module("shaders/mesh.vert.spv", device, &this->vertex_shader)) {
         std::cout << "Error building vertex shader module" << std::endl;
     } 
     else {
         std::cout << "Vertex shader module loaded." << std::endl;
     }
 
+    if (!load_shader_module("shaders/mesh.comp.spv", device, &this->compute_shader)) {
+        std::cout << "Error building compute shader module" << std::endl;
+    } 
+    else {
+        std::cout << "Compute shader module loaded." << std::endl;
+    }
+
     pipeline_builder.set_shaders(this->vertex_shader, this->fragment_shader);
 
-    this->pipeline = pipeline_builder.build_pipeline(this->_device);
+    pipeline_builder.enable_blending_additive();
+
+    this->pipeline = pipeline_builder.build_pipeline(device);
+
+    vkDestroyShaderModule(device, this->fragment_shader, nullptr);
+    vkDestroyShaderModule(device, this->vertex_shader, nullptr);
 
     return true;
 }
 
-void fmVK::Pipeline::Cleanup() {
-    vkDestroyShaderModule(this->_device, this->fragment_shader, nullptr);
-    vkDestroyShaderModule(this->_device, this->vertex_shader, nullptr);
-    vkDestroyPipeline(this->_device, this->pipeline, nullptr);
-    vkDestroyPipelineLayout(this->_device, this->layout, nullptr);
+void fmVK::Pipeline::Cleanup(const VkDevice device) {
+    vkDestroyPipeline(device, this->pipeline, nullptr);
+    vkDestroyPipelineLayout(device, this->layout, nullptr);
 }
 
 
-bool fmVK::Pipeline::load_shader_module(const char *file_path, VkShaderModule *out)
+bool fmVK::Pipeline::load_shader_module(const char *file_path, const VkDevice device, VkShaderModule *out)
 {
     // TODO: Move this to a file reading utility function
     std::ifstream file(file_path, std::ios::ate | std::ios::binary);
@@ -124,7 +141,7 @@ bool fmVK::Pipeline::load_shader_module(const char *file_path, VkShaderModule *o
     };
 
     VkShaderModule shader_module;
-    if (vkCreateShaderModule(this->_device, &create_info, nullptr, &shader_module) != VK_SUCCESS) {
+    if (vkCreateShaderModule(device, &create_info, nullptr, &shader_module) != VK_SUCCESS) {
         return false;
     }
 

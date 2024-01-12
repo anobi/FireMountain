@@ -1,4 +1,3 @@
-#include <iostream>
 #include <fstream>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
@@ -24,6 +23,7 @@ int fmVK::Vulkan::Init(const uint32_t width, const uint32_t height, SDL_Window* 
     this->init_swapchain();
     this->init_commands();
     this->init_sync_structures();
+    this->init_descriptors();
     this->init_pipelines();
 
     this->_is_initialized = true;
@@ -33,7 +33,6 @@ int fmVK::Vulkan::Init(const uint32_t width, const uint32_t height, SDL_Window* 
 
 void fmVK::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
     VK_CHECK(vkWaitForFences(this->_device, 1, &get_current_frame()._render_fence, true, 1000000000));
-    VK_CHECK(vkResetFences(this->_device, 1, &get_current_frame()._render_fence));
     get_current_frame()._deletion_queue.flush();
 
     // Request image from the swapchain
@@ -52,133 +51,53 @@ void fmVK::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
     this->_draw_extent.width = this->_draw_image.extent.width;
     this->_draw_extent.height = this->_draw_image.extent.height;
 
-    auto command_buffer = this->get_current_frame()._main_command_buffer;
-    VK_CHECK(vkResetCommandBuffer(command_buffer, 0));
+    VK_CHECK(vkResetFences(this->_device, 1, &get_current_frame()._render_fence));
+    VK_CHECK(vkResetCommandBuffer(this->get_current_frame()._main_command_buffer, 0));
 
+    auto command_buffer = this->get_current_frame()._main_command_buffer;
     auto command_buffer_begin = VKInit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+    // Start drawing
     VK_CHECK(vkBeginCommandBuffer(command_buffer, &command_buffer_begin));
 
-    VKUtil::transition_image(
-        command_buffer,
-        this->_draw_image.image,
-        VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_GENERAL
-    );
+    VKUtil::transition_image(command_buffer, this->_draw_image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
     draw_background(command_buffer);
 
-    VKUtil::transition_image(
-        command_buffer, 
-        this->_draw_image.image,
-        VK_IMAGE_LAYOUT_GENERAL,
-        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
-    );
-    VKUtil::transition_image(
-        command_buffer, 
-        this->_swapchain_images[swapchain_image_index],
-        VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-    );
+    VKUtil::transition_image(command_buffer, this->_draw_image.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    VKUtil::transition_image(command_buffer, this->_depth_image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
 
-    VKUtil::copy_image_to_image(
-        command_buffer,
-        this->_draw_image.image,
-        _swapchain_images[swapchain_image_index],
-        this->_draw_extent,
-        this->_swapchain_extent
-    );
+    draw_geometry(command_buffer);
 
-    VKUtil::transition_image(
-        command_buffer, 
-        this->_swapchain_images[swapchain_image_index],
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-    );
+    // Transfer draw image and swapchain image to transfer layouts
+    VKUtil::transition_image(command_buffer, this->_draw_image.image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    VKUtil::transition_image(command_buffer, this->_swapchain_images[swapchain_image_index], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
+    // Copy draw image into the swapchain
+    VKUtil::copy_image_to_image(command_buffer, this->_draw_image.image, _swapchain_images[swapchain_image_index], this->_draw_extent, this->_swapchain_extent);
+
+    // Set swapchain image layout to PRESENT
+    VKUtil::transition_image(command_buffer, this->_swapchain_images[swapchain_image_index], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
+    // Finalize command buffer
     VK_CHECK(vkEndCommandBuffer(command_buffer));
 
 
-    // Old draw
-
-    // Update and push constants
-    // glm::vec3 camera_position = {0.0f, 0.0f, -5.0f};
-    // glm::mat4 view = glm::translate(glm::mat4(1.0f), camera_position);
-    // glm::mat4 projection = glm::perspective(
-    //     glm::radians(70.0f), 
-    //     (float) this->_window_extent.width / (float) this->_window_extent.height,
-    //     0.1f,
-    //     200.0f
-    // );
-    // projection[1][1] *= -1;
-
-    // Mesh* bound_mesh = nullptr;
-    // Material* bound_material = nullptr;
-    // for (int i = 0; i < render_object_count; i++) {
-    //     RenderObject& object = render_objects[i];
-    //     if (object.material != bound_material) {
-    //         vkCmdBindPipeline(
-    //             command_buffer,
-    //             VK_PIPELINE_BIND_POINT_GRAPHICS,
-    //             object.material->pipeline
-    //         );
-    //         bound_material = object.material;
-    //     }
-
-    //     glm::mat4 model = object.transform;
-    //     glm::mat4 mvp = projection * view * model;
-    //     MeshPushConstants constants = { .render_matrix = mvp};
-
-    //     vkCmdPushConstants(
-    //         command_buffer, 
-    //         object.material->pipeline_layout, 
-    //         VK_SHADER_STAGE_VERTEX_BIT,
-    //         0,
-    //         sizeof(MeshPushConstants),
-    //         &constants
-    //     );
-
-    //     if (object.mesh != bound_mesh) {
-    //         VkDeviceSize offset = 0;
-    //         vkCmdBindVertexBuffers(
-    //             command_buffer, 
-    //             0, 
-    //             1, 
-    //             &object.mesh->_vertex_buffer.buffer,
-    //             &offset
-    //         );
-    //         bound_mesh = object.mesh;
-    //     }
-        
-    //     vkCmdDraw(command_buffer, object.mesh->vertices.size(), 1, 0, 0);
-    // }
-    
-    // VKUtil::transition_image(command_buffer, _swapchain_images[swapchain_image_index],
-    // VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-    // VK_CHECK(vkEndCommandBuffer(command_buffer));
-
-    // Submit the framebuffer to the GPU
-    auto swapchain_semaphore = this->get_current_frame()._swapchain_semaphore;
-    auto render_semaphore = this->get_current_frame()._render_semaphore;
-    auto render_fence = this->get_current_frame()._render_fence;
-
     auto cmd_info = VKInit::command_buffer_submit_info(command_buffer);
-    auto wait_info = VKInit::semaphore_submit_info(
-        VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
-        swapchain_semaphore);
-    auto signal_info = VKInit::semaphore_submit_info(
-        VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT, 
-        render_semaphore);
+    auto wait_info = VKInit::semaphore_submit_info(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR, this->get_current_frame()._swapchain_semaphore);
+    auto signal_info = VKInit::semaphore_submit_info(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT, this->get_current_frame()._render_semaphore);
 
     VkSubmitInfo2 submit_info = VKInit::submit_info(&cmd_info, &signal_info, &wait_info);
 
-    VK_CHECK(vkQueueSubmit2(this->_graphics_queue, 1, &submit_info, render_fence));
+    VK_CHECK(vkQueueSubmit2(this->_graphics_queue, 1, &submit_info, this->get_current_frame()._render_fence));
 
     // Present the image to the screen
+    // TODO move this to vkinit utils
     VkPresentInfoKHR present_info = {
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
         .pNext = nullptr,
         .waitSemaphoreCount = 1,
-        .pWaitSemaphores = &render_semaphore,
+        .pWaitSemaphores = &this->get_current_frame()._render_semaphore,
         .swapchainCount = 1,
         .pSwapchains = &this->_swapchain,
         .pImageIndices = &swapchain_image_index
@@ -207,10 +126,8 @@ void fmVK::Vulkan::Destroy() {
 }
 
 void fmVK::Vulkan::UploadMesh(Mesh &mesh) {
-
     const size_t vertex_buffer_size = mesh.vertices.size() * sizeof(Vertex);
     const size_t index_buffer_size = mesh.indices.size() * sizeof(uint32_t);
-
     GPUMeshBuffers surface;
 
     VkBufferUsageFlags vertex_buffer_flags = 
@@ -230,14 +147,39 @@ void fmVK::Vulkan::UploadMesh(Mesh &mesh) {
          | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     surface.index_buffer = create_buffer(index_buffer_size, index_buffer_flags, VMA_MEMORY_USAGE_GPU_ONLY);
 
+    AllocatedBuffer staging = create_buffer(
+        vertex_buffer_size + index_buffer_size,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VMA_MEMORY_USAGE_CPU_ONLY
+    );
+    void* data;
+    memcpy(data, mesh.vertices.data(), vertex_buffer_size);
+    memcpy((char*)data + vertex_buffer_size, mesh.indices.data(), index_buffer_size);
+    immediate_submit([&](VkCommandBuffer cmd) {
+        VkBufferCopy vertex_copy {
+            .dstOffset = 0,
+            .srcOffset = 0,
+            .size = vertex_buffer_size
+        };
+        vkCmdCopyBuffer(cmd, staging.buffer, surface.vertex_buffer.buffer, 1, &vertex_copy);
+
+        VkBufferCopy index_copy {
+            .dstOffset = 0,
+            .srcOffset = vertex_buffer_size,
+            .size = index_buffer_size
+        };
+        vkCmdCopyBuffer(cmd, staging.buffer, surface.index_buffer.buffer, 1, &index_copy);
+    });
+    destroy_buffer(staging);
+
     this->_deletion_queue.push_function([=, this]() {
         vmaDestroyBuffer(this->_allocator, mesh._vertex_buffer.buffer, mesh._vertex_buffer.allocation);
     });
 
-    void* data;
-    vmaMapMemory(this->_allocator, mesh._vertex_buffer.allocation, &data);
-    memcpy(data, mesh.vertices.data(), mesh.vertices.size() * sizeof(Vertex));
-    vmaUnmapMemory(this->_allocator, mesh._vertex_buffer.allocation);
+    
+    // vmaMapMemory(this->_allocator, mesh._vertex_buffer.allocation, &data);
+    // memcpy(data, mesh.vertices.data(), mesh.vertices.size() * sizeof(Vertex));
+    // vmaUnmapMemory(this->_allocator, mesh._vertex_buffer.allocation);
 }
 
 
@@ -452,6 +394,29 @@ void fmVK::Vulkan::init_sync_structures() {
             vkDestroyFence(this->_device, this->_frames[i]._render_fence, nullptr);
         });
     }
+
+    VK_CHECK(vkCreateFence(this->_device, &fence_create_info, nullptr, &this->_immediate_fence));
+    this->_deletion_queue.push_function([=]() { vkDestroyFence(this->_device, this->_immediate_fence, nullptr); });
+}
+
+void fmVK::Vulkan::immediate_submit(std::function<void(VkCommandBuffer cmd)> &&function) {
+    VK_CHECK(vkResetFences(this->_device, 1, &_immediate_fence));
+    VK_CHECK(vkResetCommandBuffer(this->_immediate_command_buffer, 0));
+
+    VkCommandBuffer cmd = this->_immediate_command_buffer;
+    VkCommandBufferBeginInfo cmd_begin_info = VKInit::command_buffer_begin_info(
+        VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+    );
+    VK_CHECK(vkBeginCommandBuffer(cmd, &cmd_begin_info));
+
+    function(cmd);
+
+    VK_CHECK(vkEndCommandBuffer(cmd));
+
+    VkCommandBufferSubmitInfo cmd_info = VKInit::command_buffer_submit_info(cmd);
+    VkSubmitInfo2 submit = VKInit::submit_info(&cmd_info, nullptr, nullptr);
+    VK_CHECK(vkQueueSubmit2(this->_graphics_queue, 1, &submit, this->_immediate_fence));
+    VK_CHECK(vkWaitForFences(this->_device, 1, &this->_immediate_fence, true, 9999999999));
 }
 
 void fmVK::Vulkan::init_pipelines() {
@@ -459,7 +424,7 @@ void fmVK::Vulkan::init_pipelines() {
     mesh_pipeline.Init(this->_device, this->_window_extent, "mesh");
 
     this->pipelines["mesh"] = mesh_pipeline;
-    this->_deletion_queue.push_function([=, this]() { this->pipelines["mesh"].Cleanup(); });
+    this->_deletion_queue.push_function([=, this]() { this->pipelines["mesh"].Cleanup(this->_device); });
 }
 
 void fmVK::Vulkan::draw_background(VkCommandBuffer cmd) {
@@ -479,6 +444,63 @@ void fmVK::Vulkan::draw_background(VkCommandBuffer cmd) {
     vkCmdClearColorImage(cmd, this->_draw_image.image, VK_IMAGE_LAYOUT_GENERAL, &clear_value.color, 1, &clear_range);
 }
 
+void fmVK::Vulkan::draw_geometry(VkCommandBuffer cmd) {
+    VkRenderingAttachmentInfo color_attachment = VKInit::attachement_info(this->_draw_image.view, nullptr, VK_IMAGE_LAYOUT_GENERAL);
+    VkRenderingAttachmentInfo depth_attachment = VKInit::depth_attachment_info(this->_depth_image.view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+
+    // Update and push constants
+    glm::vec3 camera_position = {0.0f, 0.0f, -5.0f};
+    glm::mat4 view = glm::translate(glm::mat4(1.0f), camera_position);
+    glm::mat4 projection = glm::perspective(
+        glm::radians(70.0f), 
+        (float) this->_window_extent.width / (float) this->_window_extent.height,
+        0.1f,
+        200.0f
+    );
+    projection[1][1] *= -1;
+
+    Mesh* bound_mesh = nullptr;
+    Material* bound_material = nullptr;
+    for (int i = 0; i < _render_object_count; i++) {
+        RenderObject& object = render_objects[i];
+        if (object.material != bound_material) {
+            vkCmdBindPipeline(
+                command_buffer,
+                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                object.material->pipeline
+            );
+            bound_material = object.material;
+        }
+
+        glm::mat4 model = object.transform;
+        glm::mat4 mvp = projection * view * model;
+        MeshPushConstants constants = { .render_matrix = mvp};
+
+        vkCmdPushConstants(
+            command_buffer, 
+            object.material->pipeline_layout, 
+            VK_SHADER_STAGE_VERTEX_BIT,
+            0,
+            sizeof(MeshPushConstants),
+            &constants
+        );
+
+        if (object.mesh != bound_mesh) {
+            VkDeviceSize offset = 0;
+            vkCmdBindVertexBuffers(
+                command_buffer, 
+                0, 
+                1, 
+                &object.mesh->_vertex_buffer.buffer,
+                &offset
+            );
+            bound_mesh = object.mesh;
+        }
+        
+        vkCmdDraw(command_buffer, object.mesh->vertices.size(), 1, 0, 0);
+    }
+}
+
 AllocatedBuffer fmVK::Vulkan::create_buffer(size_t alloc_size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage) {
     VkBufferCreateInfo buffer_info = { 
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -493,9 +515,47 @@ AllocatedBuffer fmVK::Vulkan::create_buffer(size_t alloc_size, VkBufferUsageFlag
 
     AllocatedBuffer buffer;
     VK_CHECK(vmaCreateBuffer(this->_allocator, &buffer_info, &vma_malloc_info, &buffer.buffer, &buffer.allocation, &buffer.info));
+    
     return buffer;
 }
 
 void fmVK::Vulkan::destroy_buffer(const AllocatedBuffer &buffer) {
     vmaDestroyBuffer(this->_allocator, buffer.buffer, buffer.allocation);
+}
+
+
+// =================
+//  Descriptor sets
+// =================
+
+void fmVK::Vulkan::init_descriptors() {
+    std::vector<DescriptorAllocator::PoolSizeRatio> sizes = {
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 }
+    };
+
+    this->global_descriptor_allocator.init_pool(this->_device, 10, sizes);
+
+    {
+        DescriptorLayoutBuilder builder;
+        builder.add_binding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+        this->_draw_image_descriptor_layout  = builder.build(this->_device, VK_SHADER_STAGE_COMPUTE_BIT);
+    }
+
+    this->_draw_image_descriptors = this->global_descriptor_allocator.allocate(this->_device, this->_draw_image_descriptor_layout);
+
+    VkDescriptorImageInfo image_info = {
+        .imageView = this->_draw_image.view,
+        .imageLayout = VK_IMAGE_LAYOUT_GENERAL
+    };
+
+    VkWriteDescriptorSet draw_image_write = {
+        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        .pNext = nullptr,
+        .dstSet = this ->_draw_image_descriptors,
+        .dstBinding = 0,
+        .descriptorCount = 1,
+        .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+        .pImageInfo = &image_info
+    };
+    vkUpdateDescriptorSets(this->_device, 1, &draw_image_write, 0, nullptr);
 }

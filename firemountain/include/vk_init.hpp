@@ -51,4 +51,8 @@ namespace VKInit {
     VkImageSubresourceRange image_subresource_range(VkImageAspectFlags aspect_mask);
     VkImageViewCreateInfo imageview_create_info(VkFormat format, VkImage image, VkImageAspectFlags aspect_flags);
     VkPipelineDepthStencilStateCreateInfo depth_stencil_create_info(bool depth_test, bool depth_write, VkCompareOp compare_op);
+
+    VkRenderingAttachmentInfo attachment_info(VkImageView view, VkClearValue* clear, VkImageLayout layout);
+    VkRenderingAttachmentInfo depth_attachment_info(VkImageView view, VkImageLayout layout);
+
 }

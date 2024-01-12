@@ -9,10 +9,10 @@ add_library(${PROJECT_NAME} STATIC)
 # ---------------------------------------------------------------
 find_package(Vulkan REQUIRED)
 
-target_link_libraries(${PROJECT_NAME} 
+target_link_libraries(${PROJECT_NAME}
   Vulkan::Vulkan
   vk-bootstrap::vk-bootstrap
-  VulkanMemoryAllocator
+  GPUOpen::VulkanMemoryAllocator
   tinyobjloader
   glm
 )
@@ -34,6 +34,7 @@ target_sources(${PROJECT_NAME}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_renderer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_pipeline_builder.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_pipeline.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_descriptors.cpp
 )
 
 target_include_directories(${PROJECT_NAME}

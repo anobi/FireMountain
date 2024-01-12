@@ -26,6 +26,9 @@ namespace fmVK {
         void disable_blending();
         void disable_depth_test();
 
+        void enable_blending_additive();
+        void enable_blending_alphablend();
+
         std::vector<VkPipelineShaderStageCreateInfo> _shader_stages;
         VkPipelineLayout _pipeline_layout;
         VkPipelineInputAssemblyStateCreateInfo _input_assembly;
