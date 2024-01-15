@@ -15,7 +15,6 @@
 
 
 namespace fmVK {
-
     struct FrameData {
         VkCommandPool _command_pool;
         VkCommandBuffer _main_command_buffer;
@@ -23,13 +22,6 @@ namespace fmVK {
         VkSemaphore _swapchain_semaphore;
         VkFence _render_fence;
         DeletionQueue _deletion_queue;
-    };
-
-    struct ComputePushConstants {
-        glm::fvec4 data_1;
-        glm::fvec4 data_2;
-        glm::fvec4 data_3;
-        glm::fvec4 data_4;
     };
 
     constexpr unsigned int FRAME_OVERLAP = 2;
@@ -47,10 +39,12 @@ namespace fmVK {
         void CreateMaterial();
         void CreatePipeline(const char* shader_name);
 
+        
         VkPipeline GetPipeline(const char* name) { return this->pipelines[name].pipeline; }
         VkPipelineLayout GetPipelineLayout(const char* name) { return this->pipelines[name].layout; }
 
         std::unordered_map<std::string, fmVK::Pipeline> pipelines;
+        std::unordered_map<std::string, fmVK::ComputePipeline> compute_pipelines;
 
     private:
         int _frame_number = 0;
@@ -96,18 +90,16 @@ namespace fmVK {
 
         // Pipelines
         void init_pipelines();
+        int init_pipeline(const VkDevice device, const VkExtent2D window_extent, const char* shader_name);
 
         // Draw resources
         AllocatedImage _draw_image;
-        VkExtent2D _draw_extent;
-
-        // Depth buffer resources
-        VkFormat _depth_format;
-        VkImageView _depth_image_view;
         AllocatedImage _depth_image;
+        VkExtent2D _draw_extent;
+ 
 
         void draw_background(VkCommandBuffer cmd);
-        void draw_geometry(VkCommandBuffer cmd);
+        void draw_geometry(VkCommandBuffer cmd, RenderObject* render_objects, uint32_t render_object_count);
 
         // New stuff, where these go?
         AllocatedBuffer create_buffer(size_t alloc_size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage);

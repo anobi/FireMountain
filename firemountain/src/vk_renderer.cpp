@@ -63,13 +63,11 @@ void fmVK::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
     VKUtil::transition_image(command_buffer, this->_draw_image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
     draw_background(command_buffer);
-
     VKUtil::transition_image(command_buffer, this->_draw_image.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     VKUtil::transition_image(command_buffer, this->_depth_image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
 
-    draw_geometry(command_buffer);
-
-    // Transfer draw image and swapchain image to transfer layouts
+    // Draw meshes, transfer the draw image and the swapchain image to transfer layouts
+    draw_geometry(command_buffer, render_objects, render_object_count);
     VKUtil::transition_image(command_buffer, this->_draw_image.image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
     VKUtil::transition_image(command_buffer, this->_swapchain_images[swapchain_image_index], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
@@ -157,15 +155,15 @@ void fmVK::Vulkan::UploadMesh(Mesh &mesh) {
     memcpy((char*)data + vertex_buffer_size, mesh.indices.data(), index_buffer_size);
     immediate_submit([&](VkCommandBuffer cmd) {
         VkBufferCopy vertex_copy {
-            .dstOffset = 0,
             .srcOffset = 0,
+            .dstOffset = 0,
             .size = vertex_buffer_size
         };
         vkCmdCopyBuffer(cmd, staging.buffer, surface.vertex_buffer.buffer, 1, &vertex_copy);
 
         VkBufferCopy index_copy {
-            .dstOffset = 0,
             .srcOffset = vertex_buffer_size,
+            .dstOffset = 0,
             .size = index_buffer_size
         };
         vkCmdCopyBuffer(cmd, staging.buffer, surface.index_buffer.buffer, 1, &index_copy);
@@ -179,7 +177,7 @@ void fmVK::Vulkan::UploadMesh(Mesh &mesh) {
     
     // vmaMapMemory(this->_allocator, mesh._vertex_buffer.allocation, &data);
     // memcpy(data, mesh.vertices.data(), mesh.vertices.size() * sizeof(Vertex));
-    // vmaUnmapMemory(this->_allocator, mesh._vertex_buffer.allocation);
+    vmaUnmapMemory(this->_allocator, mesh._vertex_buffer.allocation);
 }
 
 
@@ -303,10 +301,10 @@ void fmVK::Vulkan::create_swapchain() {
     //
     // Create depth buffer images and views
     //
-    this->_depth_format = VK_FORMAT_D32_SFLOAT;
+    this->_depth_image.format = VK_FORMAT_D32_SFLOAT;
     
     VkImageCreateInfo depth_image_info = VKInit::image_create_info(
-        this->_depth_format,
+        this->_depth_image.format,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
         render_image_extent
     );
@@ -315,24 +313,24 @@ void fmVK::Vulkan::create_swapchain() {
         .requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
     };
     vmaCreateImage(
-        this->_allocator, 
-        &depth_image_info, 
-        &depth_image_allocation_info, 
+        this->_allocator,
+        &depth_image_info,
+        &depth_image_allocation_info,
         &this->_depth_image.image,
         &this->_depth_image.allocation,
         nullptr
     );
     VkImageViewCreateInfo depth_view_info = VKInit::imageview_create_info(
-        this->_depth_format,
+        this->_depth_image.format,
         this->_depth_image.image,
         VK_IMAGE_ASPECT_DEPTH_BIT
     );
-    VK_CHECK(vkCreateImageView(this->_device, &depth_view_info, nullptr, &this->_depth_image_view));
+    VK_CHECK(vkCreateImageView(this->_device, &depth_view_info, nullptr, &this->_depth_image.view));
 
     this->_deletion_queue.push_function([=, this]() {
         vkDestroySwapchainKHR(this->_device, this->_swapchain, nullptr);
         for (int i = 0; i < this->_swapchain_image_views.size(); i++) {
-            vkDestroyImageView(this->_device, this->_depth_image_view, nullptr);
+            vkDestroyImageView(this->_device, this->_depth_image.view, nullptr);
             vmaDestroyImage(this->_allocator, this->_depth_image.image, this->_depth_image.allocation);
             vkDestroyImageView(this->_device, this->_draw_image.view, nullptr);
             vmaDestroyImage(this->_allocator, this->_draw_image.image, this->_draw_image.allocation);
@@ -420,33 +418,62 @@ void fmVK::Vulkan::immediate_submit(std::function<void(VkCommandBuffer cmd)> &&f
 }
 
 void fmVK::Vulkan::init_pipelines() {
-    fmVK::Pipeline mesh_pipeline;
-    mesh_pipeline.Init(this->_device, this->_window_extent, "mesh");
+    fmVK::ComputePipeline background_pipeline;
+    background_pipeline.Init(this->_device, "bg_gradient", this->_draw_image_descriptor_layout);
+    this->compute_pipelines["background"] = background_pipeline;
 
+    fmVK::Pipeline mesh_pipeline;
+    mesh_pipeline.Init(this->_device, this->_window_extent, "mesh", this->_draw_image_descriptor_layout);
     this->pipelines["mesh"] = mesh_pipeline;
-    this->_deletion_queue.push_function([=, this]() { this->pipelines["mesh"].Cleanup(this->_device); });
+
+    this->_deletion_queue.push_function([=, this]() { 
+        for (auto &p : this->pipelines) {
+            p.second.Cleanup(this->_device);
+        }
+
+        for (auto &p : this->compute_pipelines) {
+            p.second.Cleanup(this->_device);
+        }
+    });
 }
 
 void fmVK::Vulkan::draw_background(VkCommandBuffer cmd) {
-    VkClearValue clear_value = { .color = {{0.01f, 0.01f, 0.01f, 1.0f}} };
-    VkClearValue depth_clear = {
-        .depthStencil = {
-            .depth = 1.0f
-        }
-    };
-    VkClearValue clear_values[2] = {
-        clear_value,
-        depth_clear
-    };
-    VkDeviceSize offset = 0;
 
-    VkImageSubresourceRange clear_range = VKInit::image_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
-    vkCmdClearColorImage(cmd, this->_draw_image.image, VK_IMAGE_LAYOUT_GENERAL, &clear_value.color, 1, &clear_range);
+    auto bg_pipeline = this->compute_pipelines["background"];
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, bg_pipeline.pipeline);
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, bg_pipeline.layout, 0, 1, &this->_draw_image_descriptors, 0, nullptr);
+    
+    ComputePushConstants pc = {
+        .data_1 = glm::vec4(0, 0, 0, 1),
+        .data_2 = glm::vec4(0.1, 0.2, 0.4, 1)
+    };
+
+    vkCmdPushConstants(cmd, bg_pipeline.layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(ComputePushConstants), &pc);
+    vkCmdDispatch(cmd, std::ceil(this->_draw_extent.width / 16.0), std::ceil(this->_draw_extent.height / 16.0), 1);
 }
 
-void fmVK::Vulkan::draw_geometry(VkCommandBuffer cmd) {
-    VkRenderingAttachmentInfo color_attachment = VKInit::attachement_info(this->_draw_image.view, nullptr, VK_IMAGE_LAYOUT_GENERAL);
+void fmVK::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objects, uint32_t render_object_count) {
+    VkRenderingAttachmentInfo color_attachment = VKInit::attachment_info(this->_draw_image.view, nullptr, VK_IMAGE_LAYOUT_GENERAL);
     VkRenderingAttachmentInfo depth_attachment = VKInit::depth_attachment_info(this->_depth_image.view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+
+    VkRenderingInfo render_info = VKInit::rendering_info(this->_draw_extent, &color_attachment, &depth_attachment);
+    vkCmdBeginRendering(cmd, &render_info);
+
+    VkViewport viewport = {
+        .x = 0,
+        .y = 0,
+        .width = (float) this->_draw_extent.width,
+        .height = (float) this->_draw_extent.height,
+        .minDepth = 0.01f,
+        .maxDepth = 1.0f
+    };
+    vkCmdSetViewport(cmd, 0, 1, &viewport);
+
+    VkRect2D scissor = {
+        .offset = { .x = 0, .y = 0},
+        .extent = this->_draw_extent
+    };
+    vkCmdSetScissor(cmd, 0, 1, &scissor);
 
     // Update and push constants
     glm::vec3 camera_position = {0.0f, 0.0f, -5.0f};
@@ -461,11 +488,11 @@ void fmVK::Vulkan::draw_geometry(VkCommandBuffer cmd) {
 
     Mesh* bound_mesh = nullptr;
     Material* bound_material = nullptr;
-    for (int i = 0; i < _render_object_count; i++) {
+    for (int i = 0; i < /*_render_object_count*/ 0; i++) {
         RenderObject& object = render_objects[i];
         if (object.material != bound_material) {
             vkCmdBindPipeline(
-                command_buffer,
+                cmd,
                 VK_PIPELINE_BIND_POINT_GRAPHICS,
                 object.material->pipeline
             );
@@ -477,7 +504,7 @@ void fmVK::Vulkan::draw_geometry(VkCommandBuffer cmd) {
         MeshPushConstants constants = { .render_matrix = mvp};
 
         vkCmdPushConstants(
-            command_buffer, 
+            cmd, 
             object.material->pipeline_layout, 
             VK_SHADER_STAGE_VERTEX_BIT,
             0,
@@ -488,7 +515,7 @@ void fmVK::Vulkan::draw_geometry(VkCommandBuffer cmd) {
         if (object.mesh != bound_mesh) {
             VkDeviceSize offset = 0;
             vkCmdBindVertexBuffers(
-                command_buffer, 
+                cmd, 
                 0, 
                 1, 
                 &object.mesh->_vertex_buffer.buffer,
@@ -496,8 +523,7 @@ void fmVK::Vulkan::draw_geometry(VkCommandBuffer cmd) {
             );
             bound_mesh = object.mesh;
         }
-        
-        vkCmdDraw(command_buffer, object.mesh->vertices.size(), 1, 0, 0);
+        vkCmdDraw(cmd, object.mesh->vertices.size(), 1, 0, 0);
     }
 }
 

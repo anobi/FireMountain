@@ -15,6 +15,7 @@ target_link_libraries(${PROJECT_NAME}
   GPUOpen::VulkanMemoryAllocator
   tinyobjloader
   glm
+  fmt
 )
 
 find_package(SDL2 REQUIRED)

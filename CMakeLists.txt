@@ -14,6 +14,7 @@ FetchContent_Declare(
   VulkanMemoryAllocator
   GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
   GIT_TAG        5e43c795daf43dd09398d8307212e85025215052  # Master
+  SYSTEM
 )
 FetchContent_Declare(
   tinyobjloader
@@ -25,11 +26,17 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/g-truc/glm.git
   GIT_TAG        b85861aa0914241f6403697ea0b73cbb658afae4  # Master
 )
+FetchContent_Declare(
+  fmt
+  GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+  GIT_TAG        10.2.1
+)
 FetchContent_MakeAvailable(
   vk-bootstrap
   VulkanMemoryAllocator
   tinyobjloader
   glm
+  fmt
 )
 
 

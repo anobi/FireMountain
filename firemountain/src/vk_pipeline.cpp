@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <fmt/core.h>
 #include <VkBootstrap.h>
 
 #include "vk_pipeline.hpp"
@@ -9,7 +10,40 @@
 #include "vk_pipeline_builder.hpp"
 
 
-int fmVK::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, const char* shader_name)
+bool fmVK::load_shader_module(const char *file_path, const VkDevice device, VkShaderModule *out)
+{
+    // TODO: Move this to a file reading utility function
+    std::ifstream file(file_path, std::ios::ate | std::ios::binary);
+    if(!file.is_open()) {
+        return false;
+    }
+
+    size_t file_size = (size_t) file.tellg();
+    std::vector<uint32_t> buffer(file_size / sizeof(uint32_t));
+
+    file.seekg(0);
+    file.read((char*) buffer.data(), file_size);
+    file.close();
+    // End of TODO
+
+    VkShaderModuleCreateInfo create_info = {
+        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        .pNext = nullptr,
+        .codeSize = buffer.size() * sizeof(uint32_t),
+        .pCode = buffer.data()
+    };
+
+    VkShaderModule shader_module;
+    if (vkCreateShaderModule(device, &create_info, nullptr, &shader_module) != VK_SUCCESS) {
+        return false;
+    }
+
+    *out = shader_module;
+    return true;
+}
+
+
+int fmVK::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, const char* shader_name, VkDescriptorSetLayout layout)
 {
     PipelineBuilder pipeline_builder;
     pipeline_builder.viewport = VkViewport {
@@ -31,20 +65,6 @@ int fmVK::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, 
     pipeline_builder._vertex_input_info = VKInit::vertex_input_state_create_info();
     pipeline_builder._multisampling = VKInit::multisampling_state_create_info();
     pipeline_builder._depth_stencil = VKInit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
-
-
-    // Compute layout
-    // -------------------------------------------------------------------------
-    VkPipelineLayoutCreateInfo compute_layout = VKInit::pipeline_layout_create_info();
-    compute_layout.pSetLayouts = &this->_draw_image_descriptor_layout;
-    compute_layout.setLayoutCount = 1;
-    VkPushConstantRange compute_constants = {
-        .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
-        .offset = 0,
-        .size = sizeof(ComputePushConstants)
-    };
-    VK_CHECK(vkCreatePipelineLayout(device, &compute_layout, nullptr, &this->layout));
-
 
     // Pipeline layout
     // -------------------------------------------------------------------------
@@ -77,26 +97,19 @@ int fmVK::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, 
     };
     pipeline_builder._shader_stages.clear();
 
-    // TODO: Get shader paths from pipeline name
+    // TODO: Get shader paths from pipeline name. Use fmt::format
     if (!load_shader_module("shaders/mesh.frag.spv", device, &this->fragment_shader)) {
-        std::cout << "Error building fragment shader module" << std::endl;
+        fmt::print("Error building fragment shader module");
     }
     else {
-        std::cout << "Fragment shader module loaded." << std::endl;
+        fmt::print("Fragment shader module loaded.");
     }
 
     if (!load_shader_module("shaders/mesh.vert.spv", device, &this->vertex_shader)) {
-        std::cout << "Error building vertex shader module" << std::endl;
+        fmt::print("Error building vertex shader module");
     } 
     else {
-        std::cout << "Vertex shader module loaded." << std::endl;
-    }
-
-    if (!load_shader_module("shaders/mesh.comp.spv", device, &this->compute_shader)) {
-        std::cout << "Error building compute shader module" << std::endl;
-    } 
-    else {
-        std::cout << "Compute shader module loaded." << std::endl;
+        fmt::print("Vertex shader module loaded.");
     }
 
     pipeline_builder.set_shaders(this->vertex_shader, this->fragment_shader);
@@ -116,35 +129,61 @@ void fmVK::Pipeline::Cleanup(const VkDevice device) {
     vkDestroyPipelineLayout(device, this->layout, nullptr);
 }
 
-
-bool fmVK::Pipeline::load_shader_module(const char *file_path, const VkDevice device, VkShaderModule *out)
+int fmVK::ComputePipeline::Init(const VkDevice device, const char *shader_name, VkDescriptorSetLayout descriptor_layout)
 {
-    // TODO: Move this to a file reading utility function
-    std::ifstream file(file_path, std::ios::ate | std::ios::binary);
-    if(!file.is_open()) {
-        return false;
-    }
-
-    size_t file_size = (size_t) file.tellg();
-    std::vector<uint32_t> buffer(file_size / sizeof(uint32_t));
-
-    file.seekg(0);
-    file.read((char*) buffer.data(), file_size);
-    file.close();
-    // End of TODO
-
-    VkShaderModuleCreateInfo create_info = {
-        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-        .pNext = nullptr,
-        .codeSize = buffer.size() * sizeof(uint32_t),
-        .pCode = buffer.data()
+    VkPushConstantRange push_constants = {
+        .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+        .offset = 0,
+        .size = sizeof(ComputePushConstants)
     };
 
-    VkShaderModule shader_module;
-    if (vkCreateShaderModule(device, &create_info, nullptr, &shader_module) != VK_SUCCESS) {
-        return false;
+    VkPipelineLayoutCreateInfo compute_layout = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .pNext = nullptr,
+        .setLayoutCount = 1,
+        .pSetLayouts = &descriptor_layout,
+        .pushConstantRangeCount = 1,
+        .pPushConstantRanges = &push_constants
+    };
+
+    VK_CHECK(vkCreatePipelineLayout(device, &compute_layout, nullptr, &this->layout));
+
+    VkShaderModule compute_shader;
+    if (!load_shader_module("shaders/bg_gradient.comp.spv", device, &compute_shader)) {
+        fmt::print("Error building compute shader module");
+    }
+    else {
+        fmt::print("Compute shader module loaded.");
     }
 
-    *out = shader_module;
-    return true;
+    VkPipelineShaderStageCreateInfo stage_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .pNext = nullptr,
+        .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+        .module = compute_shader,
+        .pName = "main"
+    };
+
+    VkComputePipelineCreateInfo compute_pipeline_create_info = {
+        .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+        .pNext = nullptr,
+        .layout = this->layout,
+        .stage = stage_info
+    };
+
+    // TODO: temp stuff
+    this->data.data_1 = glm::vec4(1, 0, 0, 1);
+    this->data.data_2 = glm::vec4(0, 0, 1, 1);
+
+    VK_CHECK(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &compute_pipeline_create_info, nullptr, &this->pipeline));
+
+    vkDestroyShaderModule(device, compute_shader, nullptr);
+
+    return 0;
+}
+
+void fmVK::ComputePipeline::Cleanup(const VkDevice device)
+{
+    vkDestroyPipelineLayout(device, this->layout, nullptr);
+	vkDestroyPipeline(device, this->pipeline, nullptr);
 }

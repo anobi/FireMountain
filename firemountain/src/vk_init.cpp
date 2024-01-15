@@ -276,5 +276,29 @@ VkRenderingAttachmentInfo VKInit::attachment_info(VkImageView view, VkClearValue
 
 VkRenderingAttachmentInfo VKInit::depth_attachment_info(VkImageView view, VkImageLayout layout)
 {
-    return VkRenderingAttachmentInfo();
+    VkRenderingAttachmentInfo depth_info = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .pNext = nullptr,
+        .imageView = view,
+        .imageLayout = layout,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .clearValue.depthStencil.depth = 0.0f
+    };
+    return depth_info;
+}
+
+VkRenderingInfo VKInit::rendering_info(VkExtent2D render_extent, VkRenderingAttachmentInfo *color_attachment, VkRenderingAttachmentInfo *depth_attachment)
+{
+    VkRenderingInfo render_info = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+        .pNext = nullptr,
+        .renderArea = VkRect2D { VkOffset2D {0, 0}, render_extent },
+        .layerCount = 1,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = color_attachment,
+        .pDepthAttachment = depth_attachment,
+        .pStencilAttachment = nullptr
+    };
+    return render_info;
 }

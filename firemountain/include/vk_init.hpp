@@ -54,5 +54,10 @@ namespace VKInit {
 
     VkRenderingAttachmentInfo attachment_info(VkImageView view, VkClearValue* clear, VkImageLayout layout);
     VkRenderingAttachmentInfo depth_attachment_info(VkImageView view, VkImageLayout layout);
+    VkRenderingInfo rendering_info(
+        VkExtent2D render_extent, 
+        VkRenderingAttachmentInfo* color_attachment, 
+        VkRenderingAttachmentInfo* depth_attachment
+    );
 
 }

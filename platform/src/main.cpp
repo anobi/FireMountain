@@ -17,7 +17,7 @@ int RunApp()
     display.Init(WIDTH, HEIGHT);
     firemountain.Init(WIDTH, HEIGHT, display.window);
 
-    auto monke_1 = firemountain.AddMesh("monke", "assets/monke.obj");
+    // auto monke_1 = firemountain.AddMesh("monke", "assets/monke.obj");
     // firemountain.AddToScene(monke_1, "mesh");
 
     // auto monke_2 = firemountain.AddMesh("monke", "assets/monke.obj");
