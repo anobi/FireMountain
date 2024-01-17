@@ -80,7 +80,6 @@ void fmVK::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
     // Finalize command buffer
     VK_CHECK(vkEndCommandBuffer(command_buffer));
 
-
     auto cmd_info = VKInit::command_buffer_submit_info(command_buffer);
     auto wait_info = VKInit::semaphore_submit_info(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR, this->get_current_frame()._swapchain_semaphore);
     auto signal_info = VKInit::semaphore_submit_info(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT, this->get_current_frame()._render_semaphore);
@@ -115,9 +114,11 @@ void fmVK::Vulkan::Destroy() {
         
         this->_deletion_queue.flush();
 
+        destroy_swapchain();
+
+        vkDestroySurfaceKHR(this->_instance, this->_surface, nullptr);
         vmaDestroyAllocator(this->_allocator);
         vkDestroyDevice(this->_device, nullptr);
-        vkDestroySurfaceKHR(this->_instance, this->_surface, nullptr);
         vkb::destroy_debug_utils_messenger(this->_instance, this->_debug_messenger);
         vkDestroyInstance(this->_instance, nullptr);
     }
@@ -173,11 +174,6 @@ void fmVK::Vulkan::UploadMesh(Mesh &mesh) {
     this->_deletion_queue.push_function([=, this]() {
         vmaDestroyBuffer(this->_allocator, mesh._vertex_buffer.buffer, mesh._vertex_buffer.allocation);
     });
-
-    
-    // vmaMapMemory(this->_allocator, mesh._vertex_buffer.allocation, &data);
-    // memcpy(data, mesh.vertices.data(), mesh.vertices.size() * sizeof(Vertex));
-    vmaUnmapMemory(this->_allocator, mesh._vertex_buffer.allocation);
 }
 
 
@@ -241,28 +237,9 @@ void fmVK::Vulkan::init_vulkan(SDL_Window *window) {
 }
 
 void fmVK::Vulkan::init_swapchain() {
+
     create_swapchain();
-}
 
-void fmVK::Vulkan::create_swapchain() {
-    vkb::SwapchainBuilder swapchain_builder{ this->_gpu, this->_device, this->_surface };
-    vkb::Swapchain vkb_swapchain = swapchain_builder
-        .set_desired_format(VkSurfaceFormatKHR { 
-            .format = this->_swapchain_image_format,
-            .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
-        })
-        .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
-        .set_desired_extent(this->_window_extent.width, this->_window_extent.height)
-        .build()
-        .value();
-    this->_swapchain = vkb_swapchain.swapchain;
-    this->_swapchain_extent = vkb_swapchain.extent;
-    this->_swapchain_images = vkb_swapchain.get_images().value();
-    this->_swapchain_image_views = vkb_swapchain.get_image_views().value();
-
-    //
-    // Create draw images and views
-    //
     VkExtent3D render_image_extent = {this->_window_extent.width, this->_window_extent.height, 1};
     this->_draw_image.format = VK_FORMAT_R16G16B16A16_SFLOAT;
     this->_draw_image.extent = render_image_extent;
@@ -278,25 +255,15 @@ void fmVK::Vulkan::create_swapchain() {
         draw_image_usage,
         render_image_extent
     );
-    VmaAllocationCreateInfo draw_image_allocation_info = {
+    VmaAllocationCreateInfo draw_image_allocinfo = {
         .usage = VMA_MEMORY_USAGE_GPU_ONLY,
         .requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
     };
-    vmaCreateImage(
-        this->_allocator, 
-        &draw_image_info, 
-        &draw_image_allocation_info, 
-        &this->_draw_image.image,
-        &this->_draw_image.allocation,
-        nullptr
-    );
-    VkImageViewCreateInfo draw_view_info = VKInit::imageview_create_info(
-        this->_draw_image.format,
-        this->_draw_image.image,
-        VK_IMAGE_ASPECT_COLOR_BIT
-    );
+    vmaCreateImage(this->_allocator, &draw_image_info, &draw_image_allocinfo,&this->_draw_image.image,&this->_draw_image.allocation,nullptr);
+    
+    
+    VkImageViewCreateInfo draw_view_info = VKInit::imageview_create_info(this->_draw_image.format,this->_draw_image.image,VK_IMAGE_ASPECT_COLOR_BIT);
     VK_CHECK(vkCreateImageView(this->_device, &draw_view_info, nullptr, &this->_draw_image.view));
-
 
     //
     // Create depth buffer images and views
@@ -327,15 +294,38 @@ void fmVK::Vulkan::create_swapchain() {
     );
     VK_CHECK(vkCreateImageView(this->_device, &depth_view_info, nullptr, &this->_depth_image.view));
 
-    this->_deletion_queue.push_function([=, this]() {
+    this->_deletion_queue.push_function([=]() {
+        vkDestroyImageView(this->_device, this->_draw_image.view, nullptr);
+        vmaDestroyImage(this->_allocator, this->_draw_image.image, this->_draw_image.allocation);
+        vkDestroyImageView(this->_device, this->_depth_image.view, nullptr);
+        vmaDestroyImage(this->_allocator, this->_depth_image.image, this->_depth_image.allocation);
+    });
+}
+
+void fmVK::Vulkan::create_swapchain() {
+    vkb::SwapchainBuilder swapchain_builder{ this->_gpu, this->_device, this->_surface };
+    vkb::Swapchain vkb_swapchain = swapchain_builder
+        .set_desired_format(VkSurfaceFormatKHR { 
+            .format = this->_swapchain_image_format,
+            .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
+        })
+        .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
+        .set_desired_extent(this->_window_extent.width, this->_window_extent.height)
+        .add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT)
+        .build()
+        .value();
+    this->_swapchain = vkb_swapchain.swapchain;
+    this->_swapchain_extent = vkb_swapchain.extent;
+    this->_swapchain_images = vkb_swapchain.get_images().value();
+    this->_swapchain_image_views = vkb_swapchain.get_image_views().value();
+}
+
+void fmVK::Vulkan::destroy_swapchain()
+{
         vkDestroySwapchainKHR(this->_device, this->_swapchain, nullptr);
         for (int i = 0; i < this->_swapchain_image_views.size(); i++) {
-            vkDestroyImageView(this->_device, this->_depth_image.view, nullptr);
-            vmaDestroyImage(this->_allocator, this->_depth_image.image, this->_depth_image.allocation);
-            vkDestroyImageView(this->_device, this->_draw_image.view, nullptr);
-            vmaDestroyImage(this->_allocator, this->_draw_image.image, this->_draw_image.allocation);
+            vkDestroyImageView(this->_device, this->_swapchain_image_views[i], nullptr);
         }
-    });
 }
 
 void fmVK::Vulkan::init_commands() {
@@ -438,7 +428,6 @@ void fmVK::Vulkan::init_pipelines() {
 }
 
 void fmVK::Vulkan::draw_background(VkCommandBuffer cmd) {
-
     auto bg_pipeline = this->compute_pipelines["background"];
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, bg_pipeline.pipeline);
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, bg_pipeline.layout, 0, 1, &this->_draw_image_descriptors, 0, nullptr);
@@ -455,7 +444,6 @@ void fmVK::Vulkan::draw_background(VkCommandBuffer cmd) {
 void fmVK::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objects, uint32_t render_object_count) {
     VkRenderingAttachmentInfo color_attachment = VKInit::attachment_info(this->_draw_image.view, nullptr, VK_IMAGE_LAYOUT_GENERAL);
     VkRenderingAttachmentInfo depth_attachment = VKInit::depth_attachment_info(this->_depth_image.view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
-
     VkRenderingInfo render_info = VKInit::rendering_info(this->_draw_extent, &color_attachment, &depth_attachment);
     vkCmdBeginRendering(cmd, &render_info);
 
@@ -501,16 +489,8 @@ void fmVK::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
 
         glm::mat4 model = object.transform;
         glm::mat4 mvp = projection * view * model;
-        MeshPushConstants constants = { .render_matrix = mvp};
-
-        vkCmdPushConstants(
-            cmd, 
-            object.material->pipeline_layout, 
-            VK_SHADER_STAGE_VERTEX_BIT,
-            0,
-            sizeof(MeshPushConstants),
-            &constants
-        );
+        MeshPushConstants constants = { .render_matrix = mvp };
+        vkCmdPushConstants(cmd, object.material->pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT,0, sizeof(MeshPushConstants), &constants);
 
         if (object.mesh != bound_mesh) {
             VkDeviceSize offset = 0;
@@ -525,6 +505,7 @@ void fmVK::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
         }
         vkCmdDraw(cmd, object.mesh->vertices.size(), 1, 0, 0);
     }
+    vkCmdEndRendering(cmd);
 }
 
 AllocatedBuffer fmVK::Vulkan::create_buffer(size_t alloc_size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage) {
@@ -584,4 +565,9 @@ void fmVK::Vulkan::init_descriptors() {
         .pImageInfo = &image_info
     };
     vkUpdateDescriptorSets(this->_device, 1, &draw_image_write, 0, nullptr);
+
+    this->_deletion_queue.push_function([&]() {
+        vkDestroyDescriptorSetLayout(this->_device, this->_draw_image_descriptor_layout, nullptr);
+        this->global_descriptor_allocator.destroy_pool(this->_device);
+    });
 }

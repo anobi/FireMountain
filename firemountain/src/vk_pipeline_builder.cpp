@@ -23,6 +23,11 @@ VkPipeline fmVK::PipelineBuilder::build_pipeline(VkDevice device)
         .pAttachments = &this->_color_blend_attachment
     };
 
+    // Clear the vertex input info
+    this->_vertex_input_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO
+    };
+
     VkDynamicState state[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
     VkPipelineDynamicStateCreateInfo dynamic_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
@@ -32,7 +37,7 @@ VkPipeline fmVK::PipelineBuilder::build_pipeline(VkDevice device)
 
     VkGraphicsPipelineCreateInfo pipeline_info = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .pNext = nullptr,
+        .pNext = &this->_render_info,  // Connect render info to pNext extension
         .stageCount = (uint32_t) this->_shader_stages.size(),
         .pStages = this->_shader_stages.data(),
         .pVertexInputState = &this->_vertex_input_info,
@@ -49,7 +54,7 @@ VkPipeline fmVK::PipelineBuilder::build_pipeline(VkDevice device)
 
     VkPipeline pipeline;
     if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline) != VK_SUCCESS) {
-        std::cout << "failed to create pipeline" << std::endl;
+        fmt::println("failed to create pipeline");
         return VK_NULL_HANDLE;
     }
     return pipeline;

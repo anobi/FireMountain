@@ -52,17 +52,17 @@ void DescriptorAllocator::init_pool(VkDevice device, uint32_t max_sets, std::spa
         .pPoolSizes = pool_sizes.data()
     };
 
-    vkCreateDescriptorPool(device, &pool_info, nullptr, &pool);
+    vkCreateDescriptorPool(device, &pool_info, nullptr, &this->pool);
 }
 
 void DescriptorAllocator::clear_descriptors(VkDevice device)
 {
-    vkResetDescriptorPool(device, pool, 0);
+    vkResetDescriptorPool(device, this->pool, 0);
 }
 
 void DescriptorAllocator::destroy_pool(VkDevice device)
 {
-    vkDestroyDescriptorPool(device, pool, nullptr);
+    vkDestroyDescriptorPool(device, this->pool, nullptr);
 }
 
 VkDescriptorSet DescriptorAllocator::allocate(VkDevice device, VkDescriptorSetLayout layout)

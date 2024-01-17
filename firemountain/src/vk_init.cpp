@@ -73,38 +73,6 @@ VkPipelineVertexInputStateCreateInfo VKInit::vertex_input_state_create_info() {
     return info;
 }
 
-VkPipelineInputAssemblyStateCreateInfo VKInit::input_assembly_create_info(
-        VkPrimitiveTopology topology
-) {
-    VkPipelineInputAssemblyStateCreateInfo info = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-        .pNext = nullptr,
-        .topology = topology,
-        .primitiveRestartEnable = VK_FALSE
-    };
-    return info;
-}
-
-VkPipelineRasterizationStateCreateInfo VKInit::rasterization_state_create_info(
-        VkPolygonMode polygon_mode
-) {
-    VkPipelineRasterizationStateCreateInfo info = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-        .pNext = nullptr,
-        .depthClampEnable = VK_FALSE,
-        .rasterizerDiscardEnable = VK_FALSE,
-        .polygonMode = polygon_mode,
-        .cullMode = VK_CULL_MODE_NONE,
-        .frontFace = VK_FRONT_FACE_CLOCKWISE,
-        .depthBiasEnable = VK_FALSE,
-        .depthBiasConstantFactor = 0.0f,
-        .depthBiasClamp = 0.0f,
-        .depthBiasSlopeFactor = 0.0f,
-        .lineWidth = 1.0f
-    };
-    return info;
-}
-
 VkPipelineMultisampleStateCreateInfo VKInit::multisampling_state_create_info() {
     VkPipelineMultisampleStateCreateInfo info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
@@ -240,21 +208,6 @@ VkImageSubresourceRange VKInit::image_subresource_range(VkImageAspectFlags aspec
         .layerCount = VK_REMAINING_ARRAY_LAYERS
     };
     return sub_image;
-}
-
-VkPipelineDepthStencilStateCreateInfo VKInit::depth_stencil_create_info(bool depth_test, bool depth_write, VkCompareOp compare_op) {
-    VkPipelineDepthStencilStateCreateInfo info = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-        .pNext = nullptr,
-        .depthTestEnable = depth_test ? VK_TRUE : VK_FALSE,
-        .depthWriteEnable = depth_write ? VK_TRUE : VK_FALSE,
-        .depthCompareOp = depth_test ? compare_op : VK_COMPARE_OP_ALWAYS,
-        .depthBoundsTestEnable = VK_FALSE,
-        .stencilTestEnable = VK_FALSE,
-        .minDepthBounds = 0.0f,
-        .maxDepthBounds = 1.0f,
-    };
-    return info;
 }
 
 VkRenderingAttachmentInfo VKInit::attachment_info(VkImageView view, VkClearValue *clear, VkImageLayout layout)

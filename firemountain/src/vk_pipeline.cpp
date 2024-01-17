@@ -45,58 +45,8 @@ bool fmVK::load_shader_module(const char *file_path, const VkDevice device, VkSh
 
 int fmVK::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, const char* shader_name, VkDescriptorSetLayout layout)
 {
-    PipelineBuilder pipeline_builder;
-    pipeline_builder.viewport = VkViewport {
-            .x = 0.0f,
-            .y = 0.0f,
-            .width = (float) window_extent.width,
-            .height = (float) window_extent.height,
-            .minDepth = 0.0f,
-            .maxDepth = 1.0f
-    };
-    pipeline_builder.scissor = VkRect2D {
-            .offset = {0, 0},
-            .extent = window_extent
-    };
-    pipeline_builder._pipeline_layout = this->layout;
-    pipeline_builder._input_assembly = VKInit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-    pipeline_builder._rasterizer = VKInit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
-    pipeline_builder._color_blend_attachment = VKInit::color_blend_attachment_state();
-    pipeline_builder._vertex_input_info = VKInit::vertex_input_state_create_info();
-    pipeline_builder._multisampling = VKInit::multisampling_state_create_info();
-    pipeline_builder._depth_stencil = VKInit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
-
-    // Pipeline layout
-    // -------------------------------------------------------------------------
-    VkPipelineLayoutCreateInfo pipeline_layout_info = VKInit::pipeline_layout_create_info();
-    VkPushConstantRange push_constant = {
-        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-        .offset = 0,
-        .size = sizeof(MeshPushConstants)
-    };
-    pipeline_layout_info.pPushConstantRanges = &push_constant;
-    pipeline_layout_info.pushConstantRangeCount = 1;
-    VK_CHECK(vkCreatePipelineLayout(
-        device,
-        &pipeline_layout_info,
-        nullptr,
-        &this->layout
-    ));
-    pipeline_builder._pipeline_layout = this->layout;
-
-
     // Shaders
     // -------------------------------------------------------------------------
-    VertexInputDescription vertex_description = Vertex::get_vertex_description();
-    pipeline_builder._vertex_input_info = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-        .vertexBindingDescriptionCount = (uint32_t) vertex_description.bindings.size(),
-        .pVertexBindingDescriptions = vertex_description.bindings.data(),
-        .vertexAttributeDescriptionCount = (uint32_t) vertex_description.attributes.size(),
-        .pVertexAttributeDescriptions = vertex_description.attributes.data()
-    };
-    pipeline_builder._shader_stages.clear();
-
     // TODO: Get shader paths from pipeline name. Use fmt::format
     if (!load_shader_module("shaders/mesh.frag.spv", device, &this->fragment_shader)) {
         fmt::print("Error building fragment shader module");
@@ -112,9 +62,45 @@ int fmVK::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, 
         fmt::print("Vertex shader module loaded.");
     }
 
-    pipeline_builder.set_shaders(this->vertex_shader, this->fragment_shader);
+    // Pipeline layout
+    // -------------------------------------------------------------------------
+    VkPipelineLayoutCreateInfo pipeline_layout_info = VKInit::pipeline_layout_create_info();
+    VkPushConstantRange push_constant = {
+        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+        .offset = 0,
+        .size = sizeof(MeshPushConstants)
+    };
+    pipeline_layout_info.pPushConstantRanges = &push_constant;
+    pipeline_layout_info.pushConstantRangeCount = 1;
+    VK_CHECK(vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr, &this->layout));
 
-    pipeline_builder.enable_blending_additive();
+    // Pipeline builder
+    // -------------------------------------------------------------------------
+    PipelineBuilder pipeline_builder;
+    pipeline_builder.viewport = VkViewport {
+            .x = 0.0f,
+            .y = 0.0f,
+            .width = (float) window_extent.width,
+            .height = (float) window_extent.height,
+            .minDepth = 0.0f,
+            .maxDepth = 1.0f
+    };
+    pipeline_builder.scissor = VkRect2D {
+            .offset = {0, 0},
+            .extent = window_extent
+    };
+    pipeline_builder._pipeline_layout = this->layout;
+
+    pipeline_builder.set_shaders(this->vertex_shader, this->fragment_shader);
+    pipeline_builder.set_input_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+    pipeline_builder.set_polygon_mode(VK_POLYGON_MODE_FILL);
+    pipeline_builder.set_cull_mode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
+    pipeline_builder.set_multisampling_none();
+    pipeline_builder.disable_blending();
+    pipeline_builder.disable_depth_test();
+    // pipeline_builder.set_color_attachment_format(); this requires image format
+    pipeline_builder.set_depth_format(VK_FORMAT_UNDEFINED);
+    // pipeline_builder.enable_blending_additive();
 
     this->pipeline = pipeline_builder.build_pipeline(device);
 
@@ -125,8 +111,8 @@ int fmVK::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, 
 }
 
 void fmVK::Pipeline::Cleanup(const VkDevice device) {
-    vkDestroyPipeline(device, this->pipeline, nullptr);
     vkDestroyPipelineLayout(device, this->layout, nullptr);
+    vkDestroyPipeline(device, this->pipeline, nullptr);
 }
 
 int fmVK::ComputePipeline::Init(const VkDevice device, const char *shader_name, VkDescriptorSetLayout descriptor_layout)

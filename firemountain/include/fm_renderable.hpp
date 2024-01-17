@@ -10,6 +10,10 @@ struct Material {
 };
 
 struct RenderObject {
+    uint32_t index_count;
+    uint32_t first_index;
+    VkBuffer index_buffer;
+
     Mesh* mesh;
     Material* material;
     glm::mat4 transform;
