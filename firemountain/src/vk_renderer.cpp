@@ -8,6 +8,10 @@
 
 #include <glm/gtx/transform.hpp>
 
+#include "imgui.h"
+#include "imgui_impl_sdl2.h"
+#include "imgui_impl_vulkan.h"
+
 #include "vk_renderer.hpp"
 #include "vk_init.hpp"
 #include "vk_images.hpp"
@@ -107,10 +111,6 @@ void fmVK::Vulkan::Destroy() {
     if(this->_is_initialized) {
         vkDeviceWaitIdle(this->_device);
         vkWaitForFences(this->_device, 1, &get_current_frame()._render_fence, true, 1000000000);
-
-        for (int i = 0; i < FRAME_OVERLAP; i++) {
-            vkDestroyCommandPool(this->_device, this->_frames[i]._command_pool, nullptr);
-        };
         
         this->_deletion_queue.flush();
 
@@ -124,9 +124,9 @@ void fmVK::Vulkan::Destroy() {
     }
 }
 
-void fmVK::Vulkan::UploadMesh(Mesh &mesh) {
-    const size_t vertex_buffer_size = mesh.vertices.size() * sizeof(Vertex);
-    const size_t index_buffer_size = mesh.indices.size() * sizeof(uint32_t);
+GPUMeshBuffers fmVK::Vulkan::UploadMesh(std::span<Vertex> vertices, std::span<uint32_t> indices) {
+    const size_t vertex_buffer_size = vertices.size() * sizeof(Vertex);
+    const size_t index_buffer_size = indices.size() * sizeof(uint32_t);
     GPUMeshBuffers surface;
 
     VkBufferUsageFlags vertex_buffer_flags = 
@@ -152,8 +152,8 @@ void fmVK::Vulkan::UploadMesh(Mesh &mesh) {
         VMA_MEMORY_USAGE_CPU_ONLY
     );
     void* data;
-    memcpy(data, mesh.vertices.data(), vertex_buffer_size);
-    memcpy((char*)data + vertex_buffer_size, mesh.indices.data(), index_buffer_size);
+    memcpy(data, vertices.data(), vertex_buffer_size);
+    memcpy((char*)data + vertex_buffer_size, indices.data(), index_buffer_size);
     immediate_submit([&](VkCommandBuffer cmd) {
         VkBufferCopy vertex_copy {
             .srcOffset = 0,
@@ -171,9 +171,7 @@ void fmVK::Vulkan::UploadMesh(Mesh &mesh) {
     });
     destroy_buffer(staging);
 
-    this->_deletion_queue.push_function([=, this]() {
-        vmaDestroyBuffer(this->_allocator, mesh._vertex_buffer.buffer, mesh._vertex_buffer.allocation);
-    });
+    return surface;
 }
 
 
@@ -234,6 +232,38 @@ void fmVK::Vulkan::init_vulkan(SDL_Window *window) {
         .instance = this->_instance
     };
     vmaCreateAllocator(&allocator_info, &this->_allocator);
+}
+
+
+void fmVK::Vulkan::init_imgui(SDL_Window *window) {
+    // 1: Create descriptor pool
+    VkDescriptorPoolSize pool_sizes[] = {
+        { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+    };
+
+    VkDescriptorPoolCreateInfo pool_info = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
+        .maxSets = 1000,
+        .poolSizeCount = (uint32_t) std::size(pool_sizes),
+        .pPoolSizes = pool_sizes
+    };
+
+    VkDescriptorPool imgui_pool;
+    VK_CHECK(vkCreateDescriptorPool(this->_device, &pool_info, nullptr, &imgui_pool));
+
+    // 2: Init library
+    ImGui::CreateContext();
 }
 
 void fmVK::Vulkan::init_swapchain() {
@@ -330,29 +360,29 @@ void fmVK::Vulkan::destroy_swapchain()
 
 void fmVK::Vulkan::init_commands() {
     // Init command pool
-    VkCommandPoolCreateInfo command_pool_info = VKInit::command_pool_create_info(
+    VkCommandPoolCreateInfo cmdp_info = VKInit::command_pool_create_info(
         this->_graphics_queue_family,
         VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
     );
 
     for (int i = 0; i < FRAME_OVERLAP; i++) {
-        VK_CHECK(vkCreateCommandPool(
-            this->_device, 
-            &command_pool_info, 
-            nullptr, 
-            &this->_frames[i]._command_pool
-        ));
-
-        VkCommandBufferAllocateInfo cmd_buffer_alloc_info = VKInit::command_buffer_allocate_info(
-            this->_frames[i]._command_pool,
-            1
-        );
-        VK_CHECK(vkAllocateCommandBuffers(
-            this->_device,
-            &cmd_buffer_alloc_info,
-            &this->_frames[i]._main_command_buffer
-        ));
+        VK_CHECK(vkCreateCommandPool(this->_device, &cmdp_info, nullptr, &this->_frames[i]._command_pool));
+        VkCommandBufferAllocateInfo alloc_info = VKInit::command_buffer_allocate_info(this->_frames[i]._command_pool, 1);
+        VK_CHECK(vkAllocateCommandBuffers(this->_device, &alloc_info, &this->_frames[i]._main_command_buffer));
+    
+        this->_deletion_queue.push_function([=]() {
+            vkDestroyCommandPool(this->_device, this->_frames[i]._command_pool, nullptr);
+        });
     }
+
+    // Init immediate command pool
+    VK_CHECK(vkCreateCommandPool(this->_device, &cmdp_info, nullptr, &this->_immediate_command_pool));
+    VkCommandBufferAllocateInfo immediata_alloc_info = VKInit::command_buffer_allocate_info(this->_immediate_command_pool, 1);
+    VK_CHECK(vkAllocateCommandBuffers(this->_device, &immediata_alloc_info, &this->_immediate_command_buffer));
+
+    this->_deletion_queue.push_function([=]() {
+        vkDestroyCommandPool(this->_device, this->_immediate_command_pool, nullptr);
+    });
 }
 
 void fmVK::Vulkan::init_sync_structures() {
@@ -413,7 +443,7 @@ void fmVK::Vulkan::init_pipelines() {
     this->compute_pipelines["background"] = background_pipeline;
 
     fmVK::Pipeline mesh_pipeline;
-    mesh_pipeline.Init(this->_device, this->_window_extent, "mesh", this->_draw_image_descriptor_layout);
+    mesh_pipeline.Init(this->_device, this->_window_extent, "mesh", this->_draw_image_descriptor_layout, this->_draw_image);
     this->pipelines["mesh"] = mesh_pipeline;
 
     this->_deletion_queue.push_function([=, this]() { 
@@ -433,8 +463,8 @@ void fmVK::Vulkan::draw_background(VkCommandBuffer cmd) {
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, bg_pipeline.layout, 0, 1, &this->_draw_image_descriptors, 0, nullptr);
     
     ComputePushConstants pc = {
-        .data_1 = glm::vec4(0, 0, 0, 1),
-        .data_2 = glm::vec4(0.1, 0.2, 0.4, 1)
+        .data_1 = glm::fvec4(0.10f, 0.10f, 0.10f, 1.0f),
+        .data_2 = glm::fvec4(0.16f, 0.18f, 0.20f, 1.0f)
     };
 
     vkCmdPushConstants(cmd, bg_pipeline.layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(ComputePushConstants), &pc);
@@ -474,36 +504,29 @@ void fmVK::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
     );
     projection[1][1] *= -1;
 
-    Mesh* bound_mesh = nullptr;
+    GPUMeshBuffers* bound_mesh = nullptr;
     Material* bound_material = nullptr;
-    for (int i = 0; i < /*_render_object_count*/ 0; i++) {
+    for (int i = 0; i < render_object_count; i++) {
         RenderObject& object = render_objects[i];
         if (object.material != bound_material) {
-            vkCmdBindPipeline(
-                cmd,
-                VK_PIPELINE_BIND_POINT_GRAPHICS,
-                object.material->pipeline
-            );
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
             bound_material = object.material;
         }
 
         glm::mat4 model = object.transform;
         glm::mat4 mvp = projection * view * model;
-        MeshPushConstants constants = { .render_matrix = mvp };
-        vkCmdPushConstants(cmd, object.material->pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT,0, sizeof(MeshPushConstants), &constants);
+        GPUDrawPushConstants constants = { 
+            .world_matrix = mvp,
+            .vertex_buffer = bound_mesh->vertex_buffer_address
+        };
+        vkCmdPushConstants(cmd, object.material->pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT,0, sizeof(GPUDrawPushConstants), &constants);
 
         if (object.mesh != bound_mesh) {
             VkDeviceSize offset = 0;
-            vkCmdBindVertexBuffers(
-                cmd, 
-                0, 
-                1, 
-                &object.mesh->_vertex_buffer.buffer,
-                &offset
-            );
+            vkCmdBindIndexBuffer(cmd, object.index_buffer, 0, VK_INDEX_TYPE_UINT32);
             bound_mesh = object.mesh;
         }
-        vkCmdDraw(cmd, object.mesh->vertices.size(), 1, 0, 0);
+        vkCmdDrawIndexed(cmd, object.index_count, 1, 0, 0, 0);
     }
     vkCmdEndRendering(cmd);
 }

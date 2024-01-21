@@ -8,6 +8,7 @@ add_library(${PROJECT_NAME} STATIC)
 # External dependencies
 # ---------------------------------------------------------------
 find_package(Vulkan REQUIRED)
+find_package(SDL2 REQUIRED)
 
 target_link_libraries(${PROJECT_NAME}
   Vulkan::Vulkan
@@ -16,10 +17,12 @@ target_link_libraries(${PROJECT_NAME}
   tinyobjloader
   glm
   fmt
+  imgui
 )
 
-find_package(SDL2 REQUIRED)
-include_directories(${SDL2_INCLUDE_DIRS})
+include_directories(
+  ${SDL2_INCLUDE_DIRS}
+)
 
 # ---------------------------------------------------------------
 # Internal sources, inclues and targets
@@ -29,6 +32,7 @@ target_sources(${PROJECT_NAME}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/firemountain.cpp
   PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/fm_scene.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/fm_mesh_loader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_mesh.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_images.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_init.cpp

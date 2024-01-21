@@ -17,7 +17,7 @@ public:
     void Frame();
     void Destroy();
 
-    Mesh* AddMesh(const std::string& name, const char* path);
+    bool AddMesh(const std::string& name, const char* path);
 
     fmVK::Vulkan vulkan;
     Scene scene;
@@ -28,9 +28,9 @@ private:
 
     std::vector<RenderObject> _renderables;
     std::unordered_map<std::string, Material> _materials;
-    std::unordered_map<std::string, Mesh> _meshes;
+    std::unordered_map<std::string, GPUMeshBuffers> _meshes;
 
     Material* create_material(const std::string& name);
     Material* get_material(const std::string& name);
-    Mesh* get_mesh(const std::string& name);
+    GPUMeshBuffers* get_mesh(const std::string& name);
 };

@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.13)
 project(FireMountain)
 set(CMAKE_CXX_STANDARD 23)
 
+add_subdirectory("firemountain")
+add_subdirectory("platform")
 
 include(FetchContent)
 
@@ -31,17 +33,42 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/fmtlib/fmt.git
   GIT_TAG        10.2.1
 )
+FetchContent_Declare(
+  imgui_src
+  GIT_REPOSITORY https://github.com/ocornut/imgui.git
+  GIT_TAG        v1.90.1
+)
 FetchContent_MakeAvailable(
   vk-bootstrap
   VulkanMemoryAllocator
   tinyobjloader
   glm
   fmt
+  imgui_src
 )
 
+# ---------------------------------------------------------------
+# Build imgui as library
+# ---------------------------------------------------------------
+find_package(SDL2 REQUIRED)
+add_library(imgui STATIC
+  "_deps/imgui-src/imgui.cpp"
+  "_deps/imgui-src/imgui_draw.cpp"
+  "_deps/imgui-src/imgui_tables.cpp"
+  "_deps/imgui-src/imgui_widgets.cpp"
+  "_deps/imgui-src/backends/imgui_impl_sdl2.cpp"
+  "_deps/imgui-src/backends/imgui_impl_vulkan.cpp"
+)
+set(IMGUI_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/_deps/imgui-src)
+set(IMGUI_BACKEND_DIR ${CMAKE_CURRENT_SOURCE_DIR}/_deps/imgui-src/backends)
 
-add_subdirectory("firemountain")
-add_subdirectory("platform")
+target_include_directories(imgui
+  PUBLIC
+    ${SDL2_INCLUDE_DIRS}
+    ${IMGUI_INCLUDE_DIR}
+    ${IMGUI_INCLUDE_DIR}/backends
+)
+
 
 # ---------------------------------------------------------------
 # Compile shaders

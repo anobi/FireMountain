@@ -14,7 +14,7 @@ struct RenderObject {
     uint32_t first_index;
     VkBuffer index_buffer;
 
-    Mesh* mesh;
+    GPUMeshBuffers* mesh;
     Material* material;
     glm::mat4 transform;
 };

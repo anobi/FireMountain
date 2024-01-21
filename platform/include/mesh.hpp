@@ -9,7 +9,7 @@ struct Vertex {
     glm::vec3 color;
 };
 
-struct Mesh {
+struct LoaderMesh {
     std::vector<Vertex> vertices;
     bool load_from_obj(const char* path);
 };

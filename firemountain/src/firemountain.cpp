@@ -3,6 +3,7 @@
 #include <SDL2/SDL.h>
 
 #include "firemountain.hpp"
+#include "fm_mesh_loader.hpp"
 
 
 int Firemountain::Init(const int width, const int height, SDL_Window* window) {
@@ -41,19 +42,21 @@ void Firemountain::Destroy() {
     this->vulkan.Destroy();
 }
 
-Mesh* Firemountain::AddMesh(const std::string& name, const char* path) {
-    Mesh mesh;
-    mesh.load_from_obj(path);
-    this->vulkan.UploadMesh(mesh);
-    this->_meshes[name] = mesh;
+bool Firemountain::AddMesh(const std::string& name, const char* path) {
+    std::vector<Vertex> vertices;
+    std::vector<uint32_t> indices;
+    MeshLoader::LoadObj(path, &vertices, &indices);
+    this->_meshes[name] = this->vulkan.UploadMesh(vertices, indices);
 
     RenderObject render_object;
     render_object.mesh = this->get_mesh(name);
     render_object.material = this->get_material("mesh");
     render_object.transform = glm::mat4{ 1.0f };
+    render_object.index_count = indices.size();
+    render_object.index_buffer = render_object.mesh->index_buffer.buffer;
     this->_renderables.push_back(render_object);
     
-    return &this->_meshes[name];
+    return true;
 }
 
 Material* Firemountain::create_material(const std::string& name) {
@@ -74,7 +77,7 @@ Material* Firemountain::get_material(const std::string& name) {
     }
 }
 
-Mesh* Firemountain::get_mesh(const std::string& name) {
+GPUMeshBuffers* Firemountain::get_mesh(const std::string& name) {
     auto i = this->_meshes.find(name);
     if (i == this->_meshes.end()) {
         return nullptr;

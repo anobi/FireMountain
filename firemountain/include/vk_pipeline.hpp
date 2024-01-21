@@ -22,7 +22,7 @@ namespace fmVK {
     public:
         Pipeline() {}
         ~Pipeline() {}
-        int Init(const VkDevice device, const VkExtent2D window_extent, const char* shader_name, VkDescriptorSetLayout layout);
+        int Init(const VkDevice device, const VkExtent2D window_extent, const char* shader_name, VkDescriptorSetLayout layout, AllocatedImage alloc_image);
         void Cleanup(const VkDevice device);
 
         VkPipeline pipeline;

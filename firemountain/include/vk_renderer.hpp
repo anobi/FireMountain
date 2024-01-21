@@ -13,6 +13,8 @@
 #include "fm_utils.hpp"
 #include "fm_renderable.hpp"
 
+class SDL_Window;
+
 
 namespace fmVK {
     struct FrameData {
@@ -34,7 +36,7 @@ namespace fmVK {
         int Init(const uint32_t width, const uint32_t height, SDL_Window* window);
         void Draw(RenderObject* first_render_object, int render_object_count);
         void Destroy();
-        void UploadMesh(Mesh &mesh);
+        GPUMeshBuffers UploadMesh(std::span<Vertex> vertices, std::span<uint32_t> indices);
 
         void CreateMaterial();
         void CreatePipeline(const char* shader_name);
@@ -62,6 +64,7 @@ namespace fmVK {
         DeletionQueue _deletion_queue;
         VmaAllocator _allocator;
         void init_vulkan(SDL_Window *window);
+        void init_imgui(SDL_Window *window);
 
         VkSwapchainKHR _swapchain;
         VkExtent2D _swapchain_extent;

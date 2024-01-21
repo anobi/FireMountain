@@ -16,19 +16,17 @@ struct VertexInputDescription {
 
 struct Vertex {
     glm::vec3 position;
-    glm::vec3 normal;
-    glm::vec3 color;
     float uv_x;
-    float uf_y;
-
+    glm::vec3 normal;
+    float uv_y;
+    glm::vec3 color; 
+    
     static VertexInputDescription get_vertex_description();
 };
 
-struct Mesh {
-    std::vector<Vertex> vertices;
-    std::vector<uint32_t> indices;
-    AllocatedBuffer _vertex_buffer;
-
+struct LoaderMesh {
+    std::span<Vertex> vertices;
+    std::span<uint32_t> indices;
     bool load_from_obj(const char* path);
 };
 

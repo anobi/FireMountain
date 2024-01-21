@@ -43,8 +43,9 @@ bool fmVK::load_shader_module(const char *file_path, const VkDevice device, VkSh
 }
 
 
-int fmVK::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, const char* shader_name, VkDescriptorSetLayout layout)
+int fmVK::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, const char* shader_name, VkDescriptorSetLayout layout, AllocatedImage alloc_image)
 {
+
     // Shaders
     // -------------------------------------------------------------------------
     // TODO: Get shader paths from pipeline name. Use fmt::format
@@ -65,12 +66,12 @@ int fmVK::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, 
     // Pipeline layout
     // -------------------------------------------------------------------------
     VkPipelineLayoutCreateInfo pipeline_layout_info = VKInit::pipeline_layout_create_info();
-    VkPushConstantRange push_constant = {
+    VkPushConstantRange push_constant_range = {
         .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
         .offset = 0,
-        .size = sizeof(MeshPushConstants)
+        .size = sizeof(GPUDrawPushConstants)
     };
-    pipeline_layout_info.pPushConstantRanges = &push_constant;
+    pipeline_layout_info.pPushConstantRanges = &push_constant_range;
     pipeline_layout_info.pushConstantRangeCount = 1;
     VK_CHECK(vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr, &this->layout));
 
@@ -98,7 +99,7 @@ int fmVK::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, 
     pipeline_builder.set_multisampling_none();
     pipeline_builder.disable_blending();
     pipeline_builder.disable_depth_test();
-    // pipeline_builder.set_color_attachment_format(); this requires image format
+    pipeline_builder.set_color_attachment_format(alloc_image.format);
     pipeline_builder.set_depth_format(VK_FORMAT_UNDEFINED);
     // pipeline_builder.enable_blending_additive();
 
