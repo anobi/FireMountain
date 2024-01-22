@@ -29,6 +29,7 @@ bool MeshLoader::LoadObj(const char *path, std::vector<Vertex> *vertices, std::v
         for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
             for (size_t v = 0; v < FACE_VERTICES; v++) {
                 tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
+                indices->push_back(idx.vertex_index);
 
                 tinyobj::real_t vertex_x = attrib.vertices[3 * idx.vertex_index + 0];
                 tinyobj::real_t vertex_y = attrib.vertices[3 * idx.vertex_index + 1];

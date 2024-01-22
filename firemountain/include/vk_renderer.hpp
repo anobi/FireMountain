@@ -14,6 +14,7 @@
 #include "fm_renderable.hpp"
 
 class SDL_Window;
+//class SDL_Event;
 
 
 namespace fmVK {
@@ -36,11 +37,12 @@ namespace fmVK {
         int Init(const uint32_t width, const uint32_t height, SDL_Window* window);
         void Draw(RenderObject* first_render_object, int render_object_count);
         void Destroy();
-        GPUMeshBuffers UploadMesh(std::span<Vertex> vertices, std::span<uint32_t> indices);
+        void ProcessImGuiEvent(SDL_Event* e);
+        
+        GPUMeshBuffers UploadMesh(std::vector<Vertex> vertices, std::vector<uint32_t> indices);
 
         void CreateMaterial();
         void CreatePipeline(const char* shader_name);
-
         
         VkPipeline GetPipeline(const char* name) { return this->pipelines[name].pipeline; }
         VkPipelineLayout GetPipelineLayout(const char* name) { return this->pipelines[name].layout; }
@@ -55,6 +57,7 @@ namespace fmVK {
             .color = {{0.02f, 0.02f, 0.02f, 1.0f}}
         };
 
+        SDL_Window* _window;
         VkExtent2D _window_extent;
         VkInstance _instance;
         VkPhysicalDevice _gpu;
@@ -64,7 +67,7 @@ namespace fmVK {
         DeletionQueue _deletion_queue;
         VmaAllocator _allocator;
         void init_vulkan(SDL_Window *window);
-        void init_imgui(SDL_Window *window);
+        void init_imgui();
 
         VkSwapchainKHR _swapchain;
         VkExtent2D _swapchain_extent;
@@ -100,7 +103,7 @@ namespace fmVK {
         AllocatedImage _depth_image;
         VkExtent2D _draw_extent;
  
-
+        void draw_imgui(VkCommandBuffer cmd, VkImageView image_view);
         void draw_background(VkCommandBuffer cmd);
         void draw_geometry(VkCommandBuffer cmd, RenderObject* render_objects, uint32_t render_object_count);
 

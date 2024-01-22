@@ -42,6 +42,11 @@ void Firemountain::Destroy() {
     this->vulkan.Destroy();
 }
 
+void Firemountain::ProcessImGuiEvent(SDL_Event* e)
+{
+    this->vulkan.ProcessImGuiEvent(e);
+}
+
 bool Firemountain::AddMesh(const std::string& name, const char* path) {
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;

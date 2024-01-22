@@ -1,9 +1,9 @@
 #version 450
 #extension GL_EXT_buffer_reference : require
 
-layout (location = 0) in vec3 inPosition;
-layout (location = 1) in vec3 inNormal;
-layout (location = 2) in vec3 inColor;
+// layout (location = 0) in vec3 inPosition;
+// layout (location = 1) in vec3 inNormal;
+// layout (location = 2) in vec3 inColor;
 
 layout (location = 0) out vec3 outColor;
 layout (location = 1) out vec2 outUV;
@@ -30,7 +30,8 @@ void main() {
     Vertex v = pushConstants.vertex_buffer.vertices[gl_VertexIndex];
 
     gl_Position = pushConstants.render_matrix * vec4(v.position, 1.0f);
-    outColor = inColor;
+    //outColor = inColor;
+    outColor = vec3(1.0f, 0.0f, 0.0f);
     outUV.x = v.uv_x;
     outUV.y = v.uv_y;
 }

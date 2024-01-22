@@ -217,7 +217,8 @@ VkRenderingAttachmentInfo VKInit::attachment_info(VkImageView view, VkClearValue
         .pNext = nullptr,
         .imageView = view,
         .imageLayout = layout,
-        .loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD
+        .loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE
     };
 
     if (clear) {

@@ -41,6 +41,8 @@ int RunApp()
             default:
                 break;
             }
+
+            firemountain.ProcessImGuiEvent(&event);
         }
         firemountain.Frame();
     }

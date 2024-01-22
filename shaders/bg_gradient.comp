@@ -9,6 +9,13 @@ layout (push_constant) uniform constants {
     vec4 data_4;
 } push_constants;
 
+vec4 debanding(vec4 col, ivec2 uv)
+{
+    float noise_scale = 0.003173828125;
+    float rand = fract(sin(dot(uv.xy, vec2(12.9898, 78.233))) * 43758.5453);
+    return clamp(col + rand * noise_scale - noise_scale / 2.0, 0.0, 1.0);
+}
+
 void main() {
     ivec2 texel_coord = ivec2(gl_GlobalInvocationID.xy);
     ivec2 size = imageSize(image);
@@ -17,6 +24,17 @@ void main() {
 
     if(texel_coord.x < size.x && texel_coord.y < size.y) {
         float blend = float(texel_coord.y) / size.y;
-        imageStore(image, texel_coord, mix(top_color, bottom_color, blend));
+
+        vec4 out_color = mix(top_color, bottom_color, blend);
+
+        // Add some noise to create texture
+        // This looks terrible, why?
+        // out_color += 0.015 * fract(sin(dot(texel_coord, vec2(12.9898, 78.233))) * 43758.5453);
+
+        // Tonemapping and debanding
+        out_color = 1.0f - exp(-out_color);
+        out_color = debanding(out_color, texel_coord);
+
+        imageStore(image, texel_coord, out_color);
     }
 }

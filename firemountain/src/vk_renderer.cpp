@@ -22,13 +22,15 @@ int fmVK::Vulkan::Init(const uint32_t width, const uint32_t height, SDL_Window* 
         .width = width,
         .height = height
     };
+    this->_window = window;
 
-    this->init_vulkan(window);
+    this->init_vulkan(this->_window);
     this->init_swapchain();
     this->init_commands();
     this->init_sync_structures();
     this->init_descriptors();
     this->init_pipelines();
+    init_imgui();
 
     this->_is_initialized = true;
 
@@ -36,8 +38,13 @@ int fmVK::Vulkan::Init(const uint32_t width, const uint32_t height, SDL_Window* 
 }
 
 void fmVK::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
+
+
     VK_CHECK(vkWaitForFences(this->_device, 1, &get_current_frame()._render_fence, true, 1000000000));
     get_current_frame()._deletion_queue.flush();
+
+    this->_draw_extent.width = this->_draw_image.extent.width;
+    this->_draw_extent.height = this->_draw_image.extent.height;
 
     // Request image from the swapchain
     uint32_t swapchain_image_index;
@@ -51,40 +58,41 @@ void fmVK::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
     ));
 
     // New draw
-
-    this->_draw_extent.width = this->_draw_image.extent.width;
-    this->_draw_extent.height = this->_draw_image.extent.height;
-
     VK_CHECK(vkResetFences(this->_device, 1, &get_current_frame()._render_fence));
     VK_CHECK(vkResetCommandBuffer(this->get_current_frame()._main_command_buffer, 0));
 
-    auto command_buffer = this->get_current_frame()._main_command_buffer;
+    auto cmd = this->get_current_frame()._main_command_buffer;
     auto command_buffer_begin = VKInit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
     // Start drawing
-    VK_CHECK(vkBeginCommandBuffer(command_buffer, &command_buffer_begin));
+    VK_CHECK(vkBeginCommandBuffer(cmd, &command_buffer_begin));
 
-    VKUtil::transition_image(command_buffer, this->_draw_image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+    VKUtil::transition_image(cmd, this->_draw_image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
-    draw_background(command_buffer);
-    VKUtil::transition_image(command_buffer, this->_draw_image.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-    VKUtil::transition_image(command_buffer, this->_depth_image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+    draw_background(cmd);
 
     // Draw meshes, transfer the draw image and the swapchain image to transfer layouts
-    draw_geometry(command_buffer, render_objects, render_object_count);
-    VKUtil::transition_image(command_buffer, this->_draw_image.image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-    VKUtil::transition_image(command_buffer, this->_swapchain_images[swapchain_image_index], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    VKUtil::transition_image(cmd, this->_draw_image.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    VKUtil::transition_image(cmd, this->_depth_image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+    draw_geometry(cmd, render_objects, render_object_count);
+
+    VKUtil::transition_image(cmd, this->_draw_image.image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    VKUtil::transition_image(cmd, this->_swapchain_images[swapchain_image_index], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     // Copy draw image into the swapchain
-    VKUtil::copy_image_to_image(command_buffer, this->_draw_image.image, _swapchain_images[swapchain_image_index], this->_draw_extent, this->_swapchain_extent);
+    VKUtil::copy_image_to_image(cmd, this->_draw_image.image, _swapchain_images[swapchain_image_index], this->_draw_extent, this->_swapchain_extent);
+
+    // Draw Imgui
+    VKUtil::transition_image(cmd, this->_swapchain_images[swapchain_image_index], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    draw_imgui(cmd, this->_swapchain_image_views[swapchain_image_index]);
 
     // Set swapchain image layout to PRESENT
-    VKUtil::transition_image(command_buffer, this->_swapchain_images[swapchain_image_index], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    VKUtil::transition_image(cmd, this->_swapchain_images[swapchain_image_index], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     // Finalize command buffer
-    VK_CHECK(vkEndCommandBuffer(command_buffer));
+    VK_CHECK(vkEndCommandBuffer(cmd));
 
-    auto cmd_info = VKInit::command_buffer_submit_info(command_buffer);
+    auto cmd_info = VKInit::command_buffer_submit_info(cmd);
     auto wait_info = VKInit::semaphore_submit_info(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR, this->get_current_frame()._swapchain_semaphore);
     auto signal_info = VKInit::semaphore_submit_info(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT, this->get_current_frame()._render_semaphore);
 
@@ -124,7 +132,12 @@ void fmVK::Vulkan::Destroy() {
     }
 }
 
-GPUMeshBuffers fmVK::Vulkan::UploadMesh(std::span<Vertex> vertices, std::span<uint32_t> indices) {
+void fmVK::Vulkan::ProcessImGuiEvent(SDL_Event* e)
+{
+    ImGui_ImplSDL2_ProcessEvent(e);
+}
+
+GPUMeshBuffers fmVK::Vulkan::UploadMesh(std::vector<Vertex> vertices, std::vector<uint32_t> indices) {
     const size_t vertex_buffer_size = vertices.size() * sizeof(Vertex);
     const size_t index_buffer_size = indices.size() * sizeof(uint32_t);
     GPUMeshBuffers surface;
@@ -194,7 +207,7 @@ void fmVK::Vulkan::init_vulkan(SDL_Window *window) {
 
 
     // TODO: How to do this without including SDL headers in this project?
-    SDL_Vulkan_CreateSurface(window, this->_instance, &this->_surface);
+    SDL_Vulkan_CreateSurface(this->_window, this->_instance, &this->_surface);
 
     // Vulkan 1.3 features
     VkPhysicalDeviceVulkan13Features features_13 {
@@ -235,7 +248,7 @@ void fmVK::Vulkan::init_vulkan(SDL_Window *window) {
 }
 
 
-void fmVK::Vulkan::init_imgui(SDL_Window *window) {
+void fmVK::Vulkan::init_imgui() {
     // 1: Create descriptor pool
     VkDescriptorPoolSize pool_sizes[] = {
         { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
@@ -263,7 +276,33 @@ void fmVK::Vulkan::init_imgui(SDL_Window *window) {
     VK_CHECK(vkCreateDescriptorPool(this->_device, &pool_info, nullptr, &imgui_pool));
 
     // 2: Init library
+    IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImGui_ImplSDL2_InitForVulkan(this->_window);
+    ImGui_ImplVulkan_InitInfo init_info = {
+        .Instance = this->_instance,
+        .PhysicalDevice = this->_gpu,
+        .Device = this->_device,
+        .QueueFamily = this->_graphics_queue_family,
+        .Queue = this->_graphics_queue,
+        .DescriptorPool = imgui_pool,
+        .MinImageCount = 3,
+        .ImageCount = 3,
+        .MSAASamples = VK_SAMPLE_COUNT_1_BIT,
+        .UseDynamicRendering = true,
+        .ColorAttachmentFormat = this->_swapchain_image_format
+    };
+    ImGui_ImplVulkan_Init(&init_info, VK_NULL_HANDLE);
+
+    immediate_submit([&](VkCommandBuffer cmd) { ImGui_ImplVulkan_CreateFontsTexture(); });
+
+    // ImGui_ImplVulkan_DestroyFontUploadObjects();
+    ImGui_ImplVulkan_DestroyFontsTexture();
+
+    this->_deletion_queue.push_function([=]() {
+        vkDestroyDescriptorPool(this->_device, imgui_pool, nullptr);
+        ImGui_ImplVulkan_Shutdown();
+    });
 }
 
 void fmVK::Vulkan::init_swapchain() {
@@ -334,9 +373,10 @@ void fmVK::Vulkan::init_swapchain() {
 
 void fmVK::Vulkan::create_swapchain() {
     vkb::SwapchainBuilder swapchain_builder{ this->_gpu, this->_device, this->_surface };
+    this->_swapchain_image_format = VK_FORMAT_B8G8R8A8_UNORM;
     vkb::Swapchain vkb_swapchain = swapchain_builder
         .set_desired_format(VkSurfaceFormatKHR { 
-            .format = this->_swapchain_image_format,
+            .format = this->_swapchain_image_format, 
             .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
         })
         .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
@@ -457,7 +497,26 @@ void fmVK::Vulkan::init_pipelines() {
     });
 }
 
-void fmVK::Vulkan::draw_background(VkCommandBuffer cmd) {
+void fmVK::Vulkan::draw_imgui(VkCommandBuffer cmd, VkImageView image_view)
+{
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplSDL2_NewFrame(this->_window);
+    ImGui::NewFrame();
+    ImGui::ShowDemoWindow();
+    ImGui::Render();
+
+    VkRenderingAttachmentInfo color_attachment = VKInit::attachment_info(image_view, nullptr, VK_IMAGE_LAYOUT_GENERAL);
+    VkRenderingInfo render_info = VKInit::rendering_info(this->_swapchain_extent, &color_attachment, nullptr);
+    vkCmdBeginRendering(cmd, &render_info);
+
+    //vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, GetPipeline("mesh"));
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
+
+    vkCmdEndRendering(cmd);
+}
+
+void fmVK::Vulkan::draw_background(VkCommandBuffer cmd)
+{
     auto bg_pipeline = this->compute_pipelines["background"];
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, bg_pipeline.pipeline);
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, bg_pipeline.layout, 0, 1, &this->_draw_image_descriptors, 0, nullptr);
@@ -523,7 +582,7 @@ void fmVK::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
 
         if (object.mesh != bound_mesh) {
             VkDeviceSize offset = 0;
-            vkCmdBindIndexBuffer(cmd, object.index_buffer, 0, VK_INDEX_TYPE_UINT32);
+            vkCmdBindIndexBuffer(cmd, bound_mesh->index_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
             bound_mesh = object.mesh;
         }
         vkCmdDrawIndexed(cmd, object.index_count, 1, 0, 0, 0);

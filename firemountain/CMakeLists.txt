@@ -22,6 +22,7 @@ target_link_libraries(${PROJECT_NAME}
 
 include_directories(
   ${SDL2_INCLUDE_DIRS}
+  ${IMGUI_INCLUDE_DIR}
 )
 
 # ---------------------------------------------------------------

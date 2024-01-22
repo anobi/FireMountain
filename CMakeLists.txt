@@ -34,7 +34,7 @@ FetchContent_Declare(
   GIT_TAG        10.2.1
 )
 FetchContent_Declare(
-  imgui_src
+  imgui
   GIT_REPOSITORY https://github.com/ocornut/imgui.git
   GIT_TAG        v1.90.1
 )
@@ -44,7 +44,7 @@ FetchContent_MakeAvailable(
   tinyobjloader
   glm
   fmt
-  imgui_src
+  imgui
 )
 
 # ---------------------------------------------------------------
@@ -54,6 +54,7 @@ find_package(SDL2 REQUIRED)
 add_library(imgui STATIC
   "_deps/imgui-src/imgui.cpp"
   "_deps/imgui-src/imgui_draw.cpp"
+  "_deps/imgui-src/imgui_demo.cpp"
   "_deps/imgui-src/imgui_tables.cpp"
   "_deps/imgui-src/imgui_widgets.cpp"
   "_deps/imgui-src/backends/imgui_impl_sdl2.cpp"

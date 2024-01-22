@@ -1,12 +1,14 @@
 #pragma once
 
+#include <SDL2/SDL.h>
+
 #include "fm_utils.hpp"
 #include "fm_scene.hpp"
 #include "vk_mesh.hpp"
 #include "vk_types.hpp"
 #include "vk_renderer.hpp"
 
-
+//class SDL_Event;
 
 class Firemountain {
 public:
@@ -16,6 +18,8 @@ public:
     int Init(const int width, const int height, SDL_Window* window);
     void Frame();
     void Destroy();
+
+    void ProcessImGuiEvent(SDL_Event* e);
 
     bool AddMesh(const std::string& name, const char* path);
 
