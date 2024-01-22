@@ -35,29 +35,31 @@ void VKUtil::copy_image_to_image(VkCommandBuffer cmd, VkImage src, VkImage dst, 
     VkImageBlit2 blit_region = { 
         .sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2,
         .pNext = nullptr,
-        .srcSubresource = (VkImageSubresourceLayers) {
+        .srcSubresource = {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .mipLevel = 0,
             .baseArrayLayer = 0,
             .layerCount = 1
         },
-        .srcOffsets[1] = VkOffset3D {
+        .dstSubresource = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .mipLevel = 0,
+            .baseArrayLayer = 0,
+            .layerCount = 1
+        }
+    };
+
+    blit_region.srcOffsets[1] = {
             .x = static_cast<int32_t>(src_size.width),
             .y = static_cast<int32_t>(src_size.height),
             .z = 1
-        },
-        .dstSubresource = (VkImageSubresourceLayers) {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .mipLevel = 0,
-            .baseArrayLayer = 0,
-            .layerCount = 1
-        },
-        .dstOffsets[1] = VkOffset3D {
+    };
+    blit_region.dstOffsets[1] = VkOffset3D {
             .x = static_cast<int32_t>(dst_size.width),
             .y = static_cast<int32_t>(dst_size.height),
             .z = 1
-        }
     };
+
 
     VkBlitImageInfo2 blit_info = {
         .sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2,

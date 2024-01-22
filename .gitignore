@@ -119,3 +119,4 @@ ipch/
 # !.vscode/extensions.json
 # *.code-workspace
 .DS_Store
+.vscode/c_cpp_properties.json

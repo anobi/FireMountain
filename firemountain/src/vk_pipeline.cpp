@@ -154,8 +154,8 @@ int fmVK::ComputePipeline::Init(const VkDevice device, const char *shader_name, 
     VkComputePipelineCreateInfo compute_pipeline_create_info = {
         .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
         .pNext = nullptr,
+        .stage = stage_info,
         .layout = this->layout,
-        .stage = stage_info
     };
 
     // TODO: temp stuff

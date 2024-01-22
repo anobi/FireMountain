@@ -24,6 +24,7 @@ include_directories(
   ${SDL2_INCLUDE_DIRS}
   ${IMGUI_INCLUDE_DIR}
 )
+target_link_libraries(${PROJECT_NAME} ${SDL2_LIBRARIES})
 
 # ---------------------------------------------------------------
 # Internal sources, inclues and targets

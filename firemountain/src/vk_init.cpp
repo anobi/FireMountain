@@ -237,7 +237,8 @@ VkRenderingAttachmentInfo VKInit::depth_attachment_info(VkImageView view, VkImag
         .imageLayout = layout,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-        .clearValue.depthStencil.depth = 0.0f
+        //.clearValue.depthStencil.depth = 0.0f
+        .clearValue = { .depthStencil = { .depth = 0.0f } }
     };
     return depth_info;
 }

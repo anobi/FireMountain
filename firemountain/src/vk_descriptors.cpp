@@ -24,9 +24,9 @@ VkDescriptorSetLayout DescriptorLayoutBuilder::build(VkDevice device, VkShaderSt
     VkDescriptorSetLayoutCreateInfo info = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
         .pNext = nullptr,
-        .pBindings = this->bindings.data(),
+        .flags = 0,
         .bindingCount = static_cast<uint32_t>(this->bindings.size()),
-        .flags = 0
+        .pBindings = this->bindings.data()
     };
 
     VkDescriptorSetLayout set;

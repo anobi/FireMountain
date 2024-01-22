@@ -50,6 +50,7 @@ FetchContent_MakeAvailable(
 # ---------------------------------------------------------------
 # Build imgui as library
 # ---------------------------------------------------------------
+find_package(Vulkan REQUIRED)
 find_package(SDL2 REQUIRED)
 add_library(imgui STATIC
   "_deps/imgui-src/imgui.cpp"
@@ -62,7 +63,10 @@ add_library(imgui STATIC
 )
 set(IMGUI_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/_deps/imgui-src)
 set(IMGUI_BACKEND_DIR ${CMAKE_CURRENT_SOURCE_DIR}/_deps/imgui-src/backends)
-
+target_link_libraries(imgui
+  Vulkan::Vulkan
+  SDL
+)
 target_include_directories(imgui
   PUBLIC
     ${SDL2_INCLUDE_DIRS}
