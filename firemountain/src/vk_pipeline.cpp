@@ -98,9 +98,8 @@ int fmVK::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, 
     pipeline_builder.set_cull_mode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
     pipeline_builder.set_multisampling_none();
     pipeline_builder.disable_blending();
-    pipeline_builder.disable_depth_test();
     pipeline_builder.set_color_attachment_format(alloc_image.format);
-    pipeline_builder.set_depth_format(VK_FORMAT_UNDEFINED);
+    pipeline_builder.set_depth_format(VK_FORMAT_D32_SFLOAT);
     // pipeline_builder.enable_blending_additive();
 
     this->pipeline = pipeline_builder.build_pipeline(device);
@@ -154,8 +153,8 @@ int fmVK::ComputePipeline::Init(const VkDevice device, const char *shader_name, 
     VkComputePipelineCreateInfo compute_pipeline_create_info = {
         .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
         .pNext = nullptr,
-        .layout = this->layout,
-        .stage = stage_info
+        .stage = stage_info,
+        .layout = this->layout
     };
 
     // TODO: temp stuff

@@ -8,7 +8,7 @@
 
 int Firemountain::Init(const int width, const int height, SDL_Window* window) {
     this->vulkan.Init(width, height, window);
-    // this->create_material("mesh");
+    this->create_material("mesh");
 
     // this->_triangle_mesh.vertices.resize(3);
     // this->_triangle_mesh.vertices[0] = {

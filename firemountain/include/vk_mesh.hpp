@@ -13,6 +13,10 @@ struct VertexInputDescription {
     VkPipelineVertexInputStateCreateFlags flags = 0;
 };
 
+struct GeoSurface {
+    uint32_t start_index;
+    uint32_t count;
+};
 
 struct Vertex {
     glm::vec3 position;
@@ -24,19 +28,20 @@ struct Vertex {
     static VertexInputDescription get_vertex_description();
 };
 
-struct LoaderMesh {
-    std::span<Vertex> vertices;
-    std::span<uint32_t> indices;
-    bool load_from_obj(const char* path);
-};
-
 struct GPUMeshBuffers {
     AllocatedBuffer index_buffer;
     AllocatedBuffer vertex_buffer;
     VkDeviceAddress vertex_buffer_address;
 };
 
+struct MeshAsset {
+    std::string name;
+    std::vector<GeoSurface> surfaces;
+    GPUMeshBuffers mesh_buffers;
+};
+
 struct GPUDrawPushConstants {
     glm::mat4 world_matrix;
     VkDeviceAddress vertex_buffer;
 };
+

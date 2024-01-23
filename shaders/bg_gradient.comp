@@ -25,7 +25,8 @@ void main() {
     if(texel_coord.x < size.x && texel_coord.y < size.y) {
         float blend = float(texel_coord.y) / size.y;
 
-        vec4 out_color = mix(top_color, bottom_color, blend);
+        float brightness = 0.85;
+        vec4 out_color = mix(top_color, bottom_color, blend) * brightness;
 
         // Add some noise to create texture
         // This looks terrible, why?

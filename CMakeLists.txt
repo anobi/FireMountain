@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
 project(FireMountain)
+set(CMAKE_C_STANDARD 17)
 set(CMAKE_CXX_STANDARD 23)
 
 add_subdirectory("firemountain")
@@ -24,6 +25,11 @@ FetchContent_Declare(
   GIT_TAG        f48bd0bfb9b00ed1f5b13dbcdbd7909ca8bd49b5  # v2.0.0rc10
 )
 FetchContent_Declare(
+  fastgltf
+  GIT_REPOSITORY https://github.com/spnda/fastgltf.git
+  GIT_TAG        73fa4209b883f4614fda2f516a53ebc1c53aec70
+)
+FetchContent_Declare(
   glm
   GIT_REPOSITORY https://github.com/g-truc/glm.git
   GIT_TAG        b85861aa0914241f6403697ea0b73cbb658afae4  # Master
@@ -42,6 +48,7 @@ FetchContent_MakeAvailable(
   vk-bootstrap
   VulkanMemoryAllocator
   tinyobjloader
+  fastgltf
   glm
   fmt
   imgui

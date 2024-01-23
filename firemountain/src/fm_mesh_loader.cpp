@@ -1,6 +1,10 @@
 #include <tiny_obj_loader.h>
 #include <fmt/core.h>
 
+#include <fastgltf/glm_element_traits.hpp>
+#include <fastgltf/parser.hpp>
+#include <fastgltf/tools.hpp>
+
 #include "fm_mesh_loader.hpp"
 
 

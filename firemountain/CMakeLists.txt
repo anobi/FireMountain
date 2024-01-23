@@ -15,6 +15,7 @@ target_link_libraries(${PROJECT_NAME}
   vk-bootstrap::vk-bootstrap
   GPUOpen::VulkanMemoryAllocator
   tinyobjloader
+  fastgltf
   glm
   fmt
   imgui

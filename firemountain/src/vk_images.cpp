@@ -3,7 +3,6 @@
 
 
 void VKUtil::transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout) {
-    
     VkImageAspectFlags aspect_mask = (new_layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL)
         ? VK_IMAGE_ASPECT_DEPTH_BIT
         : VK_IMAGE_ASPECT_COLOR_BIT;
@@ -35,28 +34,28 @@ void VKUtil::copy_image_to_image(VkCommandBuffer cmd, VkImage src, VkImage dst, 
     VkImageBlit2 blit_region = { 
         .sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2,
         .pNext = nullptr,
-        .srcSubresource = (VkImageSubresourceLayers) {
+        .srcSubresource = {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .mipLevel = 0,
             .baseArrayLayer = 0,
             .layerCount = 1
         },
-        .srcOffsets[1] = VkOffset3D {
-            .x = static_cast<int32_t>(src_size.width),
-            .y = static_cast<int32_t>(src_size.height),
-            .z = 1
-        },
-        .dstSubresource = (VkImageSubresourceLayers) {
+        .dstSubresource = {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .mipLevel = 0,
             .baseArrayLayer = 0,
             .layerCount = 1
-        },
-        .dstOffsets[1] = VkOffset3D {
-            .x = static_cast<int32_t>(dst_size.width),
-            .y = static_cast<int32_t>(dst_size.height),
-            .z = 1
         }
+    };
+    blit_region.srcOffsets[1] = {
+        .x = static_cast<int32_t>(src_size.width),
+        .y = static_cast<int32_t>(src_size.height),
+        .z = 1
+    };
+    blit_region.dstOffsets[1] = {
+        .x = static_cast<int32_t>(dst_size.width),
+        .y = static_cast<int32_t>(dst_size.height),
+        .z = 1
     };
 
     VkBlitImageInfo2 blit_info = {
