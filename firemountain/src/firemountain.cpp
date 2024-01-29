@@ -48,17 +48,14 @@ void Firemountain::ProcessImGuiEvent(SDL_Event* e)
 }
 
 bool Firemountain::AddMesh(const std::string& name, const char* path) {
-    std::vector<Vertex> vertices;
-    std::vector<uint32_t> indices;
-    MeshLoader::LoadObj(path, &vertices, &indices);
-    this->_meshes[name] = this->vulkan.UploadMesh(vertices, indices);
+    this->_meshes[name] = MeshLoader::LoadGltf("assets/monke.glb", &this->vulkan);
 
     RenderObject render_object;
-    render_object.mesh = this->get_mesh(name);
+    render_object.mesh = &this->_meshes[name][0]->mesh_buffers;
     render_object.material = this->get_material("mesh");
     render_object.transform = glm::mat4{ 1.0f };
-    render_object.index_count = indices.size();
-    render_object.index_buffer = render_object.mesh->index_buffer.buffer;
+    render_object.index_count = this->_meshes[name][0]->surfaces[0].count;
+    render_object.first_index = this->_meshes[name][0]->surfaces[0].start_index;
     this->_renderables.push_back(render_object);
     
     return true;
@@ -82,11 +79,11 @@ Material* Firemountain::get_material(const std::string& name) {
     }
 }
 
-GPUMeshBuffers* Firemountain::get_mesh(const std::string& name) {
-    auto i = this->_meshes.find(name);
-    if (i == this->_meshes.end()) {
-        return nullptr;
-    } else {
-        return &(*i).second;
-    }
-}
+// GPUMeshBuffers* Firemountain::get_render_mesh(const std::string& name) {
+//     auto i = this->_meshes.find(name);
+//     if (i == this->_meshes.end()) {
+//         return nullptr;
+//     } else {
+//         return &(*i).second;
+//     }
+// }

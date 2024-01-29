@@ -14,7 +14,7 @@
 #include "fm_renderable.hpp"
 
 class SDL_Window;
-//class SDL_Event;
+union SDL_Event;
 
 
 namespace fmVK {

@@ -588,7 +588,7 @@ void fmVK::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
             vkCmdBindIndexBuffer(cmd, object.mesh->index_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
             bound_mesh = object.mesh;
         }
-        vkCmdDrawIndexed(cmd, object.index_count, 1, 0, 0, 0);
+        vkCmdDrawIndexed(cmd, object.index_count, 1, object.first_index, 0, 0);
     }
     vkCmdEndRendering(cmd);
 }

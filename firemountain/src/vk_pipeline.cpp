@@ -50,17 +50,17 @@ int fmVK::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, 
     // -------------------------------------------------------------------------
     // TODO: Get shader paths from pipeline name. Use fmt::format
     if (!load_shader_module("shaders/mesh.frag.spv", device, &this->fragment_shader)) {
-        fmt::print("Error building fragment shader module");
+        fmt::println("Error building fragment shader module");
     }
     else {
-        fmt::print("Fragment shader module loaded.");
+        fmt::println("Fragment shader module loaded.");
     }
 
     if (!load_shader_module("shaders/mesh.vert.spv", device, &this->vertex_shader)) {
-        fmt::print("Error building vertex shader module");
+        fmt::println("Error building vertex shader module");
     } 
     else {
-        fmt::print("Vertex shader module loaded.");
+        fmt::println("Vertex shader module loaded.");
     }
 
     // Pipeline layout
@@ -136,10 +136,10 @@ int fmVK::ComputePipeline::Init(const VkDevice device, const char *shader_name, 
 
     VkShaderModule compute_shader;
     if (!load_shader_module("shaders/bg_gradient.comp.spv", device, &compute_shader)) {
-        fmt::print("Error building compute shader module");
+        fmt::println("Error building compute shader module");
     }
     else {
-        fmt::print("Compute shader module loaded.");
+        fmt::println("Compute shader module loaded.");
     }
 
     VkPipelineShaderStageCreateInfo stage_info = {

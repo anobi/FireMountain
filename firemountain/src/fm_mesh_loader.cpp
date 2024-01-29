@@ -1,6 +1,8 @@
 #include <tiny_obj_loader.h>
 #include <fmt/core.h>
 
+#include <glm/gtx/quaternion.hpp>
+
 #include <fastgltf/glm_element_traits.hpp>
 #include <fastgltf/parser.hpp>
 #include <fastgltf/tools.hpp>
@@ -9,6 +11,7 @@
 
 
 const int FACE_VERTICES = 3;
+constexpr bool OVERRIDE_COLORS = true;
 
 
 bool MeshLoader::LoadObj(const char *path, std::vector<Vertex> *vertices, std::vector<uint32_t> *indices)
@@ -46,7 +49,7 @@ bool MeshLoader::LoadObj(const char *path, std::vector<Vertex> *vertices, std::v
                 Vertex vertex = {
                     .position = {vertex_x, vertex_y, vertex_z},
                     .normal = {normal_x, normal_y, normal_z},
-                    .color = {normal_x, normal_y, normal_z}
+                    .color = {normal_x, normal_y, normal_z, 1.0f}
                 };
 
                 vertices->push_back(vertex);
@@ -57,9 +60,112 @@ bool MeshLoader::LoadObj(const char *path, std::vector<Vertex> *vertices, std::v
     return true;
 }
 
-bool MeshLoader::LoadGltf(const char *path, std::span<Vertex> *vertices, std::span<uint32_t> *indices)
+std::vector<std::shared_ptr<MeshAsset>> MeshLoader::LoadGltf(std::filesystem::path file_path, fmVK::Vulkan *vk_engine)
 {
-    return false;
+    fmt::println("Loading GLTF: {}", file_path.string());
+
+    fastgltf::GltfDataBuffer data;
+    data.loadFromFile(file_path);
+
+    constexpr auto gltf_options = fastgltf::Options::LoadGLBBuffers | fastgltf::Options::LoadExternalBuffers;
+
+    fastgltf::Asset gltf;
+    fastgltf::Parser parser {};
+
+    auto load = parser.loadGltfBinary(&data, file_path.parent_path(), gltf_options);
+    if (load) {
+        gltf = std::move(load.get());
+    } else {
+        fmt::println("!! Failed to load glTF: {}", fastgltf::to_underlying(load.error()));
+        return {};
+    }
+
+    std::vector<std::shared_ptr<MeshAsset>> meshes;
+    std::vector<uint32_t> indices;
+    std::vector<Vertex> vertices;
+    for (fastgltf::Mesh& mesh : gltf.meshes) {
+        MeshAsset mesh_asset;
+        mesh_asset.name = mesh.name;
+        indices.clear();
+        vertices.clear();
+
+        for (auto&& p : mesh.primitives) {
+            GeoSurface surface;
+            surface.start_index = (uint32_t) indices.size();
+            surface.count = (uint32_t) gltf.accessors[p.indicesAccessor.value()].count;
+            size_t initial_vertex = vertices.size();
+
+            // Load indices
+            {
+                fastgltf::Accessor& index_accessor = gltf.accessors[p.indicesAccessor.value()];
+                indices.reserve(indices.size() + index_accessor.count);
+                fastgltf::iterateAccessor<uint32_t>(gltf, index_accessor,
+                    [&](uint32_t idx) {
+                        indices.push_back(idx + initial_vertex);
+                });
+            }
+
+            // Load vertex positions
+            {
+                fastgltf::Accessor& position_accessor = gltf.accessors[p.findAttribute("POSITION")->second];
+                vertices.resize(vertices.size() + position_accessor.count);
+                fastgltf::iterateAccessorWithIndex<glm::vec3>(
+                    gltf,
+                    position_accessor,
+                    [&](glm::vec3 v, size_t index) {
+                        Vertex new_vertex = {
+                            .position = v,
+                            .uv_x = 0,
+                            .normal = { 1.0f, 0.0f, 0.0f },
+                            .uv_y = 0,
+                            .color = glm::vec4 { 1.0f }
+                        };
+                        vertices[initial_vertex + index] = new_vertex;
+                });
+            }
+
+            // Load vertex normals
+            auto normals = p.findAttribute("NORMAL");
+            if (normals != p.attributes.end()) {
+                fastgltf::iterateAccessorWithIndex<glm::vec3>(gltf, gltf.accessors[(*normals).second],
+                [&](glm::vec3 v, size_t index) {
+                    vertices[initial_vertex + index].normal = v;
+                });
+            }
+
+            // Load UVs
+            auto uv = p.findAttribute("TEXCOORD_0");
+            if (uv != p.attributes.end()) {
+                fastgltf::iterateAccessorWithIndex<glm::vec3>(gltf, gltf.accessors[(*uv).second],
+                [&](glm::vec2 v, size_t index) {
+                    vertices[initial_vertex + index].uv_x = v.x;
+                    vertices[initial_vertex + index].uv_y = v.y;
+                });
+            }
+
+            auto colors = p.findAttribute("COLOR_0");
+            if (colors != p.attributes.end()) {
+                fastgltf::iterateAccessorWithIndex<glm::vec4>(gltf, gltf.accessors[(*colors).second],
+                [&](glm::vec4 v, size_t index) {
+                    vertices[initial_vertex + index].color = v;
+                });
+            }
+
+            mesh_asset.surfaces.push_back(surface);
+        }
+
+        // Display vertex normals for testing purposes
+        if (OVERRIDE_COLORS) {
+            for(Vertex& vtx : vertices) {
+                vtx.color = glm::vec4(vtx.normal, 1.0f);
+            }
+        }
+
+        mesh_asset.mesh_buffers = vk_engine->UploadMesh(vertices, indices);
+        meshes.emplace_back(std::make_shared<MeshAsset>(std::move(mesh_asset)));
+    }
+
+    return meshes;
 }
 
 
