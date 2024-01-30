@@ -17,11 +17,8 @@ int RunApp()
     display.Init(WIDTH, HEIGHT);
     firemountain.Init(WIDTH, HEIGHT, display.window);
 
-    auto monke_1 = firemountain.AddMesh("froge", "assets/SM_Good_Froge_LP_Trimmed.glb");
-    // firemountain.AddToScene(monke_1, "mesh");
-
-    // auto monke_2 = firemountain.AddMesh("monke", "assets/monke.obj");
-    // firemountain.AddToScene(monke_1, "noise");
+    auto froge = firemountain.AddMesh("froge", "assets/good_froge.glb");
+    auto monke = firemountain.AddMesh("monke", "assets/monke.glb");
 
     bool running = true;
     SDL_Event event;

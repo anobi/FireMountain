@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <filesystem>
 #include <unordered_map>
 #include "vk_mem_alloc.h"
 

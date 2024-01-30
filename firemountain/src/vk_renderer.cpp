@@ -557,7 +557,7 @@ void fmVK::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
 
     // Update and push constants
     glm::vec3 camera_position = {0.0f, 0.0f, -5.0f};
-    glm::mat4 view = glm::translate(glm::mat4(1.0f), camera_position);
+    glm::mat4 view = glm::translate(camera_position);
     glm::mat4 projection = glm::perspective(
         glm::radians(70.0f), 
         (float) this->_window_extent.width / (float) this->_window_extent.height,

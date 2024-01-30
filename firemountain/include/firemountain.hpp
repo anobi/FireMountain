@@ -1,6 +1,7 @@
 #pragma once
 
 #include <SDL2/SDL.h>
+#include <filesystem>
 
 #include "fm_utils.hpp"
 #include "fm_scene.hpp"
