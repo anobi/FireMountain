@@ -24,6 +24,8 @@ namespace fmVK {
         void set_depth_format(VkFormat format);
 
         void disable_blending();
+
+        void enable_depth_test(bool depth_write_enable, VkCompareOp op);
         void disable_depth_test();
 
         void enable_blending_additive();

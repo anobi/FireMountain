@@ -184,7 +184,7 @@ GPUMeshBuffers fmVK::Vulkan::UploadMesh(std::vector<Vertex> vertices, std::vecto
     });
 
     destroy_buffer(staging);
-    this->_deletion_queue.push_function([=]() {
+    this->_deletion_queue.push_function([=, this]() {
         destroy_buffer(surface.index_buffer);
         destroy_buffer(surface.vertex_buffer);
     });
@@ -303,7 +303,7 @@ void fmVK::Vulkan::init_imgui() {
     // ImGui_ImplVulkan_DestroyFontUploadObjects();
     ImGui_ImplVulkan_DestroyFontsTexture();
 
-    this->_deletion_queue.push_function([=]() {
+    this->_deletion_queue.push_function([=, this]() {
         vkDestroyDescriptorPool(this->_device, imgui_pool, nullptr);
         ImGui_ImplVulkan_Shutdown();
     });
@@ -367,7 +367,7 @@ void fmVK::Vulkan::init_swapchain() {
     );
     VK_CHECK(vkCreateImageView(this->_device, &depth_view_info, nullptr, &this->_depth_image.view));
 
-    this->_deletion_queue.push_function([=]() {
+    this->_deletion_queue.push_function([=, this]() {
         vkDestroyImageView(this->_device, this->_draw_image.view, nullptr);
         vmaDestroyImage(this->_allocator, this->_draw_image.image, this->_draw_image.allocation);
         vkDestroyImageView(this->_device, this->_depth_image.view, nullptr);
@@ -414,7 +414,7 @@ void fmVK::Vulkan::init_commands() {
         VkCommandBufferAllocateInfo alloc_info = VKInit::command_buffer_allocate_info(this->_frames[i]._command_pool, 1);
         VK_CHECK(vkAllocateCommandBuffers(this->_device, &alloc_info, &this->_frames[i]._main_command_buffer));
     
-        this->_deletion_queue.push_function([=]() {
+        this->_deletion_queue.push_function([=, this]() {
             vkDestroyCommandPool(this->_device, this->_frames[i]._command_pool, nullptr);
         });
     }
@@ -424,7 +424,7 @@ void fmVK::Vulkan::init_commands() {
     VkCommandBufferAllocateInfo immediata_alloc_info = VKInit::command_buffer_allocate_info(this->_immediate_command_pool, 1);
     VK_CHECK(vkAllocateCommandBuffers(this->_device, &immediata_alloc_info, &this->_immediate_command_buffer));
 
-    this->_deletion_queue.push_function([=]() {
+    this->_deletion_queue.push_function([=, this]() {
         vkDestroyCommandPool(this->_device, this->_immediate_command_pool, nullptr);
     });
 }
@@ -458,7 +458,7 @@ void fmVK::Vulkan::init_sync_structures() {
     }
 
     VK_CHECK(vkCreateFence(this->_device, &fence_create_info, nullptr, &this->_immediate_fence));
-    this->_deletion_queue.push_function([=]() { vkDestroyFence(this->_device, this->_immediate_fence, nullptr); });
+    this->_deletion_queue.push_function([=, this]() { vkDestroyFence(this->_device, this->_immediate_fence, nullptr); });
 }
 
 void fmVK::Vulkan::immediate_submit(std::function<void(VkCommandBuffer cmd)> &&function) {
