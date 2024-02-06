@@ -10,7 +10,10 @@ struct Material {
 };
 
 struct RenderObject {
-    Mesh* mesh;
+    uint32_t index_count;
+    uint32_t first_index;
+
+    GPUMeshBuffers* mesh;
     Material* material;
     glm::mat4 transform;
 };

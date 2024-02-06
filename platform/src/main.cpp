@@ -1,4 +1,5 @@
 #include <string>
+#include <fmt/core.h>
 #include <SDL2/SDL.h>
 
 #include "firemountain.hpp"
@@ -17,11 +18,8 @@ int RunApp()
     display.Init(WIDTH, HEIGHT);
     firemountain.Init(WIDTH, HEIGHT, display.window);
 
-    auto monke_1 = firemountain.AddMesh("monke", "assets/monke.obj");
-    // firemountain.AddToScene(monke_1, "mesh");
-
-    // auto monke_2 = firemountain.AddMesh("monke", "assets/monke.obj");
-    // firemountain.AddToScene(monke_1, "noise");
+    auto froge = firemountain.AddMesh("froge", "assets/good_froge.glb");
+    auto monke = firemountain.AddMesh("monke", "assets/monke.glb");
 
     bool running = true;
     SDL_Event event;
@@ -37,10 +35,19 @@ int RunApp()
                 if(event.key.keysym.sym == SDLK_ESCAPE) {
                     running = false;
                 }
+
+            case SDL_WINDOWEVENT:
+                if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
+                    int w, h;
+                    SDL_GetWindowSize(display.window, &w, &h);
+                    firemountain.Resize((uint32_t)w, (uint32_t)h);
+                }
             
             default:
                 break;
             }
+
+            firemountain.ProcessImGuiEvent(&event);
         }
         firemountain.Frame();
     }

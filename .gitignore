@@ -4,6 +4,12 @@ build/
 # Don't ship pre-built SPIR-V shaders
 *.spv
 
+.cache/
+
+# Temp files
+.\#*
+\#*#
+
 
 #########
 ## C++ ##
@@ -113,3 +119,4 @@ ipch/
 # !.vscode/extensions.json
 # *.code-workspace
 .DS_Store
+.vscode/c_cpp_properties.json

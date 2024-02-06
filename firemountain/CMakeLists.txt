@@ -8,17 +8,23 @@ add_library(${PROJECT_NAME} STATIC)
 # External dependencies
 # ---------------------------------------------------------------
 find_package(Vulkan REQUIRED)
+find_package(SDL2 REQUIRED)
 
-target_link_libraries(${PROJECT_NAME} 
+target_link_libraries(${PROJECT_NAME}
   Vulkan::Vulkan
   vk-bootstrap::vk-bootstrap
-  VulkanMemoryAllocator
+  GPUOpen::VulkanMemoryAllocator
   tinyobjloader
+  fastgltf
   glm
+  fmt
+  imgui
 )
 
-find_package(SDL2 REQUIRED)
-include_directories(${SDL2_INCLUDE_DIRS})
+include_directories(
+  ${SDL2_INCLUDE_DIRS}
+  ${IMGUI_INCLUDE_DIR}
+)
 
 # ---------------------------------------------------------------
 # Internal sources, inclues and targets
@@ -28,11 +34,14 @@ target_sources(${PROJECT_NAME}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/firemountain.cpp
   PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/fm_scene.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/fm_mesh_loader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_mesh.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_images.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_init.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_renderer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_pipeline_builder.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_pipeline.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_descriptors.cpp
 )
 
 target_include_directories(${PROJECT_NAME}

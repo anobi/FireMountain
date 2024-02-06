@@ -10,7 +10,7 @@ int Display::Init(const int width, const int height) {
         SDL_WINDOWPOS_CENTERED,
         width,
         height,
-        SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN
+        SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
     );
 
     if (this->window == NULL) {

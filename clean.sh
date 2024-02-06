@@ -1,2 +1,2 @@
-find . -type d \( -name "Debug" -o -name "x64" -o -name "CMakeFiles" -o -name "build" \) | xargs rm -r
-find . -type f \( -name "CMakeCache.txt" -o -name "Makefile" -o -name "*ninja*" -name "*vcxproj*" -o -name "*.sln" \) -delete
+find . -type d \( -name "Debug" -o -name "x64" -o -name "CMakeFiles" -o -name "build" -o -name "_deps" \) | xargs rm -r
+find . -type f \( -name "CMakeCache.txt" -o -name "Makefile" -o -name "*ninja*" -name "*vcxproj*" -o -name "*.sln" -o -name "*.cmake" -o -name "*.ninja" \) -delete

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <span>
 #include <glm/vec3.hpp>
 #include "vk_types.hpp"
 
@@ -12,18 +13,35 @@ struct VertexInputDescription {
     VkPipelineVertexInputStateCreateFlags flags = 0;
 };
 
+struct GeoSurface {
+    uint32_t start_index;
+    uint32_t count;
+};
 
 struct Vertex {
     glm::vec3 position;
+    float uv_x;
     glm::vec3 normal;
-    glm::vec3 color;
-
+    float uv_y;
+    glm::vec4 color; 
+    
     static VertexInputDescription get_vertex_description();
 };
 
-struct Mesh {
-    std::vector<Vertex> vertices;
-    AllocatedBuffer _vertex_buffer;
-
-    bool load_from_obj(const char* path);
+struct GPUMeshBuffers {
+    AllocatedBuffer index_buffer;
+    AllocatedBuffer vertex_buffer;
+    VkDeviceAddress vertex_buffer_address;
 };
+
+struct MeshAsset {
+    std::string name;
+    std::vector<GeoSurface> surfaces;
+    GPUMeshBuffers mesh_buffers;
+};
+
+struct GPUDrawPushConstants {
+    glm::mat4 world_matrix;
+    VkDeviceAddress vertex_buffer;
+};
+

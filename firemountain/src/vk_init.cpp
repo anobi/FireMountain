@@ -1,4 +1,4 @@
-#include <vk_init.hpp>
+#include "vk_init.hpp"
 
 VkCommandPoolCreateInfo VKInit::command_pool_create_info(
     uint32_t queue_family_index,
@@ -28,6 +28,27 @@ VkCommandBufferAllocateInfo VKInit::command_buffer_allocate_info(
     return info;
 }
 
+VkCommandBufferBeginInfo VKInit::command_buffer_begin_info(VkCommandBufferUsageFlags flags)
+{
+    VkCommandBufferBeginInfo info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .pNext = nullptr,
+        .flags = flags,
+        .pInheritanceInfo = nullptr
+    };
+    return info;
+}
+
+VkCommandBufferSubmitInfo VKInit::command_buffer_submit_info(VkCommandBuffer cmd) {
+    VkCommandBufferSubmitInfo info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+        .pNext = nullptr,
+        .commandBuffer = cmd,
+        .deviceMask = 0
+    };
+    return info;
+}
+
 VkPipelineShaderStageCreateInfo VKInit::pipeline_shader_stage_create_info(
         VkShaderStageFlagBits stage,
         VkShaderModule shader_module
@@ -48,38 +69,6 @@ VkPipelineVertexInputStateCreateInfo VKInit::vertex_input_state_create_info() {
         .pNext = nullptr,
         .vertexBindingDescriptionCount = 0,
         .vertexAttributeDescriptionCount = 0
-    };
-    return info;
-}
-
-VkPipelineInputAssemblyStateCreateInfo VKInit::input_assembly_create_info(
-        VkPrimitiveTopology topology
-) {
-    VkPipelineInputAssemblyStateCreateInfo info = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-        .pNext = nullptr,
-        .topology = topology,
-        .primitiveRestartEnable = VK_FALSE
-    };
-    return info;
-}
-
-VkPipelineRasterizationStateCreateInfo VKInit::rasterization_state_create_info(
-        VkPolygonMode polygon_mode
-) {
-    VkPipelineRasterizationStateCreateInfo info = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-        .pNext = nullptr,
-        .depthClampEnable = VK_FALSE,
-        .rasterizerDiscardEnable = VK_FALSE,
-        .polygonMode = polygon_mode,
-        .cullMode = VK_CULL_MODE_NONE,
-        .frontFace = VK_FRONT_FACE_CLOCKWISE,
-        .depthBiasEnable = VK_FALSE,
-        .depthBiasConstantFactor = 0.0f,
-        .depthBiasClamp = 0.0f,
-        .depthBiasSlopeFactor = 0.0f,
-        .lineWidth = 1.0f
     };
     return info;
 }
@@ -141,6 +130,41 @@ VkSemaphoreCreateInfo VKInit::samephore_create_info(VkSemaphoreCreateFlags flags
     return info;
 }
 
+VkSemaphoreSubmitInfo VKInit::semaphore_submit_info(VkPipelineStageFlags2 stage_mask, VkSemaphore semaphore) {
+    VkSemaphoreSubmitInfo info = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+        .pNext = nullptr,
+        .semaphore = semaphore,
+        .value = 1,
+        .stageMask = stage_mask,
+        .deviceIndex = 0
+    };
+    return info;
+}
+
+VkSubmitInfo2 VKInit::submit_info(
+    VkCommandBufferSubmitInfo* cmd, 
+    VkSemaphoreSubmitInfo* signal_semaphore_info,
+    VkSemaphoreSubmitInfo* wait_semaphore_info
+) {
+    uint32_t wait_semaphore_info_count = wait_semaphore_info == nullptr ? 0 : 1;
+    uint32_t signal_semaphore_info_count = signal_semaphore_info == nullptr ? 0 : 1;
+    VkSubmitInfo2 info = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+        .pNext = nullptr,
+
+        .waitSemaphoreInfoCount = wait_semaphore_info_count,
+        .pWaitSemaphoreInfos = wait_semaphore_info,
+
+        .commandBufferInfoCount = 1,
+        .pCommandBufferInfos = cmd,
+
+        .signalSemaphoreInfoCount = signal_semaphore_info_count,
+        .pSignalSemaphoreInfos = signal_semaphore_info
+    };
+    return info;
+}
+
 VkImageCreateInfo VKInit::image_create_info(VkFormat format, VkImageUsageFlags usage_flags, VkExtent3D extent) {
     VkImageCreateInfo info = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -175,17 +199,60 @@ VkImageViewCreateInfo VKInit::imageview_create_info(VkFormat format, VkImage ima
     return info;
 }
 
-VkPipelineDepthStencilStateCreateInfo VKInit::depth_stencil_create_info(bool depth_test, bool depth_write, VkCompareOp compare_op) {
-    VkPipelineDepthStencilStateCreateInfo info = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-        .pNext = nullptr,
-        .depthTestEnable = depth_test ? VK_TRUE : VK_FALSE,
-        .depthWriteEnable = depth_write ? VK_TRUE : VK_FALSE,
-        .depthCompareOp = depth_test ? compare_op : VK_COMPARE_OP_ALWAYS,
-        .depthBoundsTestEnable = VK_FALSE,
-        .stencilTestEnable = VK_FALSE,
-        .minDepthBounds = 0.0f,
-        .maxDepthBounds = 1.0f,
+VkImageSubresourceRange VKInit::image_subresource_range(VkImageAspectFlags aspect_mask) {
+    VkImageSubresourceRange sub_image = {
+        .aspectMask = aspect_mask,
+        .baseMipLevel = 0,
+        .levelCount = VK_REMAINING_MIP_LEVELS,
+        .baseArrayLayer = 0,
+        .layerCount = VK_REMAINING_ARRAY_LAYERS
     };
-    return info;
+    return sub_image;
+}
+
+VkRenderingAttachmentInfo VKInit::attachment_info(VkImageView view, VkClearValue *clear, VkImageLayout layout)
+{
+    VkRenderingAttachmentInfo attachment = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .pNext = nullptr,
+        .imageView = view,
+        .imageLayout = layout,
+        .loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE
+    };
+
+    if (clear) {
+        attachment.clearValue = *clear;
+    }
+
+    return attachment;
+}
+
+VkRenderingAttachmentInfo VKInit::depth_attachment_info(VkImageView view, VkImageLayout layout)
+{
+    VkRenderingAttachmentInfo depth_info = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .pNext = nullptr,
+        .imageView = view,
+        .imageLayout = layout,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .clearValue = { .depthStencil = { .depth = 0.0f }}
+    };
+    return depth_info;
+}
+
+VkRenderingInfo VKInit::rendering_info(VkExtent2D render_extent, VkRenderingAttachmentInfo *color_attachment, VkRenderingAttachmentInfo *depth_attachment)
+{
+    VkRenderingInfo render_info = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+        .pNext = nullptr,
+        .renderArea = VkRect2D { VkOffset2D {0, 0}, render_extent },
+        .layerCount = 1,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = color_attachment,
+        .pDepthAttachment = depth_attachment,
+        .pStencilAttachment = nullptr
+    };
+    return render_info;
 }
