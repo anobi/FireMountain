@@ -97,11 +97,12 @@ int fmVK::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, 
     pipeline_builder.set_polygon_mode(VK_POLYGON_MODE_FILL);
     pipeline_builder.set_cull_mode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
     pipeline_builder.set_multisampling_none();
-    pipeline_builder.disable_blending();
+    //pipeline_builder.disable_blending();
+    pipeline_builder.enable_blending_additive();
     pipeline_builder.enable_depth_test(true, VK_COMPARE_OP_GREATER_OR_EQUAL);
     pipeline_builder.set_color_attachment_format(alloc_image.format);
     pipeline_builder.set_depth_format(VK_FORMAT_D32_SFLOAT);
-    // pipeline_builder.enable_blending_additive();
+   
 
     this->pipeline = pipeline_builder.build_pipeline(device);
 

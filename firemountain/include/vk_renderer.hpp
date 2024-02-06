@@ -37,6 +37,7 @@ namespace fmVK {
 
         int Init(const uint32_t width, const uint32_t height, SDL_Window* window);
         void Draw(RenderObject* first_render_object, int render_object_count);
+        void Resize(const uint32_t width, const uint32_t height);
         void Destroy();
         void ProcessImGuiEvent(SDL_Event* e);
         
@@ -54,12 +55,14 @@ namespace fmVK {
     private:
         int _frame_number = 0;
         bool _is_initialized = false;
+        bool _resize_requested = false;
         VkClearValue _clear_value = {
             .color = {{0.02f, 0.02f, 0.02f, 1.0f}}
         };
 
         SDL_Window* _window;
         VkExtent2D _window_extent;
+        VkExtent2D _requested_extent;
         VkInstance _instance;
         VkPhysicalDevice _gpu;
         VkDevice _device;
@@ -77,6 +80,7 @@ namespace fmVK {
         std::vector<VkImageView> _swapchain_image_views;
         void init_swapchain();
         void create_swapchain();
+        void resize_swapchain();
         void destroy_swapchain();
 
         VkQueue _graphics_queue;
@@ -103,6 +107,7 @@ namespace fmVK {
         AllocatedImage _draw_image;
         AllocatedImage _depth_image;
         VkExtent2D _draw_extent;
+        float _render_scale = 1.0f;
  
         void draw_imgui(VkCommandBuffer cmd, VkImageView image_view);
         void draw_background(VkCommandBuffer cmd);

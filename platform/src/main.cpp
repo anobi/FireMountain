@@ -34,6 +34,11 @@ int RunApp()
                 if(event.key.keysym.sym == SDLK_ESCAPE) {
                     running = false;
                 }
+
+            case SDL_WINDOWEVENT_RESIZED:
+                int w, h;
+                SDL_GetWindowSize(display.window, &w, &h);
+                firemountain.Resize(w, h);
             
             default:
                 break;

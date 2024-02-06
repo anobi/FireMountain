@@ -18,6 +18,11 @@ void Firemountain::Frame() {
     this->vulkan.Draw(this->_renderables.data(), this->_renderables.size());
 }
 
+void Firemountain::Resize(const uint32_t width, const uint32_t height)
+{
+    this->vulkan.Resize(width, height);
+}
+
 void Firemountain::Destroy() {
     this->vulkan.Destroy();
 }

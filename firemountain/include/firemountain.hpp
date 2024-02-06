@@ -18,6 +18,7 @@ public:
 
     int Init(const int width, const int height, SDL_Window* window);
     void Frame();
+    void Resize(const uint32_t width, const uint32_t height);
     void Destroy();
 
     void ProcessImGuiEvent(SDL_Event* e);

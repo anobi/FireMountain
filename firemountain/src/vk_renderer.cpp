@@ -38,24 +38,30 @@ int fmVK::Vulkan::Init(const uint32_t width, const uint32_t height, SDL_Window* 
 }
 
 void fmVK::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
-
-
     VK_CHECK(vkWaitForFences(this->_device, 1, &get_current_frame()._render_fence, true, 1000000000));
     get_current_frame()._deletion_queue.flush();
 
-    this->_draw_extent.width = this->_draw_image.extent.width;
-    this->_draw_extent.height = this->_draw_image.extent.height;
+    if (this->_resize_requested) {
+        resize_swapchain();
+    }
+
+    this->_draw_extent.width = std::min(this->_swapchain_extent.width, this->_draw_image.extent.width) * this->_render_scale;
+    this->_draw_extent.height = std::min(this->_swapchain_extent.height, this->_draw_image.extent.height) * this->_render_scale;
 
     // Request image from the swapchain
     uint32_t swapchain_image_index;
-    VK_CHECK(vkAcquireNextImageKHR(
+    VkResult e = vkAcquireNextImageKHR(
         this->_device, 
         this->_swapchain, 
         1000000000, 
         this->get_current_frame()._swapchain_semaphore, 
         nullptr, 
         &swapchain_image_index
-    ));
+    );
+    if (e == VK_ERROR_OUT_OF_DATE_KHR) {
+        this->_resize_requested = true;
+        return;
+    }
 
     // New draw
     VK_CHECK(vkResetFences(this->_device, 1, &get_current_frame()._render_fence));
@@ -111,8 +117,21 @@ void fmVK::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
         .pSwapchains = &this->_swapchain,
         .pImageIndices = &swapchain_image_index
     };
-    VK_CHECK(vkQueuePresentKHR(this->_graphics_queue, &present_info));
+    VkResult present_result = vkQueuePresentKHR(this->_graphics_queue, &present_info);
+    if (present_result == VK_ERROR_OUT_OF_DATE_KHR) {
+        this->_resize_requested = true;
+    }
+
     this->_frame_number += 1;
+}
+
+void fmVK::Vulkan::Resize(const uint32_t width, const uint32_t height)
+{
+    this->_resize_requested = true;
+    this->_requested_extent = {
+        .width = width,
+        .height = height
+    };
 }
 
 void fmVK::Vulkan::Destroy() {
@@ -392,6 +411,18 @@ void fmVK::Vulkan::create_swapchain() {
     this->_swapchain_extent = vkb_swapchain.extent;
     this->_swapchain_images = vkb_swapchain.get_images().value();
     this->_swapchain_image_views = vkb_swapchain.get_image_views().value();
+}
+
+void fmVK::Vulkan::resize_swapchain()
+{
+    vkDeviceWaitIdle(this->_device);
+    this->destroy_swapchain();
+
+    this->_window_extent.width = this->_requested_extent.width;
+    this->_window_extent.height = this->_requested_extent.height;
+    this->create_swapchain();
+
+    this->_resize_requested = false;
 }
 
 void fmVK::Vulkan::destroy_swapchain()
