@@ -1,4 +1,5 @@
 #include <string>
+#include <fmt/core.h>
 #include <SDL2/SDL.h>
 
 #include "firemountain.hpp"
@@ -35,10 +36,12 @@ int RunApp()
                     running = false;
                 }
 
-            case SDL_WINDOWEVENT_RESIZED:
-                int w, h;
-                SDL_GetWindowSize(display.window, &w, &h);
-                firemountain.Resize(w, h);
+            case SDL_WINDOWEVENT:
+                if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
+                    int w, h;
+                    SDL_GetWindowSize(display.window, &w, &h);
+                    firemountain.Resize((uint32_t)w, (uint32_t)h);
+                }
             
             default:
                 break;
