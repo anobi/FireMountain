@@ -666,21 +666,9 @@ void fmVK::Vulkan::init_descriptors() {
 
     this->_draw_image_descriptors = this->global_descriptor_allocator.allocate(this->_device, this->_draw_image_descriptor_layout);
 
-    VkDescriptorImageInfo image_info = {
-        .imageView = this->_draw_image.view,
-        .imageLayout = VK_IMAGE_LAYOUT_GENERAL
-    };
-
-    VkWriteDescriptorSet draw_image_write = {
-        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-        .pNext = nullptr,
-        .dstSet = this ->_draw_image_descriptors,
-        .dstBinding = 0,
-        .descriptorCount = 1,
-        .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-        .pImageInfo = &image_info
-    };
-    vkUpdateDescriptorSets(this->_device, 1, &draw_image_write, 0, nullptr);
+    DescriptorWriter writer;
+    writer.write_image(0, this->_draw_image.view, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_GENERAL, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+    writer.update_set(this->_device, this->_draw_image_descriptors);
 
     this->_deletion_queue.push_function([&]() {
         vkDestroyDescriptorSetLayout(this->_device, this->_draw_image_descriptor_layout, nullptr);

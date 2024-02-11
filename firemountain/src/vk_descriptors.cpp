@@ -188,3 +188,58 @@ void DescriptorAllocatorGrowable::destroy_pools(VkDevice device)
     }
     this->full_pools.clear();
 }
+
+void DescriptorWriter::write_image(int binding, VkImageView image, VkSampler sampler, VkImageLayout layout, VkDescriptorType type)
+{
+    VkDescriptorImageInfo &info = image_infos.emplace_back(VkDescriptorImageInfo {
+        .sampler = sampler,
+        .imageView = image,
+        .imageLayout = layout
+    });
+
+    VkWriteDescriptorSet write = {
+        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        .dstSet = VK_NULL_HANDLE,
+        .dstBinding = binding,
+        .descriptorCount = 1,
+        .descriptorType = type,
+        .pImageInfo = &info
+    };
+
+    this->writes.push_back(write);
+}
+
+void DescriptorWriter::write_buffer(int binding, VkBuffer buffer, size_t size, size_t offset, VkDescriptorType type)
+{
+    VkDescriptorBufferInfo &info = buffer_infos.emplace_back(VkDescriptorBufferInfo {
+        .buffer = buffer,
+        .offset = offset,
+        .range = size
+    });
+
+    VkWriteDescriptorSet write = {
+        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        .dstSet = VK_NULL_HANDLE,
+        .dstBinding = binding,
+        .descriptorCount = 1,
+        .descriptorType = type,
+        .pBufferInfo = &info
+    };
+
+    this->writes.push_back(write);
+}
+
+void DescriptorWriter::clear()
+{
+    this->image_infos.clear();
+    this->writes.clear();
+    this->buffer_infos.clear();
+}
+
+void DescriptorWriter::update_set(VkDevice device, VkDescriptorSet set)
+{
+    for (VkWriteDescriptorSet& write : this->writes) {
+        write.dstSet = set;
+    }
+    vkUpdateDescriptorSets(device, (uint32_t) this->writes.size(), this->writes.data(), 0, nullptr);
+}

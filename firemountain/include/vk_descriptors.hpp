@@ -2,6 +2,7 @@
 
 #include <span>
 #include <vector>
+#include <deque>
 
 #include "vk_types.hpp"
 
@@ -49,4 +50,16 @@ private:
     std::vector<VkDescriptorPool> full_pools;
     std::vector<VkDescriptorPool> ready_pools;
     uint32_t sets_per_pool;
+};
+
+struct DescriptorWriter {
+    std::deque<VkDescriptorImageInfo> image_infos;
+    std::deque<VkDescriptorBufferInfo> buffer_infos;
+    std::vector<VkWriteDescriptorSet> writes;
+
+    void write_image(int binding, VkImageView image, VkSampler sampler, VkImageLayout layout, VkDescriptorType type);
+    void write_buffer(int binding, VkBuffer buffer, size_t size, size_t offset, VkDescriptorType type);
+
+    void clear();
+    void update_set(VkDevice device, VkDescriptorSet set);
 };
