@@ -72,12 +72,3 @@ Material* Firemountain::get_material(const std::string& name) {
         return &(*i).second;
     }
 }
-
-// GPUMeshBuffers* Firemountain::get_render_mesh(const std::string& name) {
-//     auto i = this->_meshes.find(name);
-//     if (i == this->_meshes.end()) {
-//         return nullptr;
-//     } else {
-//         return &(*i).second;
-//     }
-// }

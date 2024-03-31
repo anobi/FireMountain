@@ -591,9 +591,45 @@ void fmVK::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
         this->_gpu_scene_data_descriptor_layout
     );
 
-    DescriptorWriter writer;
-    writer.write_buffer(0, gpu_scene_data_buffer.buffer, sizeof(GPUSceneData), 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-    writer.update_set(this->_device, global_descriptor);
+    for (const RenderObject& object : this->_main_draw_context.opaque_surfaces) {
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->pipeline);
+        vkCmdBindDescriptorSets(
+            cmd, 
+            VK_PIPELINE_BIND_POINT_GRAPHICS, 
+            object.material->pipeline->layout, 
+            0, 
+            1, 
+            &global_descriptor,
+            0,
+            nullptr
+        );
+        vkCmdBindDescriptorSets(
+            cmd, 
+            VK_PIPELINE_BIND_POINT_GRAPHICS, 
+            object.material->pipeline->layout, 
+            1, 
+            1, 
+            &object.material->material_set,
+            0,
+            nullptr
+        );
+        vkCmdBindIndexBuffer(cmd, object.index_buffer, 0, VK_INDEX_TYPE_UINT32);
+
+        GPUDrawPushConstants constants = {
+            .world_matrix = object.transform,
+            .vertex_buffer = object.vertex_buffer_address
+        };
+        vkCmdPushConstants(
+            cmd, 
+            object.material->pipeline->layout, 
+            VK_SHADER_STAGE_VERTEX_BIT,
+            0, 
+            sizeof(GPUDrawPushConstants), 
+            &constants
+        );
+
+        vkCmdDrawIndexed(cmd, object.index_count, 1, object.first_index, 0, 0);
+    }
 
     
     vkCmdBeginRendering(cmd, &render_info);
@@ -624,53 +660,6 @@ void fmVK::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
     );
     projection[1][1] *= -1;
 
-    GPUMeshBuffers* bound_mesh = nullptr;
-    Material* bound_material = nullptr;
-    for (int i = 0; i < render_object_count; i++) {
-        RenderObject& object = render_objects[i];
-        if (object.material != bound_material) {
-            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
-            bound_material = object.material;
-
-            VkDescriptorSet image_set = get_current_frame()._frame_descriptors.allocate(this->_device, this->_single_image_descriptor_layout);
-            {
-                DescriptorWriter writer;
-                writer.write_image(
-                    0, 
-                    this->_texture_missing_error_image.view, 
-                    this->_default_sampler_nearest, 
-                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
-                );
-                writer.update_set(this->_device, image_set);
-            }
-            vkCmdBindDescriptorSets(
-                cmd, 
-                VK_PIPELINE_BIND_POINT_GRAPHICS, 
-                object.material->pipeline_layout, 
-                0, 
-                1, 
-                &image_set,
-                0,
-                nullptr
-            );
-        }
-
-        glm::mat4 model = object.transform;
-        glm::mat4 mvp = projection * view * model;
-        GPUDrawPushConstants constants = { 
-            .world_matrix = mvp,
-            .vertex_buffer = object.mesh->vertex_buffer_address
-        };
-        vkCmdPushConstants(cmd, object.material->pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT,0, sizeof(GPUDrawPushConstants), &constants);
-
-        if (object.mesh != bound_mesh) {
-            VkDeviceSize offset = 0;
-            vkCmdBindIndexBuffer(cmd, object.mesh->index_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-            bound_mesh = object.mesh;
-        }
-        vkCmdDrawIndexed(cmd, object.index_count, 1, object.first_index, 0, 0);
-    }
     vkCmdEndRendering(cmd);
 }
 
@@ -845,6 +834,8 @@ void fmVK::Vulkan::init_default_textures()
     vkCreateSampler(this->_device, &linear_sampler, nullptr, &this->_default_sampler_linear);
 }
 
+
+// This should also be in Firemountain
 void fmVK::Vulkan::init_default_data()
 {
     GLTFMetallic_Roughness::MaterialResources material_resources = {
@@ -877,6 +868,10 @@ void fmVK::Vulkan::init_default_data()
         material_resources,
         this->global_descriptor_allocator
     );
+
+    for (auto& m : this->test_meshes) {
+
+    }
 }
 
 AllocatedImage fmVK::Vulkan::create_image(void *data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped)
@@ -1051,4 +1046,21 @@ MaterialInstance GLTFMetallic_Roughness::write_material(VkDevice device, Materia
     this->writer.update_set(device, data.material_set);
 
     return data;
+}
+
+void MeshNode::Draw(const glm::mat4 &top_matrix, DrawContext &ctx)
+{
+    glm::mat4 node_matrix = top_matrix * this->world_transform;
+    for (auto& s : this->mesh->surfaces) {
+        RenderObject object = {
+            .index_count = s.count,
+            .first_index = s.start_index,
+            .index_buffer = this->mesh->mesh_buffers.index_buffer.buffer,
+            .material = &s.material->data,
+            .transform = node_matrix,
+            .vertex_buffer_address = this->mesh->mesh_buffers.vertex_buffer_address
+        };
+        ctx.opaque_surfaces.push_back(object);
+    }
+    Node::Draw(top_matrix, ctx);
 }

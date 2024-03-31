@@ -118,6 +118,14 @@ namespace fmVK {
         // AllocatedImage _depth_image;
         VkExtent2D _draw_extent;
         float _render_scale = 1.0f;
+
+        // TODO: move these to FM
+        // ----------------------
+        DrawContext _main_draw_context;
+        std::unordered_map<std::string, std::shared_ptr<Node>> loaded_nodes;
+        void update_scene();
+        // ----------------------
+        // End of TODO
  
         void draw_imgui(VkCommandBuffer cmd, VkImageView image_view);
         void draw_background(VkCommandBuffer cmd);
@@ -191,4 +199,11 @@ struct GLTFMetallic_Roughness {
         const MaterialResources& resources,
         DescriptorAllocatorGrowable& descriptor_allocator
     );
+};
+
+
+struct MeshNode : public Node {
+    std::shared_ptr<MeshAsset> mesh;
+    
+    virtual void Draw(const glm::mat4& top_matrix, DrawContext& ctx) override;
 };

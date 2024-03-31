@@ -13,9 +13,14 @@ struct VertexInputDescription {
     VkPipelineVertexInputStateCreateFlags flags = 0;
 };
 
+struct GLTFMaterial {
+    MaterialInstance data;
+};
+
 struct GeoSurface {
     uint32_t start_index;
     uint32_t count;
+    std::shared_ptr<GLTFMaterial> material;
 };
 
 struct Vertex {
