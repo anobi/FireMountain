@@ -39,3 +39,29 @@ struct ComputePushConstants {
     glm::fvec4 data_3;
     glm::fvec4 data_4;
 };
+
+struct GPUSceneData {
+    glm::mat4 view;
+    glm::mat4 projection;
+    glm::mat4 viewprojection;
+    glm::vec4 ambient_color;
+    glm::vec4 sunlight_direction;  // w for sun power
+    glm::vec4 sunlight_color;
+};
+
+enum class MaterialPass : uint8_t {
+    FM_MATERIAL_PASS_OPAQUE,
+    FM_MATERIAL_PASS_TRANSPARENT,
+    FM_MATERIAL_PASS_OTHER
+};
+
+struct MaterialPipeline {
+    VkPipeline pipeline;
+    VkPipelineLayout layout;
+};
+
+struct MaterialInstance {
+    MaterialPipeline* pipeline;
+    VkDescriptorSet material_set;
+    MaterialPass pass_type;
+};

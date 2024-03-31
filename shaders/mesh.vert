@@ -1,8 +1,14 @@
 #version 450
+
+#extension GL_GOOGLE_include_directive : require
 #extension GL_EXT_buffer_reference : require
 
-layout (location = 0) out vec4 outColor;
-layout (location = 1) out vec2 outUV;
+#include "input_structures.glsl"
+
+
+layout (location = 0) out vec3 outNormal;
+layout (location = 1) out vec3 outColor;
+layout (location = 2) out vec2 outUV;
 
 struct Vertex {
     vec3 position;
@@ -22,12 +28,12 @@ layout (push_constant) uniform constants {
 } pushConstants;
 
 void main() {
-
     Vertex v = pushConstants.vertex_buffer.vertices[gl_VertexIndex];
 
-    gl_Position = pushConstants.render_matrix * vec4(v.position, 1.0f);
-    outColor = v.color;
-    // outColor = vec3(1.0f, 0.0f, 0.0f);
+    gl_Position = sceneData.viewProjection * push_constant.render_matrix * vec4(v.position, 1.0f);
+
+    outNormal = (push_constant.render_matrix * vec4(v.normal, 0.0f)).xyz;
+    outColor = v.color * materialData.colorFactors.xyz;
     outUV.x = v.uv_x;
     outUV.y = v.uv_y;
 }

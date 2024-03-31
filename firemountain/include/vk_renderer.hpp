@@ -22,9 +22,12 @@ namespace fmVK {
     struct FrameData {
         VkCommandPool _command_pool;
         VkCommandBuffer _main_command_buffer;
+
         VkSemaphore _render_semaphore;
         VkSemaphore _swapchain_semaphore;
         VkFence _render_fence;
+
+        DescriptorAllocatorGrowable _frame_descriptors;
         DeletionQueue _deletion_queue;
     };
 
@@ -52,6 +55,12 @@ namespace fmVK {
         std::unordered_map<std::string, fmVK::Pipeline> pipelines;
         std::unordered_map<std::string, fmVK::ComputePipeline> compute_pipelines;
 
+        // These have been moved to public temporarily
+        VkDevice _device;  
+        VkDescriptorSetLayout _gpu_scene_data_descriptor_layout;
+        AllocatedImage _draw_image;
+        AllocatedImage _depth_image;
+
     private:
         int _frame_number = 0;
         bool _is_initialized = false;
@@ -65,7 +74,8 @@ namespace fmVK {
         VkExtent2D _requested_extent;
         VkInstance _instance;
         VkPhysicalDevice _gpu;
-        VkDevice _device;
+        // VkDevice _device;
+        
         VkSurfaceKHR _surface;
         VkDebugUtilsMessengerEXT _debug_messenger;
         DeletionQueue _deletion_queue;
@@ -104,8 +114,8 @@ namespace fmVK {
         int init_pipeline(const VkDevice device, const VkExtent2D window_extent, const char* shader_name);
 
         // Draw resources
-        AllocatedImage _draw_image;
-        AllocatedImage _depth_image;
+        // AllocatedImage _draw_image;
+        // AllocatedImage _depth_image;
         VkExtent2D _draw_extent;
         float _render_scale = 1.0f;
  
@@ -121,6 +131,64 @@ namespace fmVK {
         DescriptorAllocator global_descriptor_allocator;
         VkDescriptorSet _draw_image_descriptors;
         VkDescriptorSetLayout _draw_image_descriptor_layout;
+        VkDescriptorSetLayout _single_image_descriptor_layout;
         void init_descriptors();
+
+        GPUSceneData scene_data;
+        // VkDescriptorSetLayout _gpu_scene_data_descriptor_layout;
+
+        // Images & Textures
+        AllocatedImage create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
+        AllocatedImage create_image(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
+        void destroy_image(const AllocatedImage& image);
+        void init_default_textures();
+
+        VkSampler _default_sampler_linear;
+        VkSampler _default_sampler_nearest;
+
+        AllocatedImage _texture_missing_error_image;
+        AllocatedImage _default_texture_white;
+        AllocatedImage _default_texture_black;
+        AllocatedImage _default_texture_grey;
+
+        void init_default_data();
+        MaterialInstance default_data;
+        GLTFMetallic_Roughness metal_roughness_material;
     };
 }
+
+
+struct GLTFMetallic_Roughness {
+    MaterialPipeline opaque_pipeline;
+    MaterialPipeline transparent_pipeline;
+    VkDescriptorSetLayout material_layout;
+
+    struct MaterialConstants {
+        glm::vec4 color_factors;
+        glm::vec4 metal_roughness_factors;
+        glm::vec4 extra[14];  // Padding for uniform buffers
+    };
+
+    struct MaterialResources {
+        AllocatedImage color_image;
+        VkSampler color_sampler;
+
+        AllocatedImage metal_roughness_image;
+        VkSampler metal_roughness_sampler;
+
+        VkBuffer data_buffer;
+        uint32_t data_buffer_offset;
+    };
+
+    DescriptorWriter writer;
+
+    void build_pipelines(fmVK::Vulkan* renderer);
+    void clear_resources(VkDevice device);
+
+    MaterialInstance write_material(
+        VkDevice device, 
+        MaterialPass pass, 
+        const MaterialResources& resources,
+        DescriptorAllocatorGrowable& descriptor_allocator
+    );
+};
