@@ -150,30 +150,20 @@ void fmVK::Vulkan::Destroy() {
 
         this->_deletion_queue.flush();
 
-
-
-
-        this->global_descriptor_allocator.destroy_pools(this->_device);
-        vkDestroyDescriptorSetLayout(_device, this->_draw_image_descriptor_layout , nullptr);
-        vkDestroyDescriptorSetLayout(_device, this->_gpu_scene_data_descriptor_layout, nullptr);
-
-        for (int i = 0; i < FRAME_OVERLAP; i++) {
-            this->_frames[i]._frame_descriptors.destroy_pools(this->_device);
-        }
-
-
-        
-
-
+        // This just warns
+        //ImGui_ImplVulkan_Shutdown();
 
         destroy_swapchain();
 
-        vmaDestroyAllocator(this->_allocator);
+        // This is what errors
+        //vmaDestroyAllocator(this->_allocator);
 
         vkDestroySurfaceKHR(this->_instance, this->_surface, nullptr);
         vkDestroyDevice(this->_device, nullptr);
         vkb::destroy_debug_utils_messenger(this->_instance, this->_debug_messenger);
         vkDestroyInstance(this->_instance, nullptr);
+
+        
     }
 }
 
@@ -296,9 +286,9 @@ void fmVK::Vulkan::init_vulkan(SDL_Window *window) {
     };
     vmaCreateAllocator(&allocator_info, &this->_allocator);
 
-    // this->_deletion_queue.push_function([&]() {
-    //         vmaDestroyAllocator(this->_allocator);
-    // });
+    this->_deletion_queue.push_function([&]() {
+            vmaDestroyAllocator(this->_allocator);
+    });
 }
 
 
@@ -354,7 +344,7 @@ void fmVK::Vulkan::init_imgui() {
 
     this->_deletion_queue.push_function([=, this]() {
         vkDestroyDescriptorPool(this->_device, imgui_pool, nullptr);
-        ImGui_ImplVulkan_Shutdown();
+        // ImGui_ImplVulkan_Shutdown();
     });
 }
 
@@ -381,7 +371,7 @@ void fmVK::Vulkan::init_swapchain() {
         .usage = VMA_MEMORY_USAGE_GPU_ONLY,
         .requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
     };
-    vmaCreateImage(this->_allocator, &draw_image_info, &draw_image_allocinfo,&this->_draw_image.image,&this->_draw_image.allocation,nullptr);
+    vmaCreateImage(this->_allocator, &draw_image_info, &draw_image_allocinfo,&this->_draw_image.image,&this->_draw_image.allocation, nullptr);
     
     
     VkImageViewCreateInfo draw_view_info = VKInit::imageview_create_info(this->_draw_image.format,this->_draw_image.image,VK_IMAGE_ASPECT_COLOR_BIT);
@@ -715,9 +705,9 @@ void fmVK::Vulkan::init_descriptors() {
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 }
     };
     this->global_descriptor_allocator.init(this->_device, 10, sizes);
-    // this->_deletion_queue.push_function([&]() {
-    //     this->global_descriptor_allocator.destroy_pools(this->_device);
-    // });
+    this->_deletion_queue.push_function([&]() {
+        this->global_descriptor_allocator.destroy_pools(this->_device);
+    });
 
     {
         DescriptorLayoutBuilder builder;
@@ -736,8 +726,8 @@ void fmVK::Vulkan::init_descriptors() {
     }
 
     _deletion_queue.push_function([&]() {
-        //vkDestroyDescriptorSetLayout(_device, this->_draw_image_descriptor_layout , nullptr);
-        //vkDestroyDescriptorSetLayout(_device, this->_gpu_scene_data_descriptor_layout, nullptr);
+        vkDestroyDescriptorSetLayout(_device, this->_draw_image_descriptor_layout , nullptr);
+        vkDestroyDescriptorSetLayout(_device, this->_gpu_scene_data_descriptor_layout, nullptr);
     });
 
     this->_draw_image_descriptors = this->global_descriptor_allocator.allocate(this->_device, this->_draw_image_descriptor_layout);
@@ -759,7 +749,7 @@ void fmVK::Vulkan::init_descriptors() {
         this->_frames[i]._frame_descriptors = DescriptorAllocatorGrowable {};
         this->_frames[i]._frame_descriptors.init(this->_device, 1000, frame_sizes);
         this->_deletion_queue.push_function([&, i]() {
-            //this->_frames[i]._frame_descriptors.destroy_pools(this->_device);
+            this->_frames[i]._frame_descriptors.destroy_pools(this->_device);
         });
     }
 }
@@ -852,6 +842,13 @@ void fmVK::Vulkan::init_default_textures()
         .minFilter = VK_FILTER_LINEAR
     };
     vkCreateSampler(this->_device, &linear_sampler, nullptr, &this->_default_sampler_linear);
+
+    this->_deletion_queue.push_function([=, this]() {
+        destroy_image(this->_default_texture_white);
+        destroy_image(this->_default_texture_grey);
+        destroy_image(this->_default_texture_black);
+        destroy_image(this->_texture_missing_error_image);
+    });
 }
 
 
