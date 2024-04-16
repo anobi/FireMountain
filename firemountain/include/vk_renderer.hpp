@@ -18,7 +18,56 @@ class SDL_Window;
 union SDL_Event;
 
 
+
+
+
+
+struct MeshNode : public Node {
+    std::shared_ptr<MeshAsset> mesh;
+    
+    virtual void Draw(const glm::mat4& top_matrix, DrawContext& ctx) override;
+};
+
+
 namespace fmVK {
+
+    class Vulkan;
+
+    struct GLTFMetallic_Roughness {
+        MaterialPipeline opaque_pipeline;
+        MaterialPipeline transparent_pipeline;
+        VkDescriptorSetLayout material_layout;
+
+        struct MaterialConstants {
+            glm::vec4 color_factors;
+            glm::vec4 metal_roughness_factors;
+            glm::vec4 extra[14];  // Padding for uniform buffers
+        };
+
+        struct MaterialResources {
+            AllocatedImage color_image;
+            VkSampler color_sampler;
+
+            AllocatedImage metal_roughness_image;
+            VkSampler metal_roughness_sampler;
+
+            VkBuffer data_buffer;
+            uint32_t data_buffer_offset;
+        };
+
+        DescriptorWriter writer;
+
+        void build_pipelines(fmVK::Vulkan* renderer);
+        void clear_resources(VkDevice device);
+
+        MaterialInstance write_material(
+            VkDevice device, 
+            MaterialPass pass, 
+            const MaterialResources& resources,
+            DescriptorAllocatorGrowable& descriptor_allocator
+        );
+    };
+
     struct FrameData {
         VkCommandPool _command_pool;
         VkCommandBuffer _main_command_buffer;
@@ -60,6 +109,8 @@ namespace fmVK {
         VkDescriptorSetLayout _gpu_scene_data_descriptor_layout;
         AllocatedImage _draw_image;
         AllocatedImage _depth_image;
+        MaterialInstance default_data;
+        std::unordered_map<std::string, std::shared_ptr<Node>> loaded_nodes;
 
     private:
         int _frame_number = 0;
@@ -122,7 +173,7 @@ namespace fmVK {
         // TODO: move these to FM
         // ----------------------
         DrawContext _main_draw_context;
-        std::unordered_map<std::string, std::shared_ptr<Node>> loaded_nodes;
+        
         void update_scene();
         // ----------------------
         // End of TODO
@@ -136,7 +187,7 @@ namespace fmVK {
         void destroy_buffer(const AllocatedBuffer &buffer);
 
         // Descriptor sets
-        DescriptorAllocator global_descriptor_allocator;
+        DescriptorAllocatorGrowable global_descriptor_allocator;
         VkDescriptorSet _draw_image_descriptors;
         VkDescriptorSetLayout _draw_image_descriptor_layout;
         VkDescriptorSetLayout _single_image_descriptor_layout;
@@ -160,50 +211,7 @@ namespace fmVK {
         AllocatedImage _default_texture_grey;
 
         void init_default_data();
-        MaterialInstance default_data;
+        
         GLTFMetallic_Roughness metal_roughness_material;
     };
 }
-
-
-struct GLTFMetallic_Roughness {
-    MaterialPipeline opaque_pipeline;
-    MaterialPipeline transparent_pipeline;
-    VkDescriptorSetLayout material_layout;
-
-    struct MaterialConstants {
-        glm::vec4 color_factors;
-        glm::vec4 metal_roughness_factors;
-        glm::vec4 extra[14];  // Padding for uniform buffers
-    };
-
-    struct MaterialResources {
-        AllocatedImage color_image;
-        VkSampler color_sampler;
-
-        AllocatedImage metal_roughness_image;
-        VkSampler metal_roughness_sampler;
-
-        VkBuffer data_buffer;
-        uint32_t data_buffer_offset;
-    };
-
-    DescriptorWriter writer;
-
-    void build_pipelines(fmVK::Vulkan* renderer);
-    void clear_resources(VkDevice device);
-
-    MaterialInstance write_material(
-        VkDevice device, 
-        MaterialPass pass, 
-        const MaterialResources& resources,
-        DescriptorAllocatorGrowable& descriptor_allocator
-    );
-};
-
-
-struct MeshNode : public Node {
-    std::shared_ptr<MeshAsset> mesh;
-    
-    virtual void Draw(const glm::mat4& top_matrix, DrawContext& ctx) override;
-};

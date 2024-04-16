@@ -175,7 +175,8 @@
 			"valarray": "cpp",
 			"variant": "cpp",
 			"strstream": "cpp",
-			"ranges": "cpp"
+			"ranges": "cpp",
+			"*.ipp": "cpp"
 		}
 	}
 }

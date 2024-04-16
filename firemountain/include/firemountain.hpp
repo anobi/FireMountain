@@ -33,11 +33,13 @@ private:
     DeletionQueue _deletion_queue;
 
     std::vector<RenderObject> _renderables;
-    std::unordered_map<std::string, Material> _materials;
+    std::unordered_map<std::string, MaterialInstance> _materials;
     //std::unordered_map<std::string, GPUMeshBuffers> _meshes;
-    std::unordered_map<std::string, std::vector<std::shared_ptr<MeshAsset>>> _meshes;
 
-    Material* create_material(const std::string& name);
-    Material* get_material(const std::string& name);
+    std::unordered_map<std::string, std::vector<std::shared_ptr<MeshAsset>>> _meshes;
+    std::unordered_map<std::string, std::shared_ptr<Node>> loadedNodes;
+
+    MaterialInstance* create_material(const std::string& name);
+    MaterialInstance* get_material(const std::string& name);
     std::vector<std::shared_ptr<MeshAsset>> get_mesh(const std::string& name);
 };

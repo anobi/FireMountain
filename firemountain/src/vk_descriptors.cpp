@@ -84,15 +84,25 @@ VkDescriptorSet DescriptorAllocator::allocate(VkDevice device, VkDescriptorSetLa
     return descriptor_set;
 }
 
-void DescriptorAllocatorGrowable::init(VkDevice device, uint32_t initial_sets, std::span<PoolSizeRatio> pool_ratios)
+
+
+
+
+
+
+
+
+
+
+void DescriptorAllocatorGrowable::init(VkDevice device, uint32_t max_sets, std::span<PoolSizeRatio> pool_ratios)
 {
     this->ratios.clear();
     for (auto r : pool_ratios) {
         ratios.push_back(r);
     }
 
-    VkDescriptorPool pool = create_pool(device, initial_sets, pool_ratios);
-    this->sets_per_pool = initial_sets * 1.5;
+    VkDescriptorPool pool = create_pool(device, max_sets, pool_ratios);
+    this->sets_per_pool = max_sets * 1.5;
     this->ready_pools.push_back(pool);
 }
 
@@ -138,7 +148,7 @@ VkDescriptorSet DescriptorAllocatorGrowable::allocate(VkDevice device, VkDescrip
 VkDescriptorPool DescriptorAllocatorGrowable::create_pool(VkDevice device, uint32_t set_count, std::span<PoolSizeRatio> pool_ratios)
 {
     std::vector<VkDescriptorPoolSize> pool_sizes;
-    for (auto ratio : pool_ratios) {
+    for (PoolSizeRatio ratio : pool_ratios) {
         pool_sizes.push_back(VkDescriptorPoolSize {
             .type = ratio.type,
             .descriptorCount = uint32_t(ratio.ratio * set_count)
@@ -153,27 +163,27 @@ VkDescriptorPool DescriptorAllocatorGrowable::create_pool(VkDevice device, uint3
         .pPoolSizes = pool_sizes.data()
     };
 
-    VkDescriptorPool pool;
-    vkCreateDescriptorPool(device, &pool_info, nullptr, &pool);
-    return pool;
+    VkDescriptorPool new_pool;
+    vkCreateDescriptorPool(device, &pool_info, nullptr, &new_pool);
+    return new_pool;
 }
 
 VkDescriptorPool DescriptorAllocatorGrowable::get_pool(VkDevice device)
 {
-    VkDescriptorPool pool;
+    VkDescriptorPool new_pool;
     if (ready_pools.size() != 0) {
-        pool = ready_pools.back();
+        new_pool = ready_pools.back();
         ready_pools.pop_back();
     }
     else {
-        pool = create_pool(device, this->sets_per_pool, this->ratios);
+        new_pool = create_pool(device, this->sets_per_pool, this->ratios);
         this->sets_per_pool = this->sets_per_pool * 1.5;
-        if (this->sets_per_pool > MAX_SETS_PER_POOL) {
-            this->sets_per_pool = MAX_SETS_PER_POOL;
+        if (this->sets_per_pool > 4092) {
+            this->sets_per_pool = 4092;
         }
     }
 
-    return pool;
+    return new_pool;
 }
 
 void DescriptorAllocatorGrowable::destroy_pools(VkDevice device)

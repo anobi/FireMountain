@@ -9,7 +9,6 @@
 
 int Firemountain::Init(const int width, const int height, SDL_Window* window) {
     this->vulkan.Init(width, height, window);
-    this->create_material("mesh");
 
     return 0;
 }
@@ -38,7 +37,7 @@ bool Firemountain::AddMesh(const std::string& name, const char* path) {
     this->_meshes[name] = MeshLoader::LoadGltf(path, &this->vulkan);
 
     RenderObject render_object;
-    render_object.mesh = &this->_meshes[name][0]->mesh_buffers;
+    render_object.vertex_buffer_address = this->_meshes[name][0]->mesh_buffers.vertex_buffer_address;
     render_object.index_count = this->_meshes[name][0]->surfaces[0].count;
     render_object.first_index = this->_meshes[name][0]->surfaces[0].start_index;
     render_object.material = this->get_material("mesh");
@@ -48,23 +47,34 @@ bool Firemountain::AddMesh(const std::string& name, const char* path) {
         0.0f
     });
 
-    this->_renderables.push_back(render_object);
+    for (auto& m : this->_meshes[name]) {
+        std::shared_ptr<MeshNode> node = std::make_shared<MeshNode>();
+        node->mesh = m;
+        node->local_transform = glm::mat4{ 1.0f };
+        node->world_transform = glm::mat4{ 1.0f };
+        for (auto& s : node->mesh->surfaces) {
+            s.material = std::make_shared<GLTFMaterial>(this->vulkan.default_data);
+        }
 
+        this->vulkan.loaded_nodes[name] = std::move(node);
+    }
+
+    this->_renderables.push_back(render_object);
     mesh_index += 1;
     
     return true;
 }
 
-Material* Firemountain::create_material(const std::string& name) {
-    Material mat = {
-        .pipeline = this->vulkan.GetPipeline("mesh"),
-        .pipeline_layout = this->vulkan.GetPipelineLayout("mesh")
-    };
-    this->_materials[name] = mat;
-    return &this->_materials[name];
-}
+// MaterialInstance* Firemountain::create_material(const std::string& name) {
+//     MaterialInstance mat = {
+//         .pipeline = this->vulkan.GetPipeline("mesh"),
+//         .pipeline_layout = this->vulkan.GetPipelineLayout("mesh")
+//     };
+//     this->_materials[name] = mat;
+//     return &this->_materials[name];
+// }
 
-Material* Firemountain::get_material(const std::string& name) {
+MaterialInstance* Firemountain::get_material(const std::string& name) {
     auto i = this->_materials.find(name);
     if (i == this->_materials.end()) {
         return nullptr;
