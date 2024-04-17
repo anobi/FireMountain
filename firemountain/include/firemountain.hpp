@@ -8,6 +8,7 @@
 #include "vk_mesh.hpp"
 #include "vk_types.hpp"
 #include "vk_renderer.hpp"
+#include "camera.hpp"
 
 //class SDL_Event;
 
@@ -24,6 +25,8 @@ public:
     void ProcessImGuiEvent(SDL_Event* e);
 
     bool AddMesh(const std::string& name, const char* path);
+    
+    void UpdateCamera(float pitch, float yaw, glm::vec3 velocity);
 
     fmVK::Vulkan vulkan;
     Scene scene;
@@ -31,6 +34,8 @@ public:
 
 private:
     DeletionQueue _deletion_queue;
+
+    Camera _main_camera;
 
     std::vector<RenderObject> _renderables;
     std::unordered_map<std::string, MaterialInstance> _materials;

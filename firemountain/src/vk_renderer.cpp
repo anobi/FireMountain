@@ -344,7 +344,7 @@ void fmVK::Vulkan::init_imgui() {
 
     this->_deletion_queue.push_function([=, this]() {
         vkDestroyDescriptorPool(this->_device, imgui_pool, nullptr);
-        // ImGui_ImplVulkan_Shutdown();
+        ImGui_ImplVulkan_Shutdown();
     });
 }
 
@@ -560,20 +560,22 @@ void fmVK::Vulkan::update_scene()
     this->_main_draw_context.opaque_surfaces.clear();
 
     // Name is hardcoded now, this should basically go through all the meshes tho
-    glm::mat4 scale = glm::scale(glm::vec3 { 1.0f });
+    glm::mat4 scale = glm::scale(glm::vec3 { 5.0f });
     glm::mat4 translation = glm::translate(glm::vec3 { 0.0f, 0.0f, 0.0f});
     this->loaded_nodes["froge"]->Draw(translation * scale, this->_main_draw_context);
 
-    this->scene_data.view = glm::translate(glm::vec3 { 0.0, 0.0, -0.5});
-    this->scene_data.projection = glm::perspective(
+    this->_camera->Update();
+    auto view = this->_camera->get_view_matrix();
+    auto projection = glm::perspective(
         glm::radians(70.0f), 
         (float) this->_window_extent.width / (float) this->_window_extent.height,
-        10000.0f,
-        0.1f
+        0.1f,
+        10000.0f
     );
+    projection[1][1] *= -1;  // Invert the Y axis to get into the gl land
 
-    // Invert the Y axis to get into the gl land
-    this->scene_data.projection[1][1] *= -1;
+    this->scene_data.view = view;
+    this->scene_data.projection = projection;
     this->scene_data.viewprojection = this->scene_data.projection * this->scene_data.view;
 
     this->scene_data.ambient_color = glm::vec4(0.1f);
@@ -586,7 +588,23 @@ void fmVK::Vulkan::draw_imgui(VkCommandBuffer cmd, VkImageView image_view)
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplSDL2_NewFrame(this->_window);
     ImGui::NewFrame();
-    ImGui::ShowDemoWindow();
+
+    // Setup camera info window
+    ImGui::SetNextWindowPos(ImVec2(10, 10));
+    ImGui::SetNextWindowSize(ImVec2(300, 85));
+    ImGui::Begin("Camera");
+
+    ImGui::Text("Pitch: %.2f", this->_camera->pitch);
+    ImGui::Text("Yaw: %.2f", this->_camera->yaw);
+    ImGui::Text("Position x: %.2f y: %.2f z: %.2f", 
+        this->_camera->position.x, 
+        this->_camera->position.y, 
+        this->_camera->position.z
+    );
+    ImGui::End();
+    // End of Camera
+
+
     ImGui::Render();
 
     VkRenderingAttachmentInfo color_attachment = VKInit::attachment_info(image_view, nullptr, VK_IMAGE_LAYOUT_GENERAL);
@@ -829,25 +847,27 @@ void fmVK::Vulkan::init_default_textures()
         VK_IMAGE_USAGE_SAMPLED_BIT
     );
 
-    VkSamplerCreateInfo nearest_sampler = {
+    VkSamplerCreateInfo nearest_sampler_info = {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
         .magFilter = VK_FILTER_NEAREST,
         .minFilter = VK_FILTER_NEAREST
     };
-    vkCreateSampler(this->_device, &nearest_sampler, nullptr, &this->_default_sampler_nearest);
+    vkCreateSampler(this->_device, &nearest_sampler_info, nullptr, &this->_default_sampler_nearest);
 
-    VkSamplerCreateInfo linear_sampler = {
+    VkSamplerCreateInfo linear_sampler_info = {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
         .magFilter = VK_FILTER_LINEAR,
         .minFilter = VK_FILTER_LINEAR
     };
-    vkCreateSampler(this->_device, &linear_sampler, nullptr, &this->_default_sampler_linear);
+    vkCreateSampler(this->_device, &linear_sampler_info, nullptr, &this->_default_sampler_linear);
 
     this->_deletion_queue.push_function([=, this]() {
         destroy_image(this->_default_texture_white);
         destroy_image(this->_default_texture_grey);
         destroy_image(this->_default_texture_black);
         destroy_image(this->_texture_missing_error_image);
+        vkDestroySampler(this->_device, this->_default_sampler_nearest, nullptr);
+        vkDestroySampler(this->_device, this->_default_sampler_linear, nullptr);
     });
 }
 
@@ -1020,6 +1040,11 @@ void fmVK::GLTFMetallic_Roughness::build_pipelines(fmVK::Vulkan* renderer)
     vkDestroyShaderModule(renderer->_device, vertex_shader, nullptr);
 }
 
+void fmVK::GLTFMetallic_Roughness::clear_resources(VkDevice device)
+{
+    
+}
+
 MaterialInstance fmVK::GLTFMetallic_Roughness::write_material(VkDevice device, MaterialPass pass, const MaterialResources &resources, DescriptorAllocatorGrowable &descriptor_allocators)
 {
     MaterialInstance data;
@@ -1074,3 +1099,4 @@ void MeshNode::Draw(const glm::mat4 &top_matrix, DrawContext &ctx)
     }
     Node::Draw(top_matrix, ctx);
 }
+

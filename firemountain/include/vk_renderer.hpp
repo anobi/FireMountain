@@ -13,6 +13,7 @@
 
 #include "fm_utils.hpp"
 #include "fm_renderable.hpp"
+#include "camera.hpp"
 
 class SDL_Window;
 union SDL_Event;
@@ -44,9 +45,10 @@ namespace fmVK {
             glm::vec4 extra[14];  // Padding for uniform buffers
         };
 
+        // TODO: These need to be cleaned on exit
         struct MaterialResources {
             AllocatedImage color_image;
-            VkSampler color_sampler;
+            VkSampler color_sampler;    
 
             AllocatedImage metal_roughness_image;
             VkSampler metal_roughness_sampler;
@@ -105,6 +107,8 @@ namespace fmVK {
         std::unordered_map<std::string, fmVK::ComputePipeline> compute_pipelines;
 
         // These have been moved to public temporarily
+        Camera* _camera;
+        
         VkDevice _device;  
         VkDescriptorSetLayout _gpu_scene_data_descriptor_layout;
         AllocatedImage _draw_image;

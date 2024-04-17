@@ -8,7 +8,11 @@
 
 
 int Firemountain::Init(const int width, const int height, SDL_Window* window) {
+
+    this->_main_camera.position = glm::vec3(0.0f, 0.0f, 5.0f);
+
     this->vulkan.Init(width, height, window);
+    this->vulkan._camera = &this->_main_camera;
 
     return 0;
 }
@@ -63,6 +67,13 @@ bool Firemountain::AddMesh(const std::string& name, const char* path) {
     mesh_index += 1;
     
     return true;
+}
+
+void Firemountain::UpdateCamera(float pitch, float yaw, glm::vec3 velocity)
+{
+    this->_main_camera.pitch -= pitch;
+    this->_main_camera.yaw += yaw;
+    this->_main_camera.velocity = velocity;
 }
 
 // MaterialInstance* Firemountain::create_material(const std::string& name) {

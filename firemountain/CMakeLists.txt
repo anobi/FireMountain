@@ -42,6 +42,7 @@ target_sources(${PROJECT_NAME}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_pipeline_builder.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_pipeline.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_descriptors.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/camera.cpp
 )
 
 target_include_directories(${PROJECT_NAME}
