@@ -579,7 +579,7 @@ void fmVK::Vulkan::update_scene()
     this->scene_data.viewprojection = this->scene_data.projection * this->scene_data.view;
 
     this->scene_data.ambient_color = glm::vec4(0.1f);
-    this->scene_data.sunlight_color = glm::vec4(1.0f);
+    this->scene_data.sunlight_color = glm::vec4(0.4f);
     this->scene_data.sunlight_direction = glm::vec4(0.0, 1.0, 0.5, 1.0);
 }
 
@@ -809,7 +809,7 @@ void fmVK::Vulkan::destroy_image(const AllocatedImage &image)
 void fmVK::Vulkan::init_default_textures()
 {
 
-    uint32_t white = 0xFFFFFFFF;
+    constexpr uint32_t white = std::byteswap(0xFFFFFFFF);
     this->_default_texture_white = create_image(
         (void*) &white, 
         VkExtent3D(1, 1, 1), 
@@ -817,7 +817,7 @@ void fmVK::Vulkan::init_default_textures()
         VK_IMAGE_USAGE_SAMPLED_BIT
     );
 
-    uint32_t grey = 0x808080FF;
+    constexpr uint32_t grey = std::byteswap(0x404040FF);
     this->_default_texture_grey = create_image(
         (void*) &grey, 
         VkExtent3D(1, 1, 1), 
@@ -825,7 +825,7 @@ void fmVK::Vulkan::init_default_textures()
         VK_IMAGE_USAGE_SAMPLED_BIT
     );
 
-    uint32_t black = 0x000000FF;
+    constexpr uint32_t black = std::byteswap(0x000000FF);
     this->_default_texture_black = create_image(
         (void*) &black, 
         VkExtent3D(1, 1, 1), 
@@ -833,11 +833,11 @@ void fmVK::Vulkan::init_default_textures()
         VK_IMAGE_USAGE_SAMPLED_BIT
     );
 
-    uint32_t magenta = 0xFF00FFFF;
+    constexpr uint32_t magenta = std::byteswap(0xFF00FFFF);
     std::array<uint32_t, 16 * 16> pixels;
     for (int x = 0; x < 16; x++) {
         for (int y = 0; y < 16; y++) {
-            pixels[y * 16 + x] = ((x % 2) ^ (y % 2)) ? white : black;
+            pixels[y * 16 + x] = ((x % 2) ^ (y % 2)) ? magenta : black;
         }
     }
     this->_texture_missing_error_image = create_image(
@@ -876,7 +876,7 @@ void fmVK::Vulkan::init_default_textures()
 void fmVK::Vulkan::init_default_data()
 {
     GLTFMetallic_Roughness::MaterialResources material_resources = {
-        .color_image = this->_default_texture_grey,
+        .color_image = this->_texture_missing_error_image,
         .color_sampler = this->_default_sampler_linear,
         .metal_roughness_image = this->_default_texture_white,
         .metal_roughness_sampler = this->_default_sampler_linear
@@ -1016,7 +1016,7 @@ void fmVK::GLTFMetallic_Roughness::build_pipelines(fmVK::Vulkan* renderer)
     pipeline_builder.set_shaders(vertex_shader, fragment_shader);
     pipeline_builder.set_input_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
     pipeline_builder.set_polygon_mode(VK_POLYGON_MODE_FILL);
-    pipeline_builder.set_cull_mode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
+    pipeline_builder.set_cull_mode(VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
     pipeline_builder.set_multisampling_none();
     pipeline_builder.disable_blending();
     pipeline_builder.enable_depth_test(true, VK_COMPARE_OP_GREATER_OR_EQUAL);
