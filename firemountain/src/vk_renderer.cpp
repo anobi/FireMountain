@@ -817,7 +817,7 @@ void fmVK::Vulkan::init_default_textures()
         VK_IMAGE_USAGE_SAMPLED_BIT
     );
 
-    uint32_t grey = 0xAAAAAAFF;
+    uint32_t grey = 0x808080FF;
     this->_default_texture_grey = create_image(
         (void*) &grey, 
         VkExtent3D(1, 1, 1), 
@@ -837,7 +837,7 @@ void fmVK::Vulkan::init_default_textures()
     std::array<uint32_t, 16 * 16> pixels;
     for (int x = 0; x < 16; x++) {
         for (int y = 0; y < 16; y++) {
-            pixels[y * 16 + x] = ((x % 2) ^ (y % 2)) ? magenta : black;
+            pixels[y * 16 + x] = ((x % 2) ^ (y % 2)) ? white : black;
         }
     }
     this->_texture_missing_error_image = create_image(
@@ -876,7 +876,7 @@ void fmVK::Vulkan::init_default_textures()
 void fmVK::Vulkan::init_default_data()
 {
     GLTFMetallic_Roughness::MaterialResources material_resources = {
-        .color_image = this->_texture_missing_error_image,
+        .color_image = this->_default_texture_grey,
         .color_sampler = this->_default_sampler_linear,
         .metal_roughness_image = this->_default_texture_white,
         .metal_roughness_sampler = this->_default_sampler_linear

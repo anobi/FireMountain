@@ -28,7 +28,12 @@ int RunApp()
     float camera_pitch = 0.0f;
     glm::vec3 camera_velocity = glm::vec3(0);
 
+    SDL_bool capture_mouse = SDL_TRUE;
+    SDL_SetRelativeMouseMode(capture_mouse);
+
     while(running) {
+        camera_yaw = 0.0f;
+        camera_pitch = 0.0f;
         while(SDL_PollEvent(&event)) {
             switch (event.type)
             {
@@ -53,11 +58,21 @@ int RunApp()
                 if (event.key.keysym.sym == SDLK_s) { camera_velocity.z = 0; }
                 if (event.key.keysym.sym == SDLK_a) { camera_velocity.x = 0; }
                 if (event.key.keysym.sym == SDLK_d) { camera_velocity.x = 0; }
+                if (event.key.keysym.sym == SDLK_RALT) {
+                    if (capture_mouse == SDL_TRUE) { capture_mouse = SDL_FALSE; }
+                    else { capture_mouse = SDL_TRUE; }
+                    SDL_SetRelativeMouseMode(capture_mouse);
+                }
                 break;
 
             case SDL_MOUSEMOTION:
-                camera_yaw = (float) event.motion.xrel / 200.0f;
-                camera_pitch = (float) event.motion.yrel / 200.0f;
+                if (capture_mouse == SDL_TRUE) {
+                    camera_yaw = (float) event.motion.xrel / 200.0f;
+                    camera_pitch = (float) event.motion.yrel / 200.0f;
+                }
+                else {
+
+                }
                 break;
 
             case SDL_WINDOWEVENT:
