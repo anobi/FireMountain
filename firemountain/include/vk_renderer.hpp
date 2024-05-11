@@ -13,14 +13,13 @@
 
 #include "fm_utils.hpp"
 #include "fm_renderable.hpp"
+// #include "fm_mesh_loader.hpp"
 #include "camera.hpp"
 
 class SDL_Window;
 union SDL_Event;
 
-
-
-
+class LoadedGLTF;
 
 
 struct MeshNode : public Node {
@@ -108,13 +107,29 @@ namespace fmVK {
 
         // These have been moved to public temporarily
         Camera* _camera;
+
+        // deprecated: std::unordered_map<std::string, std::shared_ptr<Node>> loaded_nodes;
+        std::unordered_map<std::string, std::shared_ptr<LoadedGLTF>> loaded_Scenes;
         
         VkDevice _device;  
         VkDescriptorSetLayout _gpu_scene_data_descriptor_layout;
         AllocatedImage _draw_image;
         AllocatedImage _depth_image;
         MaterialInstance default_data;
-        std::unordered_map<std::string, std::shared_ptr<Node>> loaded_nodes;
+        
+
+        AllocatedImage _texture_missing_error_image;
+        AllocatedImage _default_texture_white;
+        AllocatedImage _default_texture_black;
+        AllocatedImage _default_texture_grey;
+        VkSampler _default_sampler_linear;
+        VkSampler _default_sampler_nearest;
+
+        GLTFMetallic_Roughness metal_roughness_material;
+
+        // New stuff, where these go?
+        AllocatedBuffer create_buffer(size_t alloc_size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage);
+        void destroy_buffer(const AllocatedBuffer &buffer);
 
     private:
         int _frame_number = 0;
@@ -186,9 +201,7 @@ namespace fmVK {
         void draw_background(VkCommandBuffer cmd);
         void draw_geometry(VkCommandBuffer cmd, RenderObject* render_objects, uint32_t render_object_count);
 
-        // New stuff, where these go?
-        AllocatedBuffer create_buffer(size_t alloc_size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage);
-        void destroy_buffer(const AllocatedBuffer &buffer);
+
 
         // Descriptor sets
         DescriptorAllocatorGrowable global_descriptor_allocator;
@@ -205,17 +218,8 @@ namespace fmVK {
         AllocatedImage create_image(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
         void destroy_image(const AllocatedImage& image);
         void init_default_textures();
-
-        VkSampler _default_sampler_linear;
-        VkSampler _default_sampler_nearest;
-
-        AllocatedImage _texture_missing_error_image;
-        AllocatedImage _default_texture_white;
-        AllocatedImage _default_texture_black;
-        AllocatedImage _default_texture_grey;
-
         void init_default_data();
-        
-        GLTFMetallic_Roughness metal_roughness_material;
     };
 }
+
+

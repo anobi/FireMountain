@@ -107,7 +107,6 @@ int fmVK::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, 
     pipeline_builder.set_color_attachment_format(alloc_image.format);
     pipeline_builder.set_depth_format(VK_FORMAT_D32_SFLOAT);
    
-
     this->pipeline = pipeline_builder.build_pipeline(device);
 
     vkDestroyShaderModule(device, this->fragment_shader, nullptr);

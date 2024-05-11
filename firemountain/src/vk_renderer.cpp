@@ -17,6 +17,8 @@
 #include "vk_images.hpp"
 #include "vk_pipeline_builder.hpp"
 
+#include "fm_mesh_loader.hpp"
+
 
 int fmVK::Vulkan::Init(const uint32_t width, const uint32_t height, SDL_Window* window) {
     this->_window_extent = {
@@ -562,7 +564,9 @@ void fmVK::Vulkan::update_scene()
     // Name is hardcoded now, this should basically go through all the meshes tho
     glm::mat4 scale = glm::scale(glm::vec3 { 5.0f });
     glm::mat4 translation = glm::translate(glm::vec3 { 0.0f, 0.0f, 0.0f});
-    this->loaded_nodes["froge"]->Draw(translation * scale, this->_main_draw_context);
+    // this->loaded_nodes["froge"]->Draw(translation * scale, this->_main_draw_context);
+
+    this->loaded_Scenes["structure"]->Draw(glm::mat4 { 1.0f }, this->_main_draw_context);
 
     this->_camera->Update();
     auto view = this->_camera->get_view_matrix();
@@ -953,6 +957,28 @@ AllocatedImage fmVK::Vulkan::create_image(void *data, VkExtent3D size, VkFormat 
     return image;
 }
 
+
+
+void MeshNode::Draw(const glm::mat4 &top_matrix, DrawContext &ctx)
+{
+    glm::mat4 node_matrix = top_matrix * this->world_transform;
+    for (auto& s : this->mesh->surfaces) {
+        RenderObject object = {
+            .index_count = s.count,
+            .first_index = s.start_index,
+            .index_buffer = this->mesh->mesh_buffers.index_buffer.buffer,
+            .material = &s.material->data,
+            .transform = node_matrix,
+            .vertex_buffer_address = this->mesh->mesh_buffers.vertex_buffer_address
+        };
+        ctx.opaque_surfaces.push_back(object);
+    }
+    Node::Draw(top_matrix, ctx);
+}
+
+
+
+
 void fmVK::GLTFMetallic_Roughness::build_pipelines(fmVK::Vulkan* renderer)
 {
     // Shaders
@@ -1016,7 +1042,7 @@ void fmVK::GLTFMetallic_Roughness::build_pipelines(fmVK::Vulkan* renderer)
     pipeline_builder.set_shaders(vertex_shader, fragment_shader);
     pipeline_builder.set_input_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
     pipeline_builder.set_polygon_mode(VK_POLYGON_MODE_FILL);
-    pipeline_builder.set_cull_mode(VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+    pipeline_builder.set_cull_mode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
     pipeline_builder.set_multisampling_none();
     pipeline_builder.disable_blending();
     pipeline_builder.enable_depth_test(true, VK_COMPARE_OP_GREATER_OR_EQUAL);
@@ -1082,21 +1108,3 @@ MaterialInstance fmVK::GLTFMetallic_Roughness::write_material(VkDevice device, M
 
     return data;
 }
-
-void MeshNode::Draw(const glm::mat4 &top_matrix, DrawContext &ctx)
-{
-    glm::mat4 node_matrix = top_matrix * this->world_transform;
-    for (auto& s : this->mesh->surfaces) {
-        RenderObject object = {
-            .index_count = s.count,
-            .first_index = s.start_index,
-            .index_buffer = this->mesh->mesh_buffers.index_buffer.buffer,
-            .material = &s.material->data,
-            .transform = node_matrix,
-            .vertex_buffer_address = this->mesh->mesh_buffers.vertex_buffer_address
-        };
-        ctx.opaque_surfaces.push_back(object);
-    }
-    Node::Draw(top_matrix, ctx);
-}
-

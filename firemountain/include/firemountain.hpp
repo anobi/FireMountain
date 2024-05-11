@@ -18,6 +18,7 @@ public:
     ~Firemountain() {};
 
     int Init(const int width, const int height, SDL_Window* window);
+    void Update();
     void Frame();
     void Resize(const uint32_t width, const uint32_t height);
     void Destroy();
@@ -38,11 +39,13 @@ private:
     Camera _main_camera;
 
     std::vector<RenderObject> _renderables;
+    // std::vector<IRenderable> _renderables;
     std::unordered_map<std::string, MaterialInstance> _materials;
     //std::unordered_map<std::string, GPUMeshBuffers> _meshes;
 
     std::unordered_map<std::string, std::vector<std::shared_ptr<MeshAsset>>> _meshes;
     std::unordered_map<std::string, std::shared_ptr<Node>> loadedNodes;
+    std::unordered_map<std::string, std::shared_ptr<LoadedGLTF>> loaded_Scenes;
 
     MaterialInstance* create_material(const std::string& name);
     MaterialInstance* get_material(const std::string& name);
