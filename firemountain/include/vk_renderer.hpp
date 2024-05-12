@@ -131,6 +131,10 @@ namespace fmVK {
         AllocatedBuffer create_buffer(size_t alloc_size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage);
         void destroy_buffer(const AllocatedBuffer &buffer);
 
+        AllocatedImage create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
+        AllocatedImage create_image(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
+        void destroy_image(const AllocatedImage& image);
+
     private:
         int _frame_number = 0;
         bool _is_initialized = false;
@@ -214,9 +218,7 @@ namespace fmVK {
         // VkDescriptorSetLayout _gpu_scene_data_descriptor_layout;
 
         // Images & Textures
-        AllocatedImage create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
-        AllocatedImage create_image(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
-        void destroy_image(const AllocatedImage& image);
+
         void init_default_textures();
         void init_default_data();
     };
