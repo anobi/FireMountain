@@ -73,14 +73,8 @@ std::optional<AllocatedImage> load_image(fmVK::Vulkan* engine, fastgltf::Asset& 
             }
         },
         [&](fastgltf::sources::Vector& vector) {
-            unsigned char* data = stbi_load_from_memory(
-                vector.bytes.data(), 
-                static_cast<int>(vector.bytes.size()),
-                &width,
-                &height,
-                &nr_channels,
-                4
-            );
+            unsigned char* data = stbi_load_from_memory(vector.bytes.data(), static_cast<int>(vector.bytes.size()), 
+                &width, &height, &nr_channels, 4);
             if (data) {
                 VkExtent3D image_size = {
                     .width = width,
@@ -218,7 +212,9 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmVK::Vulkan* e
     }
 
     std::vector<DescriptorAllocatorGrowable::PoolSizeRatio> sizes = {
-        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3}
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3},
+        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1}
     };
     file.descriptor_pool.init(engine->_device, gltf.materials.size(), sizes);
     
@@ -247,7 +243,14 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmVK::Vulkan* e
 
     // Load textures
     for (fastgltf::Image& image : gltf.images) {
-        images.push_back(engine->_texture_missing_error_image);
+        std::optional<AllocatedImage> img = load_image(engine, gltf, image);
+        if (img.has_value()) {
+            images.push_back(*img);
+            file.images[image.name.c_str()] = *img;
+        } else {
+            images.push_back(engine->_texture_missing_error_image);
+            fmt::println("[GLTF] Failed to load  texture %s", image.name);
+        }
     }
 
     // TODO: need to "publish" the buffer creation function and GLTF Materials

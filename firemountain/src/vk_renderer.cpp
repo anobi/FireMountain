@@ -649,7 +649,7 @@ void fmVK::Vulkan::draw_imgui(VkCommandBuffer cmd, VkImageView image_view)
     ImGui::Text("Draw time %f ms", stats.mesh_draw_time);
     ImGui::Text("Update time %f ms", stats.scene_update_time);
     ImGui::Text("Triangles %i", stats.triangle_count);
-    ImGui::Text("Draws calls %i", stats.drawcall_count);
+    ImGui::Text("Draw calls %i", stats.drawcall_count);
     ImGui::End();
 
     // Setup camera info window
