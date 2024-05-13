@@ -28,6 +28,14 @@ struct MeshNode : public Node {
     virtual void Draw(const glm::mat4& top_matrix, DrawContext& ctx) override;
 };
 
+struct EngineStats {
+    float frametime;
+    int triangle_count;
+    int drawcall_count;
+    float scene_update_time;
+    float mesh_draw_time;
+};
+
 
 namespace fmVK {
 
@@ -134,6 +142,8 @@ namespace fmVK {
         AllocatedImage create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
         AllocatedImage create_image(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
         void destroy_image(const AllocatedImage& image);
+
+        EngineStats stats;
 
     private:
         int _frame_number = 0;

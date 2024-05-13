@@ -43,6 +43,8 @@ int fmVK::Vulkan::Init(const uint32_t width, const uint32_t height, SDL_Window* 
 }
 
 void fmVK::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
+    auto start = std::chrono::system_clock::now();
+
     update_scene();
     
     VK_CHECK(vkWaitForFences(this->_device, 1, &get_current_frame()._render_fence, true, 1000000000));
@@ -132,6 +134,10 @@ void fmVK::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
     }
 
     this->_frame_number += 1;
+
+    auto end = std::chrono::system_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    stats.frametime = elapsed.count() / 1000.f;
 }
 
 void fmVK::Vulkan::Resize(const uint32_t width, const uint32_t height)
@@ -218,10 +224,10 @@ GPUMeshBuffers fmVK::Vulkan::UploadMesh(std::vector<Vertex> vertices, std::vecto
     });
 
     destroy_buffer(staging);
-    this->_deletion_queue.push_function([=, this]() {
-        destroy_buffer(new_surface.index_buffer);
-        destroy_buffer(new_surface.vertex_buffer);
-    });
+    // this->_deletion_queue.push_function([=, this]() {
+    //     destroy_buffer(new_surface.index_buffer);
+    //     destroy_buffer(new_surface.vertex_buffer);
+    // });
 
     return new_surface;
 }
@@ -380,10 +386,12 @@ void fmVK::Vulkan::init_swapchain() {
     // Create depth buffer images and views
     //
     this->_depth_image.format = VK_FORMAT_D32_SFLOAT;
+    VkImageUsageFlags depth_image_usages {};
+    depth_image_usages |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     
     VkImageCreateInfo depth_image_info = VKInit::image_create_info(
         this->_depth_image.format,
-        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+        depth_image_usages,
         render_image_extent
     );
     VmaAllocationCreateInfo depth_image_allocation_info = {
@@ -556,6 +564,8 @@ void fmVK::Vulkan::init_pipelines() {
 
 void fmVK::Vulkan::update_scene()
 {
+    auto start = std::chrono::system_clock::now();
+
     this->_main_draw_context.opaque_surfaces.clear();
 
     // Name is hardcoded now, this should basically go through all the meshes tho
@@ -582,6 +592,10 @@ void fmVK::Vulkan::update_scene()
     this->scene_data.ambient_color = glm::vec4(0.1f);
     this->scene_data.sunlight_color = glm::vec4(0.4f);
     this->scene_data.sunlight_direction = glm::vec4(0.0, 1.0, 0.5, 1.0);
+
+    auto end = std::chrono::system_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    stats.scene_update_time = elapsed.count() / 1000.f;
 }
 
 void fmVK::Vulkan::draw_imgui(VkCommandBuffer cmd, VkImageView image_view)
@@ -590,14 +604,25 @@ void fmVK::Vulkan::draw_imgui(VkCommandBuffer cmd, VkImageView image_view)
     ImGui_ImplSDL2_NewFrame(this->_window);
     ImGui::NewFrame();
 
-    // Setup camera info window
+    // Setup stats window
     ImGui::SetNextWindowPos(ImVec2(10, 10));
+    ImGui::SetNextWindowSize(ImVec2(300, 120));
+    ImGui::Begin("Stats");
+    ImGui::Text("Frametime %f ms", stats.frametime);
+    ImGui::Text("Draw time %f ms", stats.mesh_draw_time);
+    ImGui::Text("Update time %f ms", stats.scene_update_time);
+    ImGui::Text("Triangles %i", stats.triangle_count);
+    ImGui::Text("Draws calls %i", stats.drawcall_count);
+    ImGui::End();
+
+    // Setup camera info window
+    ImGui::SetNextWindowPos(ImVec2(10, 130));
     ImGui::SetNextWindowSize(ImVec2(300, 85));
     ImGui::Begin("Camera");
 
     ImGui::Text("Pitch: %.2f", this->_camera->pitch);
     ImGui::Text("Yaw: %.2f", this->_camera->yaw);
-    ImGui::Text("Position x: %.2f y: %.2f z: %.2f", 
+    ImGui::Text("Position x: %.2f y: %.2f z: %.2f",
         this->_camera->position.x, 
         this->_camera->position.y, 
         this->_camera->position.z
@@ -634,6 +659,12 @@ void fmVK::Vulkan::draw_background(VkCommandBuffer cmd)
 }
 
 void fmVK::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objects, uint32_t render_object_count) {
+
+    stats.drawcall_count = 0;
+    stats.triangle_count = 0;
+    auto start = std::chrono::system_clock::now();
+
+
     VkRenderingAttachmentInfo color_attachment = VKInit::attachment_info(this->_draw_image.view, nullptr, VK_IMAGE_LAYOUT_GENERAL);
     VkRenderingAttachmentInfo depth_attachment = VKInit::depth_attachment_info(this->_depth_image.view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
     VkRenderingInfo render_info = VKInit::rendering_info(this->_draw_extent, &color_attachment, &depth_attachment);
@@ -686,6 +717,9 @@ void fmVK::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
         };
         vkCmdPushConstants(cmd, object.material->pipeline->layout, VK_SHADER_STAGE_VERTEX_BIT,0, sizeof(GPUDrawPushConstants), &constants);
         vkCmdDrawIndexed(cmd, object.index_count, 1, object.first_index, 0, 0);
+
+        stats.drawcall_count++;
+        stats.triangle_count += object.index_count / 3;
     };
 
     for (auto& r : this->_main_draw_context.opaque_surfaces) {
@@ -699,6 +733,11 @@ void fmVK::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
 
     this->_main_draw_context.opaque_surfaces.clear();
     this->_main_draw_context.transparent_surfaces.clear();
+
+    auto end = std::chrono::system_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    stats.mesh_draw_time = elapsed.count() / 1000.0f;
+
 }
 
 AllocatedBuffer fmVK::Vulkan::create_buffer(size_t alloc_size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage) {
@@ -975,6 +1014,7 @@ void MeshNode::Draw(const glm::mat4 &top_matrix, DrawContext &ctx)
             .first_index = s.start_index,
             .index_buffer = this->mesh->mesh_buffers.index_buffer.buffer,
             .material = &s.material->data,
+            // .bounds = s.bounds,
             .transform = node_matrix,
             .vertex_buffer_address = this->mesh->mesh_buffers.vertex_buffer_address
         };
@@ -1030,7 +1070,6 @@ void fmVK::GLTFMetallic_Roughness::build_pipelines(fmVK::Vulkan* renderer)
         this->material_layout
     };
 
-    
     VkPipelineLayoutCreateInfo pipeline_layout_info = VKInit::pipeline_layout_create_info();
     pipeline_layout_info.pPushConstantRanges = &push_constant_range;
     pipeline_layout_info.pushConstantRangeCount = 1;
