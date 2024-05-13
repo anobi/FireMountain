@@ -43,7 +43,7 @@ bool fmVK::load_shader_module(const char *file_path, const VkDevice device, VkSh
 }
 
 
-int fmVK::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, const char* shader_name, VkDescriptorSetLayout layout, AllocatedImage alloc_image)
+int fmVK::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, const char* shader_name, VkDescriptorSetLayout descriptor_layout, AllocatedImage alloc_image)
 {
 
     // Shaders
@@ -65,14 +65,18 @@ int fmVK::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, 
 
     // Pipeline layout
     // -------------------------------------------------------------------------
-    VkPipelineLayoutCreateInfo pipeline_layout_info = VKInit::pipeline_layout_create_info();
+    
     VkPushConstantRange push_constant_range = {
         .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
         .offset = 0,
         .size = sizeof(GPUDrawPushConstants)
     };
+
+    VkPipelineLayoutCreateInfo pipeline_layout_info = VKInit::pipeline_layout_create_info();
     pipeline_layout_info.pPushConstantRanges = &push_constant_range;
     pipeline_layout_info.pushConstantRangeCount = 1;
+    pipeline_layout_info.pSetLayouts = &descriptor_layout;
+    pipeline_layout_info.setLayoutCount = 1;
     VK_CHECK(vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr, &this->layout));
 
     // Pipeline builder
@@ -103,7 +107,6 @@ int fmVK::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, 
     pipeline_builder.set_color_attachment_format(alloc_image.format);
     pipeline_builder.set_depth_format(VK_FORMAT_D32_SFLOAT);
    
-
     this->pipeline = pipeline_builder.build_pipeline(device);
 
     vkDestroyShaderModule(device, this->fragment_shader, nullptr);

@@ -126,7 +126,7 @@ void fmVK::PipelineBuilder::disable_blending() {
 
 void fmVK::PipelineBuilder::enable_depth_test(bool depth_write_enable, VkCompareOp op)
 {
-    this->_depth_stencil.depthBoundsTestEnable = VK_TRUE;
+    this->_depth_stencil.depthTestEnable = VK_TRUE;
     this->_depth_stencil.depthWriteEnable = depth_write_enable;
     this->_depth_stencil.depthCompareOp = op;
     this->_depth_stencil.depthBoundsTestEnable = VK_FALSE;
@@ -139,7 +139,7 @@ void fmVK::PipelineBuilder::enable_depth_test(bool depth_write_enable, VkCompare
 
 void fmVK::PipelineBuilder::disable_depth_test()
 {
-    this->_depth_stencil.depthBoundsTestEnable = VK_FALSE;
+    this->_depth_stencil.depthTestEnable = VK_FALSE;
     this->_depth_stencil.depthWriteEnable = VK_FALSE;
     this->_depth_stencil.depthCompareOp = VK_COMPARE_OP_NEVER;
     this->_depth_stencil.depthBoundsTestEnable = VK_FALSE;

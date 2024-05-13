@@ -15,4 +15,6 @@ namespace VKUtil {
         VkExtent2D src_size, 
         VkExtent2D dst_size
     );
+
+    void generate_mipmaps(VkCommandBuffer cmd, VkImage image, VkExtent2D image_size);
 }

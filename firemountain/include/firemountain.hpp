@@ -8,6 +8,7 @@
 #include "vk_mesh.hpp"
 #include "vk_types.hpp"
 #include "vk_renderer.hpp"
+#include "camera.hpp"
 
 //class SDL_Event;
 
@@ -17,6 +18,7 @@ public:
     ~Firemountain() {};
 
     int Init(const int width, const int height, SDL_Window* window);
+    void Update();
     void Frame();
     void Resize(const uint32_t width, const uint32_t height);
     void Destroy();
@@ -24,6 +26,8 @@ public:
     void ProcessImGuiEvent(SDL_Event* e);
 
     bool AddMesh(const std::string& name, const char* path);
+    
+    void UpdateCamera(float pitch, float yaw, glm::vec3 velocity);
 
     fmVK::Vulkan vulkan;
     Scene scene;
@@ -32,12 +36,18 @@ public:
 private:
     DeletionQueue _deletion_queue;
 
-    std::vector<RenderObject> _renderables;
-    std::unordered_map<std::string, Material> _materials;
-    //std::unordered_map<std::string, GPUMeshBuffers> _meshes;
-    std::unordered_map<std::string, std::vector<std::shared_ptr<MeshAsset>>> _meshes;
+    Camera _main_camera;
 
-    Material* create_material(const std::string& name);
-    Material* get_material(const std::string& name);
+    std::vector<RenderObject> _renderables;
+    // std::vector<IRenderable> _renderables;
+    std::unordered_map<std::string, MaterialInstance> _materials;
+    //std::unordered_map<std::string, GPUMeshBuffers> _meshes;
+
+    std::unordered_map<std::string, std::vector<std::shared_ptr<MeshAsset>>> _meshes;
+    std::unordered_map<std::string, std::shared_ptr<Node>> loadedNodes;
+    std::unordered_map<std::string, std::shared_ptr<LoadedGLTF>> loaded_Scenes;
+
+    MaterialInstance* create_material(const std::string& name);
+    MaterialInstance* get_material(const std::string& name);
     std::vector<std::shared_ptr<MeshAsset>> get_mesh(const std::string& name);
 };
