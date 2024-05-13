@@ -176,7 +176,8 @@
 			"variant": "cpp",
 			"strstream": "cpp",
 			"ranges": "cpp",
-			"*.ipp": "cpp"
+			"*.ipp": "cpp",
+			"text_encoding": "cpp"
 		}
 	}
 }

@@ -20,6 +20,43 @@
 #include "fm_mesh_loader.hpp"
 
 
+// This goes to culling utils or something
+bool is_visible(const RenderObject& obj, const glm::mat4& view_projection) {
+    std::array<glm::vec3, 8> corners {
+        glm::vec3 { 1,  1,  1 },
+        glm::vec3 { 1,  1, -1 },
+        glm::vec3 { 1, -1,  1 },
+        glm::vec3 { 1, -1, -1 },
+        glm::vec3 {-1,  1,  1 },
+        glm::vec3 {-1,  1, -1 },
+        glm::vec3 {-1, -1,  1 },
+        glm::vec3 {-1, -1, -1 },
+    };
+    glm::mat4 matrix = view_projection * obj.transform;
+    glm::vec3 min = {  1.5f,  1.5f, 1.5f };
+    glm::vec3 max = { -1.5f, -1.5, -1.5f };
+
+    for (int c = 0; c < 8; c++) {
+        // Project corners into clip space
+        glm::vec4 v = matrix * glm::vec4(obj.bounds.origin + (corners[c] * obj.bounds.extents), 1.0f);
+
+        // Perspective correction
+        v.x = v.x / v.w;
+        v.y = v.y / v.w;
+        v.z = v.z / v.w;
+
+        min = glm::min(glm::vec3 { v.x, v.y, v.z }, min);
+        max = glm::max(glm::vec3 { v.x, v.y, v.z }, max);
+    }
+
+    if (min.z > 1.0f || max.z < 0.0f || min.x > 1.0f || max.x < -1.0f || min.y > 1.0f || max.y < -1.0f) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
+
 int fmVK::Vulkan::Init(const uint32_t width, const uint32_t height, SDL_Window* window) {
     this->_window_extent = {
         .width = width,
@@ -659,32 +696,33 @@ void fmVK::Vulkan::draw_background(VkCommandBuffer cmd)
 }
 
 void fmVK::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objects, uint32_t render_object_count) {
-
     stats.drawcall_count = 0;
     stats.triangle_count = 0;
     auto start = std::chrono::system_clock::now();
 
+    std::vector<uint32_t> opaque_draws;
+    opaque_draws.reserve(this->_main_draw_context.opaque_surfaces.size());
+    for (uint32_t i = 0; i < this->_main_draw_context.opaque_surfaces.size(); i++) {
+        if (is_visible(this->_main_draw_context.opaque_surfaces[i], scene_data.viewprojection)) {
+            opaque_draws.push_back(i);
+        }
+    }
+
+    std::sort(opaque_draws.begin(), opaque_draws.end(), 
+        [&](const auto& iA, const auto& iB) {
+            const RenderObject& A = this->_main_draw_context.opaque_surfaces[iA];
+            const RenderObject& B = this->_main_draw_context.opaque_surfaces[iB];
+            if (A.material == B.material) {
+                return A.index_buffer < B.index_buffer;
+            } else {
+                return A.material < B.material;
+            }
+    });
 
     VkRenderingAttachmentInfo color_attachment = VKInit::attachment_info(this->_draw_image.view, nullptr, VK_IMAGE_LAYOUT_GENERAL);
     VkRenderingAttachmentInfo depth_attachment = VKInit::depth_attachment_info(this->_depth_image.view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
     VkRenderingInfo render_info = VKInit::rendering_info(this->_draw_extent, &color_attachment, &depth_attachment);
-
     vkCmdBeginRendering(cmd, &render_info);
-    VkViewport viewport = {
-        .x = 0,
-        .y = 0,
-        .width = (float) this->_draw_extent.width,
-        .height = (float) this->_draw_extent.height,
-        .minDepth = 0.0f,
-        .maxDepth = 1.0f
-    };
-    vkCmdSetViewport(cmd, 0, 1, &viewport);
-
-    VkRect2D scissor = {
-        .offset = { .x = 0, .y = 0},
-        .extent = { .width = viewport.width, .height = viewport.height }
-    };
-    vkCmdSetScissor(cmd, 0, 1, &scissor);
 
     // Allocate uniform buffer for the scene data
     AllocatedBuffer gpu_scene_data_buffer = create_buffer(sizeof(GPUSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
@@ -705,25 +743,56 @@ void fmVK::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
     writer.write_buffer(0, gpu_scene_data_buffer.buffer, sizeof(GPUSceneData), 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
     writer.update_set(this->_device, global_descriptor);
 
+    MaterialPipeline* last_pipeline = nullptr;
+    MaterialInstance* last_material = nullptr;
+    VkBuffer last_index_buffer = VK_NULL_HANDLE;
     auto draw = [&](const RenderObject& object) {
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->pipeline);
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->layout, 0, 1, &global_descriptor,0,nullptr);
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->layout, 1, 1, &object.material->material_set,0,nullptr);
-        vkCmdBindIndexBuffer(cmd, object.index_buffer, 0, VK_INDEX_TYPE_UINT32);
+        if (object.material != last_material) {
+            last_material = object.material;
 
+            if (object.material->pipeline != last_pipeline) {
+                last_pipeline = object.material->pipeline;
+
+                vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->pipeline);
+                vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->layout, 0, 1, &global_descriptor, 0, nullptr);
+                
+                VkViewport viewport = {
+                    .x = 0,
+                    .y = 0,
+                    .width = (float) this->_draw_extent.width,
+                    .height = (float) this->_draw_extent.height,
+                    .minDepth = 0.0f,
+                    .maxDepth = 1.0f
+                };
+                vkCmdSetViewport(cmd, 0, 1, &viewport);
+
+                VkRect2D scissor = {
+                    .offset = { .x = 0, .y = 0},
+                    .extent = { .width = viewport.width, .height = viewport.height }
+                };
+                vkCmdSetScissor(cmd, 0, 1, &scissor);
+            }
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->layout, 1, 1, &object.material->material_set, 0, nullptr);
+        }
+
+        if (object.index_buffer != last_index_buffer) {
+            last_index_buffer = object.index_buffer;
+            vkCmdBindIndexBuffer(cmd, object.index_buffer, 0, VK_INDEX_TYPE_UINT32);
+        }
+        
         GPUDrawPushConstants constants = {
             .world_matrix = object.transform,
             .vertex_buffer = object.vertex_buffer_address
         };
-        vkCmdPushConstants(cmd, object.material->pipeline->layout, VK_SHADER_STAGE_VERTEX_BIT,0, sizeof(GPUDrawPushConstants), &constants);
+        vkCmdPushConstants(cmd, object.material->pipeline->layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(GPUDrawPushConstants), &constants);
         vkCmdDrawIndexed(cmd, object.index_count, 1, object.first_index, 0, 0);
 
         stats.drawcall_count++;
         stats.triangle_count += object.index_count / 3;
     };
 
-    for (auto& r : this->_main_draw_context.opaque_surfaces) {
-        draw(r);
+    for (auto& r : opaque_draws) {
+        draw(this->_main_draw_context.opaque_surfaces[r]);
     }
     for (auto& r : this->_main_draw_context.transparent_surfaces) {
         draw(r);
@@ -824,11 +893,10 @@ void fmVK::Vulkan::init_descriptors() {
 
 AllocatedImage fmVK::Vulkan::create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped)
 {
-    AllocatedImage image = {
+    AllocatedImage new_image = {
         .extent = size,
         .format = format
     };
-
     VkImageCreateInfo image_info = VKInit::image_create_info(format, usage, size);
     if (mipmapped) {
         image_info.mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(size.width, size.height)))) + 1;
@@ -837,17 +905,64 @@ AllocatedImage fmVK::Vulkan::create_image(VkExtent3D size, VkFormat format, VkIm
         .usage = VMA_MEMORY_USAGE_GPU_ONLY,
         .requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
     };
-    VK_CHECK(vmaCreateImage(this->_allocator, &image_info, &alloc_info, &image.image, &image.allocation, nullptr));
+    VK_CHECK(vmaCreateImage(this->_allocator, &image_info, &alloc_info, &new_image.image, &new_image.allocation, nullptr));
 
     VkImageAspectFlags aspect_flag = VK_IMAGE_ASPECT_COLOR_BIT;
     if (format == VK_FORMAT_D32_SFLOAT) {
         aspect_flag = VK_IMAGE_ASPECT_DEPTH_BIT;
     }
-    VkImageViewCreateInfo view_info = VKInit::imageview_create_info(format, image.image, aspect_flag);
+    VkImageViewCreateInfo view_info = VKInit::imageview_create_info(format, new_image.image, aspect_flag);
     view_info.subresourceRange.levelCount = image_info.mipLevels;
-    VK_CHECK(vkCreateImageView(this->_device, &view_info, nullptr, &image.view));
+    VK_CHECK(vkCreateImageView(this->_device, &view_info, nullptr, &new_image.view));
 
-    return image;
+    return new_image;
+}
+
+AllocatedImage fmVK::Vulkan::create_image(void *data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped)
+{
+    size_t data_size = size.depth * size.width * size.height * 4;
+    AllocatedBuffer upload_buffer = create_buffer(data_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+    memcpy(upload_buffer.info.pMappedData, data, data_size);
+
+    AllocatedImage new_image = create_image(size, format, usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, mipmapped);
+
+    immediate_submit([&](VkCommandBuffer cmd) {
+        VKUtil::transition_image(cmd, new_image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        VkBufferImageCopy copy_region = {
+            .bufferOffset = 0,
+            .bufferRowLength = 0,
+            .bufferImageHeight = 0,
+            .imageSubresource = {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .mipLevel = 0,
+                .baseArrayLayer = 0,
+                .layerCount = 1
+            },
+            .imageExtent = size
+        };
+
+        vkCmdCopyBufferToImage(
+            cmd, 
+            upload_buffer.buffer, 
+            new_image.image, 
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
+            1, 
+            &copy_region
+        );
+
+        if (mipmapped) {
+            VkExtent2D mip_extent = VkExtent2D { new_image.extent.width, new_image.extent.height};
+            VKUtil::generate_mipmaps(cmd, new_image.image, mip_extent);
+        } else {
+            VKUtil::transition_image(cmd, new_image.image, 
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+            );
+        }
+    });
+
+    destroy_buffer(upload_buffer);
+    return new_image;
 }
 
 void fmVK::Vulkan::destroy_image(const AllocatedImage &image)
@@ -957,54 +1072,6 @@ void fmVK::Vulkan::init_default_data()
     );
 }
 
-AllocatedImage fmVK::Vulkan::create_image(void *data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped)
-{
-    size_t data_size = size.depth * size.width * size.height * 4;
-    AllocatedBuffer upload_buffer = create_buffer(data_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-
-    memcpy(upload_buffer.info.pMappedData, data, data_size);
-
-    AllocatedImage image = create_image(size, format, usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, mipmapped);
-
-    immediate_submit([&](VkCommandBuffer cmd) {
-        VKUtil::transition_image(cmd, image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-        VkBufferImageCopy copy_region = {
-            .bufferOffset = 0,
-            .bufferRowLength = 0,
-            .bufferImageHeight = 0,
-            .imageSubresource = {
-                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                .mipLevel = 0,
-                .baseArrayLayer = 0,
-                .layerCount = 1
-            },
-            .imageExtent = size
-        };
-
-        vkCmdCopyBufferToImage(
-            cmd, 
-            upload_buffer.buffer, 
-            image.image, 
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
-            1, 
-            &copy_region
-        );
-
-        VKUtil::transition_image(
-            cmd, 
-            image.image, 
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-        );
-    });
-
-    destroy_buffer(upload_buffer);
-
-    return image;
-}
-
-
-
 void MeshNode::Draw(const glm::mat4 &top_matrix, DrawContext &ctx)
 {
     glm::mat4 node_matrix = top_matrix * this->world_transform;
@@ -1014,17 +1081,19 @@ void MeshNode::Draw(const glm::mat4 &top_matrix, DrawContext &ctx)
             .first_index = s.start_index,
             .index_buffer = this->mesh->mesh_buffers.index_buffer.buffer,
             .material = &s.material->data,
-            // .bounds = s.bounds,
+            .bounds = s.bounds,
             .transform = node_matrix,
             .vertex_buffer_address = this->mesh->mesh_buffers.vertex_buffer_address
         };
-        ctx.opaque_surfaces.push_back(object);
+
+        if (s.material->data.pass_type == MaterialPass::FM_MATERIAL_PASS_TRANSPARENT) {
+            ctx.transparent_surfaces.push_back(object);
+        } else {
+            ctx.opaque_surfaces.push_back(object);
+        }
     }
     Node::Draw(top_matrix, ctx);
 }
-
-
-
 
 void fmVK::GLTFMetallic_Roughness::build_pipelines(fmVK::Vulkan* renderer)
 {

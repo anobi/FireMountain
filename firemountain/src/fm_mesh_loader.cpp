@@ -68,7 +68,7 @@ std::optional<AllocatedImage> load_image(fmVK::Vulkan* engine, fastgltf::Asset& 
                     .height = height,
                     .depth = 1
                 };
-                new_image = engine->create_image(data, image_size, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, false);
+                new_image = engine->create_image(data, image_size, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, true);
                 stbi_image_free(data);
             }
         },
@@ -87,7 +87,7 @@ std::optional<AllocatedImage> load_image(fmVK::Vulkan* engine, fastgltf::Asset& 
                     .height = height,
                     .depth = 1
                 };
-                new_image = engine->create_image(data, image_size, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, false);
+                new_image = engine->create_image(data, image_size, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, true);
                 stbi_image_free(data);
             }
         },
@@ -111,7 +111,7 @@ std::optional<AllocatedImage> load_image(fmVK::Vulkan* engine, fastgltf::Asset& 
                             .height = height,
                             .depth = 1
                         };
-                        new_image = engine->create_image(data, image_size, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, false);
+                        new_image = engine->create_image(data, image_size, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, true);
                         stbi_image_free(data);
                     }
                 }
@@ -381,6 +381,19 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmVK::Vulkan* e
             } else {
                 new_surface.material = materials[0];
             }
+
+            // Calculate bounds for culling
+            glm::vec3 min_pos = vertices[initial_vertex].position;
+            glm::vec3 max_pos = vertices[initial_vertex].position;
+            for (int i = initial_vertex; i < vertices.size(); i++) {
+                min_pos = glm::min(min_pos, vertices[i].position);
+                max_pos = glm::max(max_pos, vertices[i].position);
+            }
+            new_surface.bounds = {
+                .origin = (max_pos + min_pos) / 2.0f,
+                .sphere_radius = glm::length(new_surface.bounds.extents),
+                .extents = (max_pos - min_pos) / 2.0f
+            };
 
             new_mesh->surfaces.push_back(new_surface);
         }
