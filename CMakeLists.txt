@@ -32,7 +32,7 @@ FetchContent_Declare(
 FetchContent_Declare(
   glm
   GIT_REPOSITORY https://github.com/g-truc/glm.git
-  GIT_TAG        b85861aa0914241f6403697ea0b73cbb658afae4  # Master
+  GIT_TAG        1.0.1
 )
 FetchContent_Declare(
   fmt

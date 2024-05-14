@@ -19,7 +19,7 @@ int RunApp()
     firemountain.Init(WIDTH, HEIGHT, display.window);
 
     //auto froge = firemountain.AddMesh("froge", "assets/good_froge.glb");
-    auto structure = firemountain.AddMesh("structure", "assets/structure.glb");
+    auto structure = firemountain.AddMesh("structure", "assets/good_froge.glb");
     // auto monke = firemountain.AddMesh("monke", "assets/monke.glb");
 
     bool running = true;
@@ -29,7 +29,7 @@ int RunApp()
     float camera_pitch = 0.0f;
     glm::vec3 camera_velocity = glm::vec3(0);
 
-    SDL_bool capture_mouse = SDL_TRUE;
+    SDL_bool capture_mouse = SDL_FALSE;
     SDL_SetRelativeMouseMode(capture_mouse);
 
     while(running) {
@@ -52,6 +52,8 @@ int RunApp()
                 if (event.key.keysym.sym == SDLK_s) { camera_velocity.z =  1; }
                 if (event.key.keysym.sym == SDLK_a) { camera_velocity.x = -1; }
                 if (event.key.keysym.sym == SDLK_d) { camera_velocity.x =  1; }
+                if (event.key.keysym.sym == SDLK_LCTRL) { camera_velocity.y =  -1; }
+                if (event.key.keysym.sym == SDLK_SPACE) { camera_velocity.y =  1; }
                 break;
 
             case SDL_KEYUP:
@@ -59,6 +61,10 @@ int RunApp()
                 if (event.key.keysym.sym == SDLK_s) { camera_velocity.z = 0; }
                 if (event.key.keysym.sym == SDLK_a) { camera_velocity.x = 0; }
                 if (event.key.keysym.sym == SDLK_d) { camera_velocity.x = 0; }
+                if (event.key.keysym.sym == SDLK_LCTRL) { camera_velocity.y =  0; }
+                if (event.key.keysym.sym == SDLK_SPACE) { camera_velocity.y =  0; }
+
+
                 if (event.key.keysym.sym == SDLK_RALT) {
                     if (capture_mouse == SDL_TRUE) { capture_mouse = SDL_FALSE; }
                     else { capture_mouse = SDL_TRUE; }

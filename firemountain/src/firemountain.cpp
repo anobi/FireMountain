@@ -1,6 +1,8 @@
 #include <iostream>
 
 #include <SDL2/SDL.h>
+
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
 
 #include "firemountain.hpp"
@@ -30,7 +32,6 @@ void Firemountain::Resize(const uint32_t width, const uint32_t height)
 void Firemountain::Destroy() {
     this->vulkan.Destroy();
     this->loaded_Scenes.clear();
-    this->vulkan.loaded_Scenes.clear();
 }
 
 void Firemountain::ProcessImGuiEvent(SDL_Event* e)

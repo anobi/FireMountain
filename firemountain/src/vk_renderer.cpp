@@ -6,6 +6,7 @@
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
 
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
 
 #include "imgui.h"
@@ -82,8 +83,6 @@ int fmVK::Vulkan::Init(const uint32_t width, const uint32_t height, SDL_Window* 
 void fmVK::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
     auto start = std::chrono::system_clock::now();
 
-    update_scene();
-    
     VK_CHECK(vkWaitForFences(this->_device, 1, &get_current_frame()._render_fence, true, 1000000000));
     get_current_frame()._deletion_queue.flush();
     get_current_frame()._frame_descriptors.clear_pools(this->_device);
@@ -94,6 +93,8 @@ void fmVK::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
 
     this->_draw_extent.width = std::min(this->_swapchain_extent.width, this->_draw_image.extent.width) * this->_render_scale;
     this->_draw_extent.height = std::min(this->_swapchain_extent.height, this->_draw_image.extent.height) * this->_render_scale;
+
+    update_scene();
 
     // Request image from the swapchain
     uint32_t swapchain_image_index;
@@ -189,6 +190,7 @@ void fmVK::Vulkan::Resize(const uint32_t width, const uint32_t height)
 void fmVK::Vulkan::Destroy() {
     if(this->_is_initialized) {
         vkDeviceWaitIdle(this->_device);
+        this->loaded_Scenes.clear();
 
         for (auto& frame : this->_frames) {
             frame._deletion_queue.flush();
@@ -196,15 +198,9 @@ void fmVK::Vulkan::Destroy() {
 
         this->_deletion_queue.flush();
 
-        // This just warns
-        //ImGui_ImplVulkan_Shutdown();
-
         destroy_swapchain();
-
-        // This is what errors
-        //vmaDestroyAllocator(this->_allocator);
-
         vkDestroySurfaceKHR(this->_instance, this->_surface, nullptr);
+        vmaDestroyAllocator(this->_allocator);
         vkDestroyDevice(this->_device, nullptr);
         vkb::destroy_debug_utils_messenger(this->_instance, this->_debug_messenger);
         vkDestroyInstance(this->_instance, nullptr);
@@ -261,10 +257,6 @@ GPUMeshBuffers fmVK::Vulkan::UploadMesh(std::vector<Vertex> vertices, std::vecto
     });
 
     destroy_buffer(staging);
-    // this->_deletion_queue.push_function([=, this]() {
-    //     destroy_buffer(new_surface.index_buffer);
-    //     destroy_buffer(new_surface.vertex_buffer);
-    // });
 
     return new_surface;
 }
@@ -327,10 +319,6 @@ void fmVK::Vulkan::init_vulkan(SDL_Window *window) {
         .instance = this->_instance
     };
     vmaCreateAllocator(&allocator_info, &this->_allocator);
-
-    this->_deletion_queue.push_function([&]() {
-            vmaDestroyAllocator(this->_allocator);
-    });
 }
 
 
@@ -381,12 +369,10 @@ void fmVK::Vulkan::init_imgui() {
 
     immediate_submit([&](VkCommandBuffer cmd) { ImGui_ImplVulkan_CreateFontsTexture(); });
 
-    // ImGui_ImplVulkan_DestroyFontUploadObjects();
     ImGui_ImplVulkan_DestroyFontsTexture();
-
     this->_deletion_queue.push_function([=, this]() {
-        vkDestroyDescriptorPool(this->_device, imgui_pool, nullptr);
         ImGui_ImplVulkan_Shutdown();
+        vkDestroyDescriptorPool(this->_device, imgui_pool, nullptr);
     });
 }
 
@@ -491,10 +477,10 @@ void fmVK::Vulkan::resize_swapchain()
 
 void fmVK::Vulkan::destroy_swapchain()
 {
-        vkDestroySwapchainKHR(this->_device, this->_swapchain, nullptr);
-        for (int i = 0; i < this->_swapchain_image_views.size(); i++) {
-            vkDestroyImageView(this->_device, this->_swapchain_image_views[i], nullptr);
-        }
+    vkDestroySwapchainKHR(this->_device, this->_swapchain, nullptr);
+    for (int i = 0; i < this->_swapchain_image_views.size(); i++) {
+        vkDestroyImageView(this->_device, this->_swapchain_image_views[i], nullptr);
+    }
 }
 
 void fmVK::Vulkan::init_commands() {
@@ -553,7 +539,9 @@ void fmVK::Vulkan::init_sync_structures() {
     }
 
     VK_CHECK(vkCreateFence(this->_device, &fence_create_info, nullptr, &this->_immediate_fence));
-    this->_deletion_queue.push_function([=, this]() { vkDestroyFence(this->_device, this->_immediate_fence, nullptr); });
+    this->_deletion_queue.push_function([=, this]() { 
+        vkDestroyFence(this->_device, this->_immediate_fence, nullptr); 
+    });
 }
 
 void fmVK::Vulkan::immediate_submit(std::function<void(VkCommandBuffer cmd)> &&function) {
@@ -596,6 +584,7 @@ void fmVK::Vulkan::init_pipelines() {
         for (auto &p : this->compute_pipelines) {
             p.second.Cleanup(this->_device);
         }
+        this->metal_roughness_material.clear_resources(this->_device);
     });
 }
 
@@ -603,32 +592,27 @@ void fmVK::Vulkan::update_scene()
 {
     auto start = std::chrono::system_clock::now();
 
-    this->_main_draw_context.opaque_surfaces.clear();
-
-    // Name is hardcoded now, this should basically go through all the meshes tho
-    glm::mat4 scale = glm::scale(glm::vec3 { 5.0f });
-    glm::mat4 translation = glm::translate(glm::vec3 { 0.0f, 0.0f, 0.0f});
-    // this->loaded_nodes["froge"]->Draw(translation * scale, this->_main_draw_context);
-
-    this->loaded_Scenes["structure"]->Draw(glm::mat4 { 1.0f }, this->_main_draw_context);
-
+    // this->_main_draw_context.opaque_surfaces.clear();
     this->_camera->Update();
     auto view = this->_camera->get_view_matrix();
     auto projection = glm::perspective(
         glm::radians(70.0f), 
-        (float) this->_window_extent.width / (float) this->_window_extent.height,
-        0.1f,
-        10000.0f
+        (float)this->_draw_extent.width / (float)this->_draw_extent.height,
+        // (float) this->_window_extent.width / (float) this->_window_extent.height,
+        10000.0f,
+        0.1f
     );
     projection[1][1] *= -1;  // Invert the Y axis to get into the gl land
 
     this->scene_data.view = view;
     this->scene_data.projection = projection;
-    this->scene_data.viewprojection = this->scene_data.projection * this->scene_data.view;
+    this->scene_data.viewprojection = projection * view;
 
-    this->scene_data.ambient_color = glm::vec4(0.1f);
-    this->scene_data.sunlight_color = glm::vec4(0.4f);
+    this->scene_data.ambient_color = glm::vec4(0.2f);
+    this->scene_data.sunlight_color = glm::vec4(0.8f);
     this->scene_data.sunlight_direction = glm::vec4(0.0, 1.0, 0.5, 1.0);
+
+    this->loaded_Scenes["structure"]->Draw(glm::mat4 { 1.0f }, this->_main_draw_context);
 
     auto end = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
@@ -759,8 +743,8 @@ void fmVK::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
                 VkViewport viewport = {
                     .x = 0,
                     .y = 0,
-                    .width = (float) this->_draw_extent.width,
-                    .height = (float) this->_draw_extent.height,
+                    .width = (float) this->_window_extent.width,
+                    .height = (float) this->_window_extent.height,
                     .minDepth = 0.0f,
                     .maxDepth = 1.0f
                 };
@@ -768,7 +752,10 @@ void fmVK::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
 
                 VkRect2D scissor = {
                     .offset = { .x = 0, .y = 0},
-                    .extent = { .width = viewport.width, .height = viewport.height }
+                    .extent = { 
+                        .width = this->_window_extent.width, 
+                        .height = this->_window_extent.height 
+                    }
                 };
                 vkCmdSetScissor(cmd, 0, 1, &scissor);
             }
@@ -864,6 +851,7 @@ void fmVK::Vulkan::init_descriptors() {
 
     _deletion_queue.push_function([&]() {
         vkDestroyDescriptorSetLayout(_device, this->_draw_image_descriptor_layout , nullptr);
+        vkDestroyDescriptorSetLayout(_device, this->_single_image_descriptor_layout , nullptr);
         vkDestroyDescriptorSetLayout(_device, this->_gpu_scene_data_descriptor_layout, nullptr);
     });
 
@@ -1144,11 +1132,14 @@ void fmVK::GLTFMetallic_Roughness::build_pipelines(fmVK::Vulkan* renderer)
     pipeline_layout_info.pushConstantRangeCount = 1;
     pipeline_layout_info.pSetLayouts = layouts;
     pipeline_layout_info.setLayoutCount = 2;
-    VkPipelineLayout new_layout;
-    VK_CHECK(vkCreatePipelineLayout(renderer->_device, &pipeline_layout_info,nullptr, &new_layout));
 
-    this->opaque_pipeline.layout = new_layout;
-    this->transparent_pipeline.layout = new_layout;
+    VkPipelineLayout opaque_layout;
+    VK_CHECK(vkCreatePipelineLayout(renderer->_device, &pipeline_layout_info,nullptr, &opaque_layout));
+    this->opaque_pipeline.layout = opaque_layout;
+
+    VkPipelineLayout transparent_layout;
+    VK_CHECK(vkCreatePipelineLayout(renderer->_device, &pipeline_layout_info,nullptr, &transparent_layout));
+    this->transparent_pipeline.layout = transparent_layout;
 
     // Pipeline builder
     // -------------------------------------------------------------------------
@@ -1166,12 +1157,13 @@ void fmVK::GLTFMetallic_Roughness::build_pipelines(fmVK::Vulkan* renderer)
     pipeline_builder.set_depth_format(renderer->_depth_image.format);
 
     // Build opaque pipeline
-    pipeline_builder._pipeline_layout = new_layout;
+    pipeline_builder._pipeline_layout = opaque_layout;
     this->opaque_pipeline.pipeline = pipeline_builder.build_pipeline(renderer->_device);
 
     // Create and build transparent pipeline
     pipeline_builder.enable_blending_additive();
     pipeline_builder.enable_depth_test(false, VK_COMPARE_OP_GREATER_OR_EQUAL);
+    pipeline_builder._pipeline_layout = transparent_layout;
     this->transparent_pipeline.pipeline = pipeline_builder.build_pipeline(renderer->_device);
 
     vkDestroyShaderModule(renderer->_device, fragment_shader, nullptr);
@@ -1180,7 +1172,11 @@ void fmVK::GLTFMetallic_Roughness::build_pipelines(fmVK::Vulkan* renderer)
 
 void fmVK::GLTFMetallic_Roughness::clear_resources(VkDevice device)
 {
-    
+    vkDestroyDescriptorSetLayout(device, this->material_layout, nullptr);
+    vkDestroyPipelineLayout(device, this->opaque_pipeline.layout, nullptr);
+    vkDestroyPipeline(device, this->opaque_pipeline.pipeline, nullptr);
+    vkDestroyPipelineLayout(device, this->transparent_pipeline.layout, nullptr);
+    vkDestroyPipeline(device, this->transparent_pipeline.pipeline, nullptr);
 }
 
 MaterialInstance fmVK::GLTFMetallic_Roughness::write_material(VkDevice device, MaterialPass pass, const MaterialResources &resources, DescriptorAllocatorGrowable &descriptor_allocators)

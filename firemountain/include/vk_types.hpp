@@ -2,7 +2,10 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
 #include <vk_mem_alloc.h>
-#include <glm/glm.hpp>
+
+#include <glm/mat4x4.hpp>
+#include <glm/vec4.hpp>
+
 #include <fmt/core.h>
 
 #define VK_CHECK(x)                                                         \
@@ -34,10 +37,10 @@ struct MeshPushConstants {
 };
 
 struct ComputePushConstants {
-    glm::fvec4 data_1;
-    glm::fvec4 data_2;
-    glm::fvec4 data_3;
-    glm::fvec4 data_4;
+    glm::vec4 data_1;
+    glm::vec4 data_2;
+    glm::vec4 data_3;
+    glm::vec4 data_4;
 };
 
 struct GPUSceneData {

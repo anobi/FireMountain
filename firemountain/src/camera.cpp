@@ -1,10 +1,12 @@
 #include <camera.hpp>
+
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
 #include <glm/gtx/quaternion.hpp>
 
 void Camera::Update() {
+    float speed_multiplier = 0.02f;
     auto rotation = get_rotation_matrix();
-    float speed_multiplier = 0.5f;
     this->position += glm::vec3(rotation * glm::vec4(this->velocity * speed_multiplier, 0.0f));
 }
 

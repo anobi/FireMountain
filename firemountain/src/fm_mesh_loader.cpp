@@ -3,6 +3,7 @@
 #include <tiny_obj_loader.h>
 #include <fmt/core.h>
 
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/quaternion.hpp>
 
 #include <fastgltf/glm_element_traits.hpp>
@@ -318,7 +319,6 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmVK::Vulkan* e
 
         indices.clear();
         vertices.clear();
-
         for (auto&& p : mesh.primitives) {
             GeoSurface new_surface;
             new_surface.start_index = (uint32_t) indices.size();
@@ -337,14 +337,12 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmVK::Vulkan* e
             {   // Load vertex positions
                 fastgltf::Accessor& position_accessor = gltf.accessors[p.findAttribute("POSITION")->second];
                 vertices.resize(vertices.size() + position_accessor.count);
-                fastgltf::iterateAccessorWithIndex<glm::vec3>(
-                    gltf,
-                    position_accessor,
+                fastgltf::iterateAccessorWithIndex<glm::vec3>(gltf, position_accessor,
                     [&](glm::vec3 v, size_t index) {
                         Vertex new_vertex = {
                             .position = v,
                             .uv_x = 0,
-                            .normal = { 1.0f, 0.0f, 0.0f },
+                            .normal = { 1, 0, 0 },
                             .uv_y = 0,
                             .color = glm::vec4 { 1.0f }
                         };
@@ -437,7 +435,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmVK::Vulkan* e
     }
 
     // Setup transform hierarchy
-    for (int i= 0; i < gltf.nodes.size(); i++) {
+    for (int i = 0; i < gltf.nodes.size(); i++) {
         fastgltf::Node& node = gltf.nodes[i];
         std::shared_ptr<Node>& scene_node = nodes[i];
         for (auto& c : node.children) {
@@ -454,60 +452,8 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmVK::Vulkan* e
         }
     }
 
-    // Load textures
-    for (fastgltf::Image& image : gltf.images) {
-        std::optional<AllocatedImage> img = load_image(engine, gltf, image);
-        if (img.has_value()) {
-            images.push_back(*img);
-            file.images[image.name.c_str()] = *img;
-        } else {
-            images.push_back(engine->_texture_missing_error_image);
-            fmt::println("[GLTF] failed to load texture ", image.name);
-        }
-    }
-
     return scene;
 }
-
-VertexInputDescription Vertex::get_vertex_description() {
-    VertexInputDescription description;
-
-    VkVertexInputBindingDescription main_binding = {
-        .binding = 0,
-        .stride = sizeof(Vertex),
-        .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
-    };
-    description.bindings.push_back(main_binding);
-
-    VkVertexInputAttributeDescription attrib_position = {
-        .location = 0,
-        .binding = 0,
-        .format = VK_FORMAT_R32G32B32_SFLOAT,
-        .offset = offsetof(Vertex, position)
-    };
-    description.attributes.push_back(attrib_position);
-    
-    VkVertexInputAttributeDescription attrib_normal = {
-        .location = 1,
-        .binding = 0,
-        .format = VK_FORMAT_R32G32B32_SFLOAT,
-        .offset = offsetof(Vertex, normal)
-    };
-    description.attributes.push_back(attrib_normal);
-
-    VkVertexInputAttributeDescription attrib_color = {
-        .location = 2,
-        .binding = 0,
-        .format = VK_FORMAT_R32G32B32_SFLOAT,
-        .offset = offsetof(Vertex, color)
-    };
-    description.attributes.push_back(attrib_color);
-
-    return description;
-}
-
-
-
 
 void LoadedGLTF::Draw(const glm::mat4 &top_matrix, DrawContext &ctx)
 {
@@ -519,8 +465,6 @@ void LoadedGLTF::Draw(const glm::mat4 &top_matrix, DrawContext &ctx)
 void LoadedGLTF::clear_all()
 {
     VkDevice device = creator->_device;
-    this->descriptor_pool.destroy_pools(device);
-    this->creator->destroy_buffer(this->material_data_buffer);
 
     for (auto& [k, v] : meshes) {
         this->creator->destroy_buffer(v->mesh_buffers.index_buffer);
@@ -538,4 +482,7 @@ void LoadedGLTF::clear_all()
     for (auto& sampler : samplers) {
         vkDestroySampler(device, sampler, nullptr);
     }
+
+    this->descriptor_pool.destroy_pools(device);
+    this->creator->destroy_buffer(this->material_data_buffer);
 }

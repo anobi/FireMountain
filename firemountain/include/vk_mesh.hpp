@@ -35,9 +35,7 @@ struct Vertex {
     float uv_x;
     glm::vec3 normal;
     float uv_y;
-    glm::vec4 color; 
-    
-    static VertexInputDescription get_vertex_description();
+    glm::vec4 color;
 };
 
 struct GPUMeshBuffers {

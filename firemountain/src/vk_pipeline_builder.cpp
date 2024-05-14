@@ -48,8 +48,7 @@ VkPipeline fmVK::PipelineBuilder::build_pipeline(VkDevice device)
         .pDepthStencilState = &this->_depth_stencil,
         .pColorBlendState = &color_blending,
         .pDynamicState = &dynamic_info,
-        .layout = this->_pipeline_layout,
-        .basePipelineHandle = VK_NULL_HANDLE
+        .layout = this->_pipeline_layout
     };
 
     VkPipeline pipeline;
