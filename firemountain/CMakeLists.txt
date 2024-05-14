@@ -10,6 +10,8 @@ add_library(${PROJECT_NAME} STATIC)
 find_package(Vulkan REQUIRED)
 find_package(SDL2 REQUIRED)
 
+target_compile_definitions(${PROJECT_NAME} PUBLIC GLM_FORCE_DEPTH_ZERO_TO_ONE)
+
 target_link_libraries(${PROJECT_NAME}
   Vulkan::Vulkan
   vk-bootstrap::vk-bootstrap

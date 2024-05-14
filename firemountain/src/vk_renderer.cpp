@@ -266,7 +266,6 @@ GPUMeshBuffers fmVK::Vulkan::UploadMesh(std::vector<Vertex> vertices, std::vecto
 // Private methods
 // =======================================================================================================
 
-
 void fmVK::Vulkan::init_vulkan(SDL_Window *window) {
     vkb::InstanceBuilder builder;
     auto build = builder.set_app_name("FireMountain")
@@ -648,10 +647,8 @@ void fmVK::Vulkan::draw_imgui(VkCommandBuffer cmd, VkImageView image_view)
         this->_camera->position.y, 
         this->_camera->position.z
     );
+    
     ImGui::End();
-    // End of Camera
-
-
     ImGui::Render();
 
     VkRenderingAttachmentInfo color_attachment = VKInit::attachment_info(image_view, nullptr, VK_IMAGE_LAYOUT_GENERAL);

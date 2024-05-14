@@ -19,7 +19,7 @@ int RunApp()
     firemountain.Init(WIDTH, HEIGHT, display.window);
 
     //auto froge = firemountain.AddMesh("froge", "assets/good_froge.glb");
-    auto structure = firemountain.AddMesh("structure", "assets/good_froge.glb");
+    auto structure = firemountain.AddMesh("structure", "assets/structure.glb");
     // auto monke = firemountain.AddMesh("monke", "assets/monke.glb");
 
     bool running = true;
