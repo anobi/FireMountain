@@ -51,6 +51,7 @@ namespace fmVK {
             glm::vec4 metal_roughness_factors;
             glm::vec4 extra[14];  // Padding for uniform buffers
         };
+        static_assert(sizeof(MaterialConstants) == 256);  // Make sure the size is right
 
         // TODO: These need to be cleaned on exit
         struct MaterialResources {
@@ -221,11 +222,9 @@ namespace fmVK {
         DescriptorAllocatorGrowable global_descriptor_allocator;
         VkDescriptorSet _draw_image_descriptors;
         VkDescriptorSetLayout _draw_image_descriptor_layout;
-        VkDescriptorSetLayout _single_image_descriptor_layout;
         void init_descriptors();
 
         GPUSceneData scene_data;
-        // VkDescriptorSetLayout _gpu_scene_data_descriptor_layout;
 
         // Images & Textures
 

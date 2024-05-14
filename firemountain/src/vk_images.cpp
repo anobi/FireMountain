@@ -114,13 +114,13 @@ void VKUtil::generate_mipmaps(VkCommandBuffer cmd, VkImage image, VkExtent2D ima
                 .pNext = nullptr,
                 .srcSubresource = {
                     .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                    .mipLevel = mip,
+                    .mipLevel = (uint32_t) mip,
                     .baseArrayLayer = 0,
                     .layerCount = 1
                 },
                 .dstSubresource = {
                     .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                    .mipLevel = mip + 1,
+                    .mipLevel = (uint32_t) (mip + 1),
                     .baseArrayLayer = 0,
                     .layerCount = 1
                 },

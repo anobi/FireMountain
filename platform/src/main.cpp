@@ -29,7 +29,7 @@ int RunApp()
     float camera_pitch = 0.0f;
     glm::vec3 camera_velocity = glm::vec3(0);
 
-    SDL_bool capture_mouse = SDL_FALSE;
+    SDL_bool capture_mouse = SDL_TRUE;
     SDL_SetRelativeMouseMode(capture_mouse);
 
     while(running) {

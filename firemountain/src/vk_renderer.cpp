@@ -229,9 +229,7 @@ GPUMeshBuffers fmVK::Vulkan::UploadMesh(std::vector<Vertex> vertices, std::vecto
     };
     new_surface.vertex_buffer_address = vkGetBufferDeviceAddress(this->_device, &device_address_info);
 
-    VkBufferUsageFlags index_buffer_flags =
-         VK_BUFFER_USAGE_INDEX_BUFFER_BIT 
-         | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    VkBufferUsageFlags index_buffer_flags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     new_surface.index_buffer = create_buffer(index_buffer_size, index_buffer_flags, VMA_MEMORY_USAGE_GPU_ONLY);
 
     AllocatedBuffer staging = create_buffer(
@@ -245,8 +243,8 @@ GPUMeshBuffers fmVK::Vulkan::UploadMesh(std::vector<Vertex> vertices, std::vecto
     immediate_submit([&](VkCommandBuffer cmd) {
         VkBufferCopy vertex_copy = { 0 };
         vertex_copy.srcOffset = 0;
-            vertex_copy.dstOffset = 0;
-            vertex_copy.size = vertex_buffer_size;
+        vertex_copy.dstOffset = 0;
+        vertex_copy.size = vertex_buffer_size;
         vkCmdCopyBuffer(cmd, staging.buffer, new_surface.vertex_buffer.buffer, 1, &vertex_copy);
 
         VkBufferCopy index_copy = { 0 };
@@ -568,11 +566,6 @@ void fmVK::Vulkan::init_pipelines() {
     background_pipeline.Init(this->_device, "bg_gradient", this->_draw_image_descriptor_layout);
     this->compute_pipelines["background"] = background_pipeline;
 
-    // fmVK::Pipeline mesh_pipeline;
-    // mesh_pipeline.Init(this->_device, this->_window_extent, "mesh", this->_single_image_descriptor_layout, this->_draw_image);
-    // this->pipelines["mesh"] = mesh_pipeline;
-
-    // TODO: Turn this into that ^
     this->metal_roughness_material.build_pipelines(this);
 
     this->_deletion_queue.push_function([=, this]() {
@@ -591,13 +584,12 @@ void fmVK::Vulkan::update_scene()
 {
     auto start = std::chrono::system_clock::now();
 
-    // this->_main_draw_context.opaque_surfaces.clear();
+    this->_main_draw_context.opaque_surfaces.clear();
     this->_camera->Update();
     auto view = this->_camera->get_view_matrix();
     auto projection = glm::perspective(
         glm::radians(70.0f), 
         (float)this->_draw_extent.width / (float)this->_draw_extent.height,
-        // (float) this->_window_extent.width / (float) this->_window_extent.height,
         10000.0f,
         0.1f
     );
@@ -647,7 +639,7 @@ void fmVK::Vulkan::draw_imgui(VkCommandBuffer cmd, VkImageView image_view)
         this->_camera->position.y, 
         this->_camera->position.z
     );
-    
+
     ImGui::End();
     ImGui::Render();
 
@@ -837,23 +829,16 @@ void fmVK::Vulkan::init_descriptors() {
     }
     {
         DescriptorLayoutBuilder builder;
-        builder.add_binding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-        this->_single_image_descriptor_layout  = builder.build(this->_device, VK_SHADER_STAGE_FRAGMENT_BIT);
-    }
-    {
-        DescriptorLayoutBuilder builder;
         builder.add_binding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
         this->_gpu_scene_data_descriptor_layout = builder.build(this->_device, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
     }
 
     _deletion_queue.push_function([&]() {
         vkDestroyDescriptorSetLayout(_device, this->_draw_image_descriptor_layout , nullptr);
-        vkDestroyDescriptorSetLayout(_device, this->_single_image_descriptor_layout , nullptr);
         vkDestroyDescriptorSetLayout(_device, this->_gpu_scene_data_descriptor_layout, nullptr);
     });
 
     this->_draw_image_descriptors = this->global_descriptor_allocator.allocate(this->_device, this->_draw_image_descriptor_layout);
-    
     {
         DescriptorWriter writer;
         writer.write_image(0, this->_draw_image.view, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_GENERAL, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
@@ -871,7 +856,7 @@ void fmVK::Vulkan::init_descriptors() {
         this->_frames[i]._frame_descriptors = DescriptorAllocatorGrowable {};
         this->_frames[i]._frame_descriptors.init(this->_device, 1000, frame_sizes);
         this->_deletion_queue.push_function([&, i]() {
-            this->_frames[i]._frame_descriptors.destroy_pools(this->_device);
+            this->_frames[i]._frame_descriptors.destroy_pools(this->_device); 
         });
     }
 }
@@ -1185,7 +1170,7 @@ MaterialInstance fmVK::GLTFMetallic_Roughness::write_material(VkDevice device, M
     } else {
         data.pipeline = &this->opaque_pipeline;
     }
-    data.material_set = descriptor_allocators.allocate(device, material_layout);
+    data.material_set = descriptor_allocators.allocate(device, this->material_layout);
 
     this->writer.clear();
     this->writer.write_buffer(

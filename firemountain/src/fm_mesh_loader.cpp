@@ -65,8 +65,8 @@ std::optional<AllocatedImage> load_image(fmVK::Vulkan* engine, fastgltf::Asset& 
             unsigned char* data = stbi_load(path.c_str(), &width, &height, &nr_channels, 4);
             if (data) {
                 VkExtent3D image_size = {
-                    .width = width,
-                    .height = height,
+                    .width = (uint32_t) width,
+                    .height = (uint32_t) height,
                     .depth = 1
                 };
                 new_image = engine->create_image(data, image_size, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, true);
@@ -78,8 +78,8 @@ std::optional<AllocatedImage> load_image(fmVK::Vulkan* engine, fastgltf::Asset& 
                 &width, &height, &nr_channels, 4);
             if (data) {
                 VkExtent3D image_size = {
-                    .width = width,
-                    .height = height,
+                    .width = (uint32_t) width,
+                    .height = (uint32_t) height,
                     .depth = 1
                 };
                 new_image = engine->create_image(data, image_size, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, true);
@@ -102,8 +102,8 @@ std::optional<AllocatedImage> load_image(fmVK::Vulkan* engine, fastgltf::Asset& 
                     );
                     if (data) {
                         VkExtent3D image_size = {
-                            .width = width,
-                            .height = height,
+                            .width = (uint32_t) width,
+                            .height = (uint32_t) height,
                             .depth = 1
                         };
                         new_image = engine->create_image(data, image_size, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, true);
@@ -250,7 +250,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmVK::Vulkan* e
             file.images[image.name.c_str()] = *img;
         } else {
             images.push_back(engine->_texture_missing_error_image);
-            fmt::println("[GLTF] Failed to load  texture %s", image.name);
+            fmt::println("[GLTF] Failed to load  texture {}", image.name); 
         }
     }
 
@@ -295,7 +295,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmVK::Vulkan* e
             .metal_roughness_image = engine->_default_texture_white,
             .metal_roughness_sampler = engine->_default_sampler_linear,
             .data_buffer = file.material_data_buffer.buffer,
-            .data_buffer_offset = data_index * sizeof(fmVK::GLTFMetallic_Roughness::MaterialConstants)
+            .data_buffer_offset = (uint32_t)(data_index * sizeof(fmVK::GLTFMetallic_Roughness::MaterialConstants))
         };
 
         if (mat.pbrData.baseColorTexture.has_value()) {
@@ -341,9 +341,9 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmVK::Vulkan* e
                     [&](glm::vec3 v, size_t index) {
                         Vertex new_vertex = {
                             .position = v,
-                            .uv_x = 0,
+                            .uv_x = 0.0f,
                             .normal = { 1, 0, 0 },
-                            .uv_y = 0,
+                            .uv_y = 0.0f,
                             .color = glm::vec4 { 1.0f }
                         };
                         vertices[initial_vertex + index] = new_vertex;
@@ -362,18 +362,18 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmVK::Vulkan* e
             // Load UVs
             auto uv = p.findAttribute("TEXCOORD_0");
             if (uv != p.attributes.end()) {
-                fastgltf::iterateAccessorWithIndex<glm::vec3>(gltf, gltf.accessors[(*uv).second],
-                [&](glm::vec2 v, size_t index) {
-                    vertices[initial_vertex + index].uv_x = v.x;
-                    vertices[initial_vertex + index].uv_y = v.y;
+                fastgltf::iterateAccessorWithIndex<glm::vec2>(gltf, gltf.accessors[(*uv).second],
+                [&](glm::vec2 uv, size_t index) {
+                    vertices[initial_vertex + index].uv_x = uv.x;
+                    vertices[initial_vertex + index].uv_y = uv.y;
                 });
             }
 
             auto colors = p.findAttribute("COLOR_0");
             if (colors != p.attributes.end()) {
                 fastgltf::iterateAccessorWithIndex<glm::vec4>(gltf, gltf.accessors[(*colors).second],
-                [&](glm::vec4 v, size_t index) {
-                    vertices[initial_vertex + index].color = v;
+                [&](glm::vec4 c, size_t index) {
+                    vertices[initial_vertex + index].color = c;
                 });
             }
 
@@ -399,7 +399,6 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmVK::Vulkan* e
             new_mesh->surfaces.push_back(new_surface);
         }
         new_mesh->mesh_buffers = engine->UploadMesh(vertices, indices);
-        
     }
 
     // Load nodes and their meshes

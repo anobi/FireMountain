@@ -31,11 +31,6 @@ struct AllocatedImage {
     VkFormat format;
 };
 
-struct MeshPushConstants {
-    glm::vec4 data;
-    glm::mat4 render_matrix;
-};
-
 struct ComputePushConstants {
     glm::vec4 data_1;
     glm::vec4 data_2;
