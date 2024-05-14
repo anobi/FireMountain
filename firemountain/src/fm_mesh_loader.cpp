@@ -51,7 +51,7 @@ VkSamplerMipmapMode extract_mipmap_mode(fastgltf::Filter filter) {
 }
 
 
-std::optional<AllocatedImage> load_image(fmVK::Vulkan* engine, fastgltf::Asset& asset, fastgltf::Image& image) {
+std::optional<AllocatedImage> load_image(fmVK::Vulkan* engine, fastgltf::Asset& asset, fastgltf::Image& image, std::filesystem::path working_dir) {
     AllocatedImage new_image {};
     int width, height, nr_channels;
 
@@ -62,7 +62,8 @@ std::optional<AllocatedImage> load_image(fmVK::Vulkan* engine, fastgltf::Asset& 
             assert(file_path.uri.isLocalPath());
 
             const std::string path(file_path.uri.path().begin(), file_path.uri.path().end());
-            unsigned char* data = stbi_load(path.c_str(), &width, &height, &nr_channels, 4);
+            auto full_path = working_dir / file_path.uri.fspath();
+            unsigned char* data = stbi_load(full_path.c_str(), &width, &height, &nr_channels, 4);
             if (data) {
                 VkExtent3D image_size = {
                     .width = (uint32_t) width,
@@ -188,6 +189,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmVK::Vulkan* e
 
     fastgltf::Asset gltf;
     std::filesystem::path path = file_path;
+    auto working_dir = path.parent_path();
 
     auto type = fastgltf::determineGltfFileType(&data);
     if (type == fastgltf::GltfType::glTF) {
@@ -244,13 +246,13 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmVK::Vulkan* e
 
     // Load textures
     for (fastgltf::Image& image : gltf.images) {
-        std::optional<AllocatedImage> img = load_image(engine, gltf, image);
+        std::optional<AllocatedImage> img = load_image(engine, gltf, image, working_dir);
         if (img.has_value()) {
             images.push_back(*img);
             file.images[image.name.c_str()] = *img;
         } else {
             images.push_back(engine->_texture_missing_error_image);
-            fmt::println("[GLTF] Failed to load  texture {}", image.name); 
+            fmt::println("[GLTF] Failed to load  texture {}", image.name);
         }
     }
 

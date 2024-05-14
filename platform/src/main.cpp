@@ -19,8 +19,11 @@ int RunApp()
     firemountain.Init(WIDTH, HEIGHT, display.window);
 
     //auto froge = firemountain.AddMesh("froge", "assets/good_froge.glb");
-    auto structure = firemountain.AddMesh("structure", "assets/structure.glb");
+    // auto structure = firemountain.AddMesh("structure", "assets/structure.glb");
     // auto monke = firemountain.AddMesh("monke", "assets/monke.glb");
+
+    auto sponza = firemountain.AddMesh("sponza", "assets/Sponza/glTF/Sponza.gltf");
+    // auto supersponza = firemountain.AddMesh("supersponza", "assets/sponza_next/Main.1_Sponza/NewSponza_Main_glTF_002.gltf");
 
     bool running = true;
     SDL_Event event;

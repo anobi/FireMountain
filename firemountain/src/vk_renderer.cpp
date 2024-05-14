@@ -580,6 +580,7 @@ void fmVK::Vulkan::init_pipelines() {
     });
 }
 
+// TODO: Move to Firemountain actual
 void fmVK::Vulkan::update_scene()
 {
     auto start = std::chrono::system_clock::now();
@@ -599,11 +600,13 @@ void fmVK::Vulkan::update_scene()
     this->scene_data.projection = projection;
     this->scene_data.viewprojection = projection * view;
 
-    this->scene_data.ambient_color = glm::vec4(0.2f);
-    this->scene_data.sunlight_color = glm::vec4(0.8f);
+    this->scene_data.ambient_color = glm::vec4(0.5f);
+    this->scene_data.sunlight_color = glm::vec4(1.8f);
     this->scene_data.sunlight_direction = glm::vec4(0.0, 1.0, 0.5, 1.0);
 
-    this->loaded_Scenes["structure"]->Draw(glm::mat4 { 1.0f }, this->_main_draw_context);
+    for (auto& s : this->loaded_Scenes) {
+        s.second->Draw(glm::mat4 { 1.0f }, this->_main_draw_context);
+    }
 
     auto end = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
