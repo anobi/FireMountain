@@ -434,10 +434,8 @@ void fmVK::Vulkan::init_swapchain() {
     VK_CHECK(vkCreateImageView(this->_device, &depth_view_info, nullptr, &this->_depth_image.view));
 
     this->_deletion_queue.push_function([=, this]() {
-        vkDestroyImageView(this->_device, this->_draw_image.view, nullptr);
-        vmaDestroyImage(this->_allocator, this->_draw_image.image, this->_draw_image.allocation);
-        vkDestroyImageView(this->_device, this->_depth_image.view, nullptr);
-        vmaDestroyImage(this->_allocator, this->_depth_image.image, this->_depth_image.allocation);
+        destroy_image(this->_draw_image);
+        destroy_image(this->_depth_image);
     });
 }
 

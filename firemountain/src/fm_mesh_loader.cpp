@@ -116,6 +116,7 @@ std::optional<AllocatedImage> load_image(fmVK::Vulkan* engine, fastgltf::Asset& 
     }, image.data);
 
     if (new_image.image == VK_NULL_HANDLE) {
+        engine->destroy_image(new_image);  // This should be done right?
         return {};
     } else {
         return new_image;
@@ -245,10 +246,17 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmVK::Vulkan* e
     std::vector<std::shared_ptr<GLTFMaterial>> materials;
 
     // Load textures
+    int image_idx = 0;
     for (fastgltf::Image& image : gltf.images) {
         std::optional<AllocatedImage> img = load_image(engine, gltf, image, working_dir);
         if (img.has_value()) {
             images.push_back(*img);
+
+            // Generate a name if image doesn't have one to avoid overwrites and assure proper unloading
+            if (image.name == "") {
+                image.name = "__fmvk_gltf_image_" + std::to_string(image_idx);
+                image_idx += 1;
+            }
             file.images[image.name.c_str()] = *img;
         } else {
             images.push_back(engine->_texture_missing_error_image);
@@ -467,12 +475,12 @@ void LoadedGLTF::clear_all()
 {
     VkDevice device = creator->_device;
 
-    for (auto& [k, v] : meshes) {
+    for (auto& [k, v] : this->meshes) {
         this->creator->destroy_buffer(v->mesh_buffers.index_buffer);
         this->creator->destroy_buffer(v->mesh_buffers.vertex_buffer);
     }
 
-    for (auto& [k, v] : images) {
+    for (auto& [k, v] : this->images) {
         // Don't destroy the default images
         if (v.image == this->creator->_texture_missing_error_image.image) {
             continue;
@@ -480,7 +488,7 @@ void LoadedGLTF::clear_all()
         this->creator->destroy_image(v);
     }
 
-    for (auto& sampler : samplers) {
+    for (auto& sampler : this->samplers) {
         vkDestroySampler(device, sampler, nullptr);
     }
 
