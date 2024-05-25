@@ -51,7 +51,7 @@ VkSamplerMipmapMode extract_mipmap_mode(fastgltf::Filter filter) {
 }
 
 
-std::optional<AllocatedImage> load_image(fmVK::Vulkan* engine, fastgltf::Asset& asset, fastgltf::Image& image, std::filesystem::path working_dir) {
+std::optional<AllocatedImage> load_image(fmvk::Vulkan* engine, fastgltf::Asset& asset, fastgltf::Image& image, std::filesystem::path working_dir) {
     AllocatedImage new_image {};
     int width, height, nr_channels;
 
@@ -170,7 +170,7 @@ bool MeshLoader::LoadObj(const char *path, std::vector<Vertex> *vertices, std::v
 }
 
 
-std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmVK::Vulkan* engine, std::string_view file_path) {
+std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* engine, std::string_view file_path) {
     fmt::println("Loading GLTF: {}", file_path);
 
     std::shared_ptr<LoadedGLTF> scene = std::make_shared<LoadedGLTF>();
@@ -250,13 +250,13 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmVK::Vulkan* e
     for (fastgltf::Image& image : gltf.images) {
         std::optional<AllocatedImage> img = load_image(engine, gltf, image, working_dir);
         if (img.has_value()) {
-            images.push_back(*img);
-
             // Generate a name if image doesn't have one to avoid overwrites and assure proper unloading
+            // since the images are stored in a map
             if (image.name == "") {
-                image.name = "__fmvk_gltf_image_" + std::to_string(image_idx);
+                image.name = "__Texture_" + std::to_string(image_idx);
                 image_idx += 1;
             }
+            images.push_back(*img);
             file.images[image.name.c_str()] = *img;
         } else {
             images.push_back(engine->_texture_missing_error_image);
@@ -265,20 +265,21 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmVK::Vulkan* e
     }
 
     // TODO: need to "publish" the buffer creation function and GLTF Materials
-    file.material_data_buffer = engine->create_buffer(
-        sizeof(fmVK::GLTFMetallic_Roughness::MaterialConstants) * gltf.materials.size(),
+    file.material_data_buffer = fmvk::Buffer::create_buffer(
+        sizeof(fmvk::GLTFMetallic_Roughness::MaterialConstants) * gltf.materials.size(),
         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-        VMA_MEMORY_USAGE_CPU_TO_GPU
+        VMA_MEMORY_USAGE_CPU_TO_GPU,
+        engine->_allocator
     );
     int data_index = 0;
-    fmVK::GLTFMetallic_Roughness::MaterialConstants* scene_material_constants = (fmVK::GLTFMetallic_Roughness::MaterialConstants*)file.material_data_buffer.info.pMappedData;
+    fmvk::GLTFMetallic_Roughness::MaterialConstants* scene_material_constants = (fmvk::GLTFMetallic_Roughness::MaterialConstants*)file.material_data_buffer.info.pMappedData;
 
     for (fastgltf::Material& mat : gltf.materials) {
         std::shared_ptr<GLTFMaterial> new_material = std::make_shared<GLTFMaterial>();
         materials.push_back(new_material);
         file.materials[mat.name.c_str()] = new_material;
 
-        fmVK::GLTFMetallic_Roughness::MaterialConstants constants = {
+        fmvk::GLTFMetallic_Roughness::MaterialConstants constants = {
             .color_factors = glm::vec4 {
                 mat.pbrData.baseColorFactor[0],
                 mat.pbrData.baseColorFactor[1],
@@ -299,13 +300,13 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmVK::Vulkan* e
             pass_type = MaterialPass::FM_MATERIAL_PASS_TRANSPARENT;
         }
 
-        fmVK::GLTFMetallic_Roughness::MaterialResources material_resources = {
+        fmvk::GLTFMetallic_Roughness::MaterialResources material_resources = {
             .color_image = engine->_default_texture_white,
             .color_sampler = engine->_default_sampler_linear,
             .metal_roughness_image = engine->_default_texture_white,
             .metal_roughness_sampler = engine->_default_sampler_linear,
             .data_buffer = file.material_data_buffer.buffer,
-            .data_buffer_offset = (uint32_t)(data_index * sizeof(fmVK::GLTFMetallic_Roughness::MaterialConstants))
+            .data_buffer_offset = (uint32_t)(data_index * sizeof(fmvk::GLTFMetallic_Roughness::MaterialConstants))
         };
 
         if (mat.pbrData.baseColorTexture.has_value()) {
@@ -476,8 +477,8 @@ void LoadedGLTF::clear_all()
     VkDevice device = creator->_device;
 
     for (auto& [k, v] : this->meshes) {
-        this->creator->destroy_buffer(v->mesh_buffers.index_buffer);
-        this->creator->destroy_buffer(v->mesh_buffers.vertex_buffer);
+        fmvk::Buffer::destroy_buffer(v->mesh_buffers.index_buffer, creator->_allocator);
+        fmvk::Buffer::destroy_buffer(v->mesh_buffers.vertex_buffer, creator->_allocator);
     }
 
     for (auto& [k, v] : this->images) {
@@ -485,7 +486,7 @@ void LoadedGLTF::clear_all()
         if (v.image == this->creator->_texture_missing_error_image.image) {
             continue;
         }
-        this->creator->destroy_image(v);
+        creator->destroy_image(v);
     }
 
     for (auto& sampler : this->samplers) {
@@ -493,5 +494,5 @@ void LoadedGLTF::clear_all()
     }
 
     this->descriptor_pool.destroy_pools(device);
-    this->creator->destroy_buffer(this->material_data_buffer);
+    fmvk::Buffer::destroy_buffer(this->material_data_buffer, creator->_allocator);
 }

@@ -17,12 +17,6 @@
 		}                                                                   \
 	} while (0)
 
-struct AllocatedBuffer {
-    VkBuffer buffer;
-    VmaAllocation allocation;
-    VmaAllocationInfo info;
-};
-
 struct AllocatedImage {
     VkImage image;
     VkImageView view;
@@ -42,7 +36,9 @@ struct GPUSceneData {
     glm::mat4 view;
     glm::mat4 projection;
     glm::mat4 viewprojection;
+
     glm::vec4 ambient_color;
+
     glm::vec4 sunlight_direction;  // w for sun power
     glm::vec4 sunlight_color;
 };

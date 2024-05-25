@@ -6,9 +6,13 @@
 #include <unordered_map>
 #include "vk_mem_alloc.h"
 
-#include "vk_mesh.hpp"
 #include "vk_types.hpp"
+
+#include "vk_mesh.hpp"
+#include "vk_buffer.hpp"
+#include "vk_image.hpp"
 #include "vk_pipeline.hpp"
+#include "vk_swapchain.hpp"
 #include "vk_descriptors.hpp"
 
 #include "fm_utils.hpp"
@@ -37,8 +41,7 @@ struct EngineStats {
 };
 
 
-namespace fmVK {
-
+namespace fmvk {
     class Vulkan;
 
     struct GLTFMetallic_Roughness {
@@ -67,7 +70,7 @@ namespace fmVK {
 
         DescriptorWriter writer;
 
-        void build_pipelines(fmVK::Vulkan* renderer);
+        void build_pipelines(fmvk::Vulkan* renderer);
         void clear_resources(VkDevice device);
 
         MaterialInstance write_material(
@@ -111,8 +114,8 @@ namespace fmVK {
         VkPipeline GetPipeline(const char* name) { return this->pipelines[name].pipeline; }
         VkPipelineLayout GetPipelineLayout(const char* name) { return this->pipelines[name].layout; }
 
-        std::unordered_map<std::string, fmVK::Pipeline> pipelines;
-        std::unordered_map<std::string, fmVK::ComputePipeline> compute_pipelines;
+        std::unordered_map<std::string, fmvk::Pipeline> pipelines;
+        std::unordered_map<std::string, fmvk::ComputePipeline> compute_pipelines;
 
         // These have been moved to public temporarily
         Camera* _camera;
@@ -121,30 +124,33 @@ namespace fmVK {
         std::unordered_map<std::string, std::shared_ptr<LoadedGLTF>> loaded_Scenes;
         
         VkDevice _device;  
+        VmaAllocator _allocator;
         VkDescriptorSetLayout _gpu_scene_data_descriptor_layout;
-        AllocatedImage _draw_image;
-        AllocatedImage _depth_image;
-        MaterialInstance default_data;
-        
 
+        MaterialInstance default_data;
         AllocatedImage _texture_missing_error_image;
         AllocatedImage _default_texture_white;
         AllocatedImage _default_texture_black;
         AllocatedImage _default_texture_grey;
+
         VkSampler _default_sampler_linear;
         VkSampler _default_sampler_nearest;
 
         GLTFMetallic_Roughness metal_roughness_material;
 
         // New stuff, where these go?
-        AllocatedBuffer create_buffer(size_t alloc_size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage);
-        void destroy_buffer(const AllocatedBuffer &buffer);
-
+        // fmvk::Image::AllocatedImage create_image(void *data, VkDevice device, VmaAllocator allocator, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
         AllocatedImage create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
         AllocatedImage create_image(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
         void destroy_image(const AllocatedImage& image);
 
+
         EngineStats stats;
+
+        // These should be private, but the current gltf pipeline build prevents it
+        AllocatedImage _draw_image;
+        AllocatedImage _depth_image;
+        void init_render_targets();
 
     private:
         int _frame_number = 0;
@@ -160,26 +166,19 @@ namespace fmVK {
         VkInstance _instance;
         VkPhysicalDevice _gpu;
         // VkDevice _device;
-        
+
         VkSurfaceKHR _surface;
         VkDebugUtilsMessengerEXT _debug_messenger;
         DeletionQueue _deletion_queue;
-        VmaAllocator _allocator;
-        void init_vulkan(SDL_Window *window);
-        void init_imgui();
 
-        VkSwapchainKHR _swapchain;
-        VkExtent2D _swapchain_extent;
-        VkFormat _swapchain_image_format;
-        std::vector<VkImage> _swapchain_images;
-        std::vector<VkImageView> _swapchain_image_views;
+        void init_vulkan(SDL_Window *window);
+
+        fmvk::Swapchain _swapchain;
         void init_swapchain();
-        void create_swapchain();
-        void resize_swapchain();
-        void destroy_swapchain();
 
         VkQueue _graphics_queue;
         uint32_t _graphics_queue_family;
+
         VkCommandPool _command_pool;
         VkCommandBuffer _command_buffer;
         void init_commands();
@@ -198,6 +197,8 @@ namespace fmVK {
         void init_pipelines();
         int init_pipeline(const VkDevice device, const VkExtent2D window_extent, const char* shader_name);
 
+
+
         // Draw resources
         // AllocatedImage _draw_image;
         // AllocatedImage _depth_image;
@@ -212,6 +213,7 @@ namespace fmVK {
         // ----------------------
         // End of TODO
  
+        void init_imgui();
         void draw_imgui(VkCommandBuffer cmd, VkImageView image_view);
         void draw_background(VkCommandBuffer cmd);
         void draw_geometry(VkCommandBuffer cmd, RenderObject* render_objects, uint32_t render_object_count);

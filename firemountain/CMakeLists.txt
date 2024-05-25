@@ -35,12 +35,14 @@ target_sources(${PROJECT_NAME}
   PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/firemountain.cpp
   PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/fm_scene.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/src/fm_scene.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/fm_mesh_loader.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_mesh.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_buffer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_images.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_image.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_init.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_renderer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_swapchain.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_pipeline_builder.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_pipeline.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_descriptors.cpp

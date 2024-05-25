@@ -29,7 +29,7 @@ public:
     
     void UpdateCamera(float pitch, float yaw, glm::vec3 velocity);
 
-    fmVK::Vulkan vulkan;
+    fmvk::Vulkan vulkan;
     Scene scene;
     
 

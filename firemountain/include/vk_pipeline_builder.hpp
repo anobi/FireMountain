@@ -5,7 +5,7 @@
 #include "vk_types.hpp"
 
 
-namespace fmVK {
+namespace fmvk {
     class PipelineBuilder {
     public:
         PipelineBuilder() { clear(); }

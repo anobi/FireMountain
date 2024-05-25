@@ -6,6 +6,8 @@
 #include <span>
 #include <glm/vec3.hpp>
 #include "vk_types.hpp"
+#include "vk_buffer.hpp"
+#include "vk_image.hpp"
 #include "vk_mesh.hpp"
 #include "vk_renderer.hpp"
 
@@ -22,9 +24,9 @@ struct LoadedGLTF : public IRenderable {
 
     DescriptorAllocatorGrowable descriptor_pool;
 
-    AllocatedBuffer material_data_buffer;
+    fmvk::Buffer::AllocatedBuffer material_data_buffer;
 
-    fmVK::Vulkan* creator;
+    fmvk::Vulkan* creator;
 
     ~LoadedGLTF() { clear_all(); };
     virtual void Draw(const glm::mat4& top_matrix, DrawContext& ctx);
@@ -36,8 +38,8 @@ private:
 
 namespace MeshLoader {
     bool LoadObj(const char* path, std::vector<Vertex> *vertices, std::vector<uint32_t> *indices);
-    std::optional<std::shared_ptr<LoadedGLTF>> load_GLTF(fmVK::Vulkan* engine, std::string_view file_path);
+    std::optional<std::shared_ptr<LoadedGLTF>> load_GLTF(fmvk::Vulkan* engine, std::string_view file_path);
 
-    // std::vector<std::shared_ptr<MeshAsset>> LoadGltf(std::filesystem::path file_path, fmVK::Vulkan *vk_engine);
+    // std::vector<std::shared_ptr<MeshAsset>> LoadGltf(std::filesystem::path file_path, fmvk::Vulkan *vk_engine);
 
 }

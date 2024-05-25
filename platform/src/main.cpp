@@ -18,7 +18,9 @@ int RunApp()
     display.Init(WIDTH, HEIGHT);
     firemountain.Init(WIDTH, HEIGHT, display.window);
 
-    //auto froge = firemountain.AddMesh("froge", "assets/good_froge.glb");
+    // auto sun = firemountain.AddLight("sun", LIGHT_SUN);
+
+    auto froge = firemountain.AddMesh("froge", "assets/good_froge.glb");
     // auto structure = firemountain.AddMesh("structure", "assets/structure.glb");
     // auto monke = firemountain.AddMesh("monke", "assets/monke.glb");
 
@@ -32,7 +34,7 @@ int RunApp()
     float camera_pitch = 0.0f;
     glm::vec3 camera_velocity = glm::vec3(0);
 
-    SDL_bool capture_mouse = SDL_TRUE;
+    SDL_bool capture_mouse = SDL_FALSE;
     SDL_SetRelativeMouseMode(capture_mouse);
 
     while(running) {

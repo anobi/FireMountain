@@ -10,7 +10,7 @@
 #include "vk_pipeline_builder.hpp"
 
 
-bool fmVK::load_shader_module(const char *file_path, const VkDevice device, VkShaderModule *out)
+bool fmvk::load_shader_module(const char *file_path, const VkDevice device, VkShaderModule *out)
 {
     // TODO: Move this to a file reading utility function
     std::ifstream file(file_path, std::ios::ate | std::ios::binary);
@@ -43,7 +43,7 @@ bool fmVK::load_shader_module(const char *file_path, const VkDevice device, VkSh
 }
 
 
-int fmVK::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, const char* shader_name, VkDescriptorSetLayout descriptor_layout, AllocatedImage alloc_image)
+int fmvk::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, const char* shader_name, VkDescriptorSetLayout descriptor_layout, fmvk::Image::AllocatedImage alloc_image)
 {
 
     // Shaders
@@ -115,12 +115,12 @@ int fmVK::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, 
     return true;
 }
 
-void fmVK::Pipeline::Cleanup(const VkDevice device) {
+void fmvk::Pipeline::Cleanup(const VkDevice device) {
     vkDestroyPipelineLayout(device, this->layout, nullptr);
     vkDestroyPipeline(device, this->pipeline, nullptr);
 }
 
-int fmVK::ComputePipeline::Init(const VkDevice device, const char *shader_name, VkDescriptorSetLayout descriptor_layout)
+int fmvk::ComputePipeline::Init(const VkDevice device, const char *shader_name, VkDescriptorSetLayout descriptor_layout)
 {
     VkPushConstantRange push_constants = {
         .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
@@ -173,7 +173,7 @@ int fmVK::ComputePipeline::Init(const VkDevice device, const char *shader_name, 
     return 0;
 }
 
-void fmVK::ComputePipeline::Cleanup(const VkDevice device)
+void fmvk::ComputePipeline::Cleanup(const VkDevice device)
 {
     vkDestroyPipelineLayout(device, this->layout, nullptr);
 	vkDestroyPipeline(device, this->pipeline, nullptr);

@@ -4,6 +4,7 @@
 #include <span>
 #include <glm/vec3.hpp>
 #include "vk_types.hpp"
+#include "vk_buffer.hpp"
 
 
 struct VertexInputDescription {
@@ -39,8 +40,8 @@ struct Vertex {
 };
 
 struct GPUMeshBuffers {
-    AllocatedBuffer index_buffer;
-    AllocatedBuffer vertex_buffer;
+    fmvk::Buffer::AllocatedBuffer index_buffer;
+    fmvk::Buffer::AllocatedBuffer vertex_buffer;
     VkDeviceAddress vertex_buffer_address;
 };
 

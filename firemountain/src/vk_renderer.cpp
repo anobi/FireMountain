@@ -58,7 +58,7 @@ bool is_visible(const RenderObject& obj, const glm::mat4& view_projection) {
 }
 
 
-int fmVK::Vulkan::Init(const uint32_t width, const uint32_t height, SDL_Window* window) {
+int fmvk::Vulkan::Init(const uint32_t width, const uint32_t height, SDL_Window* window) {
     this->_window_extent = {
         .width = width,
         .height = height
@@ -67,6 +67,7 @@ int fmVK::Vulkan::Init(const uint32_t width, const uint32_t height, SDL_Window* 
 
     init_vulkan(this->_window);
     init_swapchain();
+    init_render_targets();
     init_commands();
     init_sync_structures();
     init_descriptors();
@@ -80,7 +81,7 @@ int fmVK::Vulkan::Init(const uint32_t width, const uint32_t height, SDL_Window* 
     return 0;
 }
 
-void fmVK::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
+void fmvk::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
     auto start = std::chrono::system_clock::now();
 
     VK_CHECK(vkWaitForFences(this->_device, 1, &get_current_frame()._render_fence, true, 1000000000));
@@ -88,11 +89,20 @@ void fmVK::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
     get_current_frame()._frame_descriptors.clear_pools(this->_device);
 
     if (this->_resize_requested) {
-        resize_swapchain();
+        // Recreate swapchain
+        vkDeviceWaitIdle(this->_device);
+        this->_swapchain.Create(this->_window_extent, this->_surface);
+
+        // TODO: When we refresh the swapchain, we also need to refresh all the images with new render image extent?
+
+        // Update extents
+        this->_window_extent.width = this->_requested_extent.width;
+        this->_window_extent.height = this->_requested_extent.height;
+        this->_resize_requested = false;
     }
 
-    this->_draw_extent.width = std::min(this->_swapchain_extent.width, this->_draw_image.extent.width) * this->_render_scale;
-    this->_draw_extent.height = std::min(this->_swapchain_extent.height, this->_draw_image.extent.height) * this->_render_scale;
+    this->_draw_extent.width = std::min(this->_swapchain.extent.width, this->_draw_image.extent.width) * this->_render_scale;
+    this->_draw_extent.height = std::min(this->_swapchain.extent.height, this->_draw_image.extent.height) * this->_render_scale;
 
     update_scene();
 
@@ -100,7 +110,7 @@ void fmVK::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
     uint32_t swapchain_image_index;
     VkResult e = vkAcquireNextImageKHR(
         this->_device,
-        this->_swapchain,
+        this->_swapchain.swapchain,
         1000000000, 
         get_current_frame()._swapchain_semaphore, 
         nullptr, 
@@ -132,17 +142,17 @@ void fmVK::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
 
     // Transition draw image and swapchain
     VKUtil::transition_image(cmd, this->_draw_image.image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-    VKUtil::transition_image(cmd, this->_swapchain_images[swapchain_image_index], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    VKUtil::transition_image(cmd, this->_swapchain.images[swapchain_image_index], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     // Copy draw image into the swapchain
-    VKUtil::copy_image_to_image(cmd, this->_draw_image.image, _swapchain_images[swapchain_image_index], this->_draw_extent, this->_swapchain_extent);
+    VKUtil::copy_image_to_image(cmd, this->_draw_image.image, _swapchain.images[swapchain_image_index], this->_draw_extent, this->_swapchain.extent);
 
     // Draw Imgui
-    VKUtil::transition_image(cmd, this->_swapchain_images[swapchain_image_index], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-    draw_imgui(cmd, this->_swapchain_image_views[swapchain_image_index]);
+    VKUtil::transition_image(cmd, this->_swapchain.images[swapchain_image_index], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    draw_imgui(cmd, this->_swapchain.image_views[swapchain_image_index]);
 
     // Set swapchain image layout to PRESENT
-    VKUtil::transition_image(cmd, this->_swapchain_images[swapchain_image_index], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    VKUtil::transition_image(cmd, this->_swapchain.images[swapchain_image_index], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     // Finalize command buffer
     VK_CHECK(vkEndCommandBuffer(cmd));
@@ -163,7 +173,7 @@ void fmVK::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
         .waitSemaphoreCount = 1,
         .pWaitSemaphores = &get_current_frame()._render_semaphore,
         .swapchainCount = 1,
-        .pSwapchains = &this->_swapchain,
+        .pSwapchains = &this->_swapchain.swapchain,
         .pImageIndices = &swapchain_image_index
     };
     VkResult present_result = vkQueuePresentKHR(this->_graphics_queue, &present_info);
@@ -178,7 +188,7 @@ void fmVK::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
     stats.frametime = elapsed.count() / 1000.f;
 }
 
-void fmVK::Vulkan::Resize(const uint32_t width, const uint32_t height)
+void fmvk::Vulkan::Resize(const uint32_t width, const uint32_t height)
 {
     this->_resize_requested = true;
     this->_requested_extent = {
@@ -187,7 +197,7 @@ void fmVK::Vulkan::Resize(const uint32_t width, const uint32_t height)
     };
 }
 
-void fmVK::Vulkan::Destroy() {
+void fmvk::Vulkan::Destroy() {
     if(this->_is_initialized) {
         vkDeviceWaitIdle(this->_device);
         this->loaded_Scenes.clear();
@@ -198,7 +208,7 @@ void fmVK::Vulkan::Destroy() {
 
         this->_deletion_queue.flush();
 
-        destroy_swapchain();
+        this->_swapchain.Destroy(this->_device);
         vkDestroySurfaceKHR(this->_instance, this->_surface, nullptr);
         vmaDestroyAllocator(this->_allocator);
         vkDestroyDevice(this->_device, nullptr);
@@ -207,12 +217,12 @@ void fmVK::Vulkan::Destroy() {
     }
 }
 
-void fmVK::Vulkan::ProcessImGuiEvent(SDL_Event* e)
+void fmvk::Vulkan::ProcessImGuiEvent(SDL_Event* e)
 {
     ImGui_ImplSDL2_ProcessEvent(e);
 }
 
-GPUMeshBuffers fmVK::Vulkan::UploadMesh(std::vector<Vertex> vertices, std::vector<uint32_t> indices) {
+GPUMeshBuffers fmvk::Vulkan::UploadMesh(std::vector<Vertex> vertices, std::vector<uint32_t> indices) {
     const size_t vertex_buffer_size = vertices.size() * sizeof(Vertex);
     const size_t index_buffer_size = indices.size() * sizeof(uint32_t);
     GPUMeshBuffers new_surface;
@@ -221,7 +231,9 @@ GPUMeshBuffers fmVK::Vulkan::UploadMesh(std::vector<Vertex> vertices, std::vecto
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
         | VK_BUFFER_USAGE_TRANSFER_DST_BIT
         | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
-    new_surface.vertex_buffer = create_buffer(vertex_buffer_size, vertex_buffer_flags, VMA_MEMORY_USAGE_GPU_ONLY);
+
+    new_surface.vertex_buffer = fmvk::Buffer::create_buffer(
+        vertex_buffer_size, vertex_buffer_flags, VMA_MEMORY_USAGE_GPU_ONLY, this->_allocator);
 
     VkBufferDeviceAddressInfo device_address_info  {
         .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
@@ -230,12 +242,14 @@ GPUMeshBuffers fmVK::Vulkan::UploadMesh(std::vector<Vertex> vertices, std::vecto
     new_surface.vertex_buffer_address = vkGetBufferDeviceAddress(this->_device, &device_address_info);
 
     VkBufferUsageFlags index_buffer_flags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    new_surface.index_buffer = create_buffer(index_buffer_size, index_buffer_flags, VMA_MEMORY_USAGE_GPU_ONLY);
+    new_surface.index_buffer = fmvk::Buffer::create_buffer(
+        index_buffer_size, index_buffer_flags, VMA_MEMORY_USAGE_GPU_ONLY, this->_allocator);
 
-    AllocatedBuffer staging = create_buffer(
+    fmvk::Buffer::AllocatedBuffer staging = fmvk::Buffer::create_buffer(
         vertex_buffer_size + index_buffer_size,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VMA_MEMORY_USAGE_CPU_ONLY
+        VMA_MEMORY_USAGE_CPU_ONLY,
+        this->_allocator
     );
     void* data = staging.allocation->GetMappedData();
     memcpy(data, vertices.data(), vertex_buffer_size);
@@ -254,7 +268,7 @@ GPUMeshBuffers fmVK::Vulkan::UploadMesh(std::vector<Vertex> vertices, std::vecto
         vkCmdCopyBuffer(cmd, staging.buffer, new_surface.index_buffer.buffer, 1, &index_copy);
     });
 
-    destroy_buffer(staging);
+    fmvk::Buffer::destroy_buffer(staging, this->_allocator);
 
     return new_surface;
 }
@@ -264,7 +278,7 @@ GPUMeshBuffers fmVK::Vulkan::UploadMesh(std::vector<Vertex> vertices, std::vecto
 // Private methods
 // =======================================================================================================
 
-void fmVK::Vulkan::init_vulkan(SDL_Window *window) {
+void fmvk::Vulkan::init_vulkan(SDL_Window *window) {
     vkb::InstanceBuilder builder;
     auto build = builder.set_app_name("FireMountain")
         .request_validation_layers(true)
@@ -319,7 +333,7 @@ void fmVK::Vulkan::init_vulkan(SDL_Window *window) {
 }
 
 
-void fmVK::Vulkan::init_imgui() {
+void fmvk::Vulkan::init_imgui() {
     // 1: Create descriptor pool
     VkDescriptorPoolSize pool_sizes[] = {
         { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
@@ -360,7 +374,7 @@ void fmVK::Vulkan::init_imgui() {
         .ImageCount = 3,
         .MSAASamples = VK_SAMPLE_COUNT_1_BIT,
         .UseDynamicRendering = true,
-        .ColorAttachmentFormat = this->_swapchain_image_format
+        .ColorAttachmentFormat = this->_swapchain.image_format
     };
     ImGui_ImplVulkan_Init(&init_info, VK_NULL_HANDLE);
 
@@ -373,10 +387,13 @@ void fmVK::Vulkan::init_imgui() {
     });
 }
 
-void fmVK::Vulkan::init_swapchain() {
+void fmvk::Vulkan::init_swapchain() {
+    this->_swapchain.SetContext(this->_instance, this->_device, this->_gpu);
+    this->_swapchain.Create(this->_window_extent, this->_surface);
+}
 
-    create_swapchain();
-
+// Create render and depth buffer images
+void fmvk::Vulkan::init_render_targets() {
     VkExtent3D render_image_extent = {this->_window_extent.width, this->_window_extent.height, 1};
     this->_draw_image.format = VK_FORMAT_R16G16B16A16_SFLOAT;
     this->_draw_image.extent = render_image_extent;
@@ -396,10 +413,10 @@ void fmVK::Vulkan::init_swapchain() {
         .usage = VMA_MEMORY_USAGE_GPU_ONLY,
         .requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
     };
-    vmaCreateImage(this->_allocator, &draw_image_info, &draw_image_allocinfo,&this->_draw_image.image,&this->_draw_image.allocation, nullptr);
+    vmaCreateImage(this->_allocator, &draw_image_info, &draw_image_allocinfo,&this->_draw_image.image, &this->_draw_image.allocation, nullptr);
     
     
-    VkImageViewCreateInfo draw_view_info = VKInit::imageview_create_info(this->_draw_image.format,this->_draw_image.image,VK_IMAGE_ASPECT_COLOR_BIT);
+    VkImageViewCreateInfo draw_view_info = VKInit::imageview_create_info(this->_draw_image.format, this->_draw_image.image,VK_IMAGE_ASPECT_COLOR_BIT);
     VK_CHECK(vkCreateImageView(this->_device, &draw_view_info, nullptr, &this->_draw_image.view));
 
     //
@@ -439,46 +456,7 @@ void fmVK::Vulkan::init_swapchain() {
     });
 }
 
-void fmVK::Vulkan::create_swapchain() {
-    vkb::SwapchainBuilder swapchain_builder{ this->_gpu, this->_device, this->_surface };
-    this->_swapchain_image_format = VK_FORMAT_B8G8R8A8_UNORM;
-    vkb::Swapchain vkb_swapchain = swapchain_builder
-        .set_desired_format(VkSurfaceFormatKHR { 
-            .format = this->_swapchain_image_format, 
-            .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
-        })
-        .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
-        .set_desired_extent(this->_window_extent.width, this->_window_extent.height)
-        .add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT)
-        .build()
-        .value();
-    this->_swapchain = vkb_swapchain.swapchain;
-    this->_swapchain_extent = vkb_swapchain.extent;
-    this->_swapchain_images = vkb_swapchain.get_images().value();
-    this->_swapchain_image_views = vkb_swapchain.get_image_views().value();
-}
-
-void fmVK::Vulkan::resize_swapchain()
-{
-    vkDeviceWaitIdle(this->_device);
-    this->destroy_swapchain();
-
-    this->_window_extent.width = this->_requested_extent.width;
-    this->_window_extent.height = this->_requested_extent.height;
-    this->create_swapchain();
-
-    this->_resize_requested = false;
-}
-
-void fmVK::Vulkan::destroy_swapchain()
-{
-    vkDestroySwapchainKHR(this->_device, this->_swapchain, nullptr);
-    for (int i = 0; i < this->_swapchain_image_views.size(); i++) {
-        vkDestroyImageView(this->_device, this->_swapchain_image_views[i], nullptr);
-    }
-}
-
-void fmVK::Vulkan::init_commands() {
+void fmvk::Vulkan::init_commands() {
     // Init command pool
     VkCommandPoolCreateInfo cmdp_info = VKInit::command_pool_create_info(
         this->_graphics_queue_family,
@@ -505,14 +483,13 @@ void fmVK::Vulkan::init_commands() {
     });
 }
 
-void fmVK::Vulkan::init_sync_structures() {
+void fmvk::Vulkan::init_sync_structures() {
     VkFenceCreateInfo fence_create_info = {
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
         .pNext = nullptr,
         .flags = VK_FENCE_CREATE_SIGNALED_BIT
     };
     
-
     VkSemaphoreCreateInfo semaphore_create_info = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
         .pNext = nullptr,
@@ -539,7 +516,7 @@ void fmVK::Vulkan::init_sync_structures() {
     });
 }
 
-void fmVK::Vulkan::immediate_submit(std::function<void(VkCommandBuffer cmd)> &&function) {
+void fmvk::Vulkan::immediate_submit(std::function<void(VkCommandBuffer cmd)> &&function) {
     VK_CHECK(vkResetFences(this->_device, 1, &_immediate_fence));
     VK_CHECK(vkResetCommandBuffer(this->_immediate_command_buffer, 0));
 
@@ -559,8 +536,8 @@ void fmVK::Vulkan::immediate_submit(std::function<void(VkCommandBuffer cmd)> &&f
     VK_CHECK(vkWaitForFences(this->_device, 1, &this->_immediate_fence, true, 9999999999));
 }
 
-void fmVK::Vulkan::init_pipelines() {
-    fmVK::ComputePipeline background_pipeline;
+void fmvk::Vulkan::init_pipelines() {
+    fmvk::ComputePipeline background_pipeline;
     background_pipeline.Init(this->_device, "bg_gradient", this->_draw_image_descriptor_layout);
     this->compute_pipelines["background"] = background_pipeline;
 
@@ -579,7 +556,7 @@ void fmVK::Vulkan::init_pipelines() {
 }
 
 // TODO: Move to Firemountain actual
-void fmVK::Vulkan::update_scene()
+void fmvk::Vulkan::update_scene()
 {
     auto start = std::chrono::system_clock::now();
 
@@ -600,7 +577,7 @@ void fmVK::Vulkan::update_scene()
 
     this->scene_data.ambient_color = glm::vec4(0.5f);
     this->scene_data.sunlight_color = glm::vec4(1.8f);
-    this->scene_data.sunlight_direction = glm::vec4(0.0, 1.0, 0.5, 1.0);
+    this->scene_data.sunlight_direction = glm::vec4(0.0, 1.0, 0.5, 2.0);
 
     for (auto& s : this->loaded_Scenes) {
         s.second->Draw(glm::mat4 { 1.0f }, this->_main_draw_context);
@@ -611,7 +588,7 @@ void fmVK::Vulkan::update_scene()
     stats.scene_update_time = elapsed.count() / 1000.f;
 }
 
-void fmVK::Vulkan::draw_imgui(VkCommandBuffer cmd, VkImageView image_view)
+void fmvk::Vulkan::draw_imgui(VkCommandBuffer cmd, VkImageView image_view)
 {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplSDL2_NewFrame(this->_window);
@@ -645,7 +622,7 @@ void fmVK::Vulkan::draw_imgui(VkCommandBuffer cmd, VkImageView image_view)
     ImGui::Render();
 
     VkRenderingAttachmentInfo color_attachment = VKInit::attachment_info(image_view, nullptr, VK_IMAGE_LAYOUT_GENERAL);
-    VkRenderingInfo render_info = VKInit::rendering_info(this->_swapchain_extent, &color_attachment, nullptr);
+    VkRenderingInfo render_info = VKInit::rendering_info(this->_swapchain.extent, &color_attachment, nullptr);
     vkCmdBeginRendering(cmd, &render_info);
 
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
@@ -653,7 +630,7 @@ void fmVK::Vulkan::draw_imgui(VkCommandBuffer cmd, VkImageView image_view)
     vkCmdEndRendering(cmd);
 }
 
-void fmVK::Vulkan::draw_background(VkCommandBuffer cmd)
+void fmvk::Vulkan::draw_background(VkCommandBuffer cmd)
 {
     // TODO: I'm missing the ComputeEffect thing
     auto bg_pipeline = this->compute_pipelines["background"];
@@ -669,7 +646,7 @@ void fmVK::Vulkan::draw_background(VkCommandBuffer cmd)
     vkCmdDispatch(cmd, std::ceil(this->_draw_extent.width / 16.0), std::ceil(this->_draw_extent.height / 16.0), 1);
 }
 
-void fmVK::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objects, uint32_t render_object_count) {
+void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objects, uint32_t render_object_count) {
     stats.drawcall_count = 0;
     stats.triangle_count = 0;
     auto start = std::chrono::system_clock::now();
@@ -699,9 +676,9 @@ void fmVK::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
     vkCmdBeginRendering(cmd, &render_info);
 
     // Allocate uniform buffer for the scene data
-    AllocatedBuffer gpu_scene_data_buffer = create_buffer(sizeof(GPUSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+    fmvk::Buffer::AllocatedBuffer gpu_scene_data_buffer = fmvk::Buffer::create_buffer(sizeof(GPUSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, this->_allocator);
     get_current_frame()._deletion_queue.push_function([=, this]() {
-        destroy_buffer(gpu_scene_data_buffer);
+        fmvk::Buffer::destroy_buffer(gpu_scene_data_buffer, this->_allocator);
     });
 
     // Write the buffer
@@ -786,34 +763,11 @@ void fmVK::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
 
 }
 
-AllocatedBuffer fmVK::Vulkan::create_buffer(size_t alloc_size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage) {
-    VkBufferCreateInfo buffer_info = { 
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .pNext = nullptr,
-        .size = alloc_size,
-        .usage = usage
-    };
-    VmaAllocationCreateInfo vma_malloc_info = {
-        .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT,
-        .usage = memory_usage
-    };
-
-    AllocatedBuffer buffer;
-    VK_CHECK(vmaCreateBuffer(this->_allocator, &buffer_info, &vma_malloc_info, &buffer.buffer, &buffer.allocation, &buffer.info));
-    
-    return buffer;
-}
-
-void fmVK::Vulkan::destroy_buffer(const AllocatedBuffer &buffer) {
-    vmaDestroyBuffer(this->_allocator, buffer.buffer, buffer.allocation);
-}
-
-
 // =================
 //  Descriptor sets 
 // ================= 
 
-void fmVK::Vulkan::init_descriptors() {
+void fmvk::Vulkan::init_descriptors() {
     std::vector<DescriptorAllocatorGrowable::PoolSizeRatio> sizes = {
         { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 },
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 }
@@ -862,7 +816,7 @@ void fmVK::Vulkan::init_descriptors() {
     }
 }
 
-AllocatedImage fmVK::Vulkan::create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped)
+AllocatedImage fmvk::Vulkan::create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped)
 {
     AllocatedImage new_image = {
         .extent = size,
@@ -889,10 +843,11 @@ AllocatedImage fmVK::Vulkan::create_image(VkExtent3D size, VkFormat format, VkIm
     return new_image;
 }
 
-AllocatedImage fmVK::Vulkan::create_image(void *data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped)
+AllocatedImage fmvk::Vulkan::create_image(void *data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped)
 {
     size_t data_size = size.depth * size.width * size.height * 4;
-    AllocatedBuffer upload_buffer = create_buffer(data_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+    fmvk::Buffer::AllocatedBuffer upload_buffer = fmvk::Buffer::create_buffer(
+        data_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, this->_allocator);
     memcpy(upload_buffer.info.pMappedData, data, data_size);
 
     AllocatedImage new_image = create_image(size, format, usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, mipmapped);
@@ -932,22 +887,21 @@ AllocatedImage fmVK::Vulkan::create_image(void *data, VkExtent3D size, VkFormat 
         }
     });
 
-    destroy_buffer(upload_buffer);
+    fmvk::Buffer::destroy_buffer(upload_buffer, this->_allocator);
     return new_image;
 }
 
-void fmVK::Vulkan::destroy_image(const AllocatedImage &image)
+void fmvk::Vulkan::destroy_image(const AllocatedImage &image)
 {
     vkDestroyImageView(this->_device, image.view, nullptr);
     vmaDestroyImage(this->_allocator, image.image, image.allocation);
 }
 
-void fmVK::Vulkan::init_default_textures()
+void fmvk::Vulkan::init_default_textures()
 {
-
     constexpr uint32_t white = std::byteswap(0xFFFFFFFF);
     this->_default_texture_white = create_image(
-        (void*) &white, 
+        (void*) &white,
         VkExtent3D(1, 1, 1), 
         VK_FORMAT_R8G8B8A8_UNORM,
         VK_IMAGE_USAGE_SAMPLED_BIT
@@ -955,7 +909,7 @@ void fmVK::Vulkan::init_default_textures()
 
     constexpr uint32_t grey = std::byteswap(0x404040FF);
     this->_default_texture_grey = create_image(
-        (void*) &grey, 
+        (void*) &grey,
         VkExtent3D(1, 1, 1), 
         VK_FORMAT_R8G8B8A8_UNORM,
         VK_IMAGE_USAGE_SAMPLED_BIT
@@ -963,7 +917,7 @@ void fmVK::Vulkan::init_default_textures()
 
     constexpr uint32_t black = std::byteswap(0x000000FF);
     this->_default_texture_black = create_image(
-        (void*) &black, 
+        (void*) &black,
         VkExtent3D(1, 1, 1), 
         VK_FORMAT_R8G8B8A8_UNORM,
         VK_IMAGE_USAGE_SAMPLED_BIT
@@ -1009,7 +963,7 @@ void fmVK::Vulkan::init_default_textures()
 
 
 // This should also be in Firemountain
-void fmVK::Vulkan::init_default_data()
+void fmvk::Vulkan::init_default_data()
 {
     GLTFMetallic_Roughness::MaterialResources material_resources = {
         .color_image = this->_texture_missing_error_image,
@@ -1018,18 +972,20 @@ void fmVK::Vulkan::init_default_data()
         .metal_roughness_sampler = this->_default_sampler_linear
     };
 
-    AllocatedBuffer material_constants = create_buffer(
+    fmvk::Buffer::AllocatedBuffer material_constants = fmvk::Buffer::create_buffer(
         sizeof(GLTFMetallic_Roughness::MaterialConstants),
         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-        VMA_MEMORY_USAGE_CPU_TO_GPU
+        VMA_MEMORY_USAGE_CPU_TO_GPU,
+        this->_allocator
     );
 
     GLTFMetallic_Roughness::MaterialConstants* scene_uniform_data = (GLTFMetallic_Roughness::MaterialConstants*) material_constants.allocation->GetMappedData();
     scene_uniform_data->color_factors = glm::vec4 { 1.0f, 1.0f, 1.0f, 1.0f};
     scene_uniform_data->metal_roughness_factors = glm::vec4 { 1.0f, 0.5f, 0.0f, 0.0f };
 
+    // TODO: This might cause problems
     this->_deletion_queue.push_function([=, this]() {
-        this->destroy_buffer(material_constants);
+        fmvk::Buffer::destroy_buffer(material_constants, this->_allocator);
     });
 
     material_resources.data_buffer = material_constants.buffer;
@@ -1066,13 +1022,13 @@ void MeshNode::Draw(const glm::mat4 &top_matrix, DrawContext &ctx)
     Node::Draw(top_matrix, ctx);
 }
 
-void fmVK::GLTFMetallic_Roughness::build_pipelines(fmVK::Vulkan* renderer)
+void fmvk::GLTFMetallic_Roughness::build_pipelines(fmvk::Vulkan* renderer)
 {
     // Shaders
     // -------------------------------------------------------------------------
     // TODO: Get shader paths from pipeline name. Use fmt::format
     VkShaderModule fragment_shader;
-    if (!fmVK::load_shader_module("shaders/mesh.frag.spv", renderer->_device, &fragment_shader)) {
+    if (!fmvk::load_shader_module("shaders/mesh.frag.spv", renderer->_device, &fragment_shader)) {
         fmt::println("Error building fragment shader module");
     }
     else {
@@ -1080,7 +1036,7 @@ void fmVK::GLTFMetallic_Roughness::build_pipelines(fmVK::Vulkan* renderer)
     }
 
     VkShaderModule vertex_shader;
-    if (!fmVK::load_shader_module("shaders/mesh.vert.spv", renderer->_device, &vertex_shader)) {
+    if (!fmvk::load_shader_module("shaders/mesh.vert.spv", renderer->_device, &vertex_shader)) {
         fmt::println("Error building vertex shader module");
     } 
     else {
@@ -1126,7 +1082,7 @@ void fmVK::GLTFMetallic_Roughness::build_pipelines(fmVK::Vulkan* renderer)
 
     // Pipeline builder
     // -------------------------------------------------------------------------
-    fmVK::PipelineBuilder pipeline_builder;
+    fmvk::PipelineBuilder pipeline_builder;
     pipeline_builder.set_shaders(vertex_shader, fragment_shader);
     pipeline_builder.set_input_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
     pipeline_builder.set_polygon_mode(VK_POLYGON_MODE_FILL);
@@ -1153,7 +1109,7 @@ void fmVK::GLTFMetallic_Roughness::build_pipelines(fmVK::Vulkan* renderer)
     vkDestroyShaderModule(renderer->_device, vertex_shader, nullptr);
 }
 
-void fmVK::GLTFMetallic_Roughness::clear_resources(VkDevice device)
+void fmvk::GLTFMetallic_Roughness::clear_resources(VkDevice device)
 {
     vkDestroyDescriptorSetLayout(device, this->material_layout, nullptr);
     vkDestroyPipelineLayout(device, this->opaque_pipeline.layout, nullptr);
@@ -1162,7 +1118,7 @@ void fmVK::GLTFMetallic_Roughness::clear_resources(VkDevice device)
     vkDestroyPipeline(device, this->transparent_pipeline.pipeline, nullptr);
 }
 
-MaterialInstance fmVK::GLTFMetallic_Roughness::write_material(VkDevice device, MaterialPass pass, const MaterialResources &resources, DescriptorAllocatorGrowable &descriptor_allocators)
+MaterialInstance fmvk::GLTFMetallic_Roughness::write_material(VkDevice device, MaterialPass pass, const MaterialResources &resources, DescriptorAllocatorGrowable &descriptor_allocators)
 {
     MaterialInstance data;
     data.pass_type = pass;
@@ -1199,3 +1155,5 @@ MaterialInstance fmVK::GLTFMetallic_Roughness::write_material(VkDevice device, M
 
     return data;
 }
+
+

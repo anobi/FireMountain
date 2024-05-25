@@ -3,7 +3,7 @@
 #include "vk_init.hpp"
 
 
-VkPipeline fmVK::PipelineBuilder::build_pipeline(VkDevice device)
+VkPipeline fmvk::PipelineBuilder::build_pipeline(VkDevice device)
 {
     VkPipelineViewportStateCreateInfo viewport_state = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
@@ -59,7 +59,7 @@ VkPipeline fmVK::PipelineBuilder::build_pipeline(VkDevice device)
     return pipeline;
 }
 
-void fmVK::PipelineBuilder::clear() {
+void fmvk::PipelineBuilder::clear() {
     this->_input_assembly = { .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
     this->_rasterizer = { .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
     this->_color_blend_attachment = {};
@@ -70,7 +70,7 @@ void fmVK::PipelineBuilder::clear() {
     this->_shader_stages.clear();
 }
 
-void fmVK::PipelineBuilder::set_shaders(VkShaderModule vertex_shader, VkShaderModule fragment_shader) {
+void fmvk::PipelineBuilder::set_shaders(VkShaderModule vertex_shader, VkShaderModule fragment_shader) {
     this->_shader_stages.clear();
     this->_shader_stages.push_back(VKInit::pipeline_shader_stage_create_info(
         VK_SHADER_STAGE_VERTEX_BIT, vertex_shader
@@ -80,22 +80,22 @@ void fmVK::PipelineBuilder::set_shaders(VkShaderModule vertex_shader, VkShaderMo
     ));
 }
 
-void fmVK::PipelineBuilder::set_input_topology(VkPrimitiveTopology topology) {
+void fmvk::PipelineBuilder::set_input_topology(VkPrimitiveTopology topology) {
     this->_input_assembly.topology = topology;
     this->_input_assembly.primitiveRestartEnable = VK_FALSE;
 }
 
-void fmVK::PipelineBuilder::set_polygon_mode(VkPolygonMode mode) {
+void fmvk::PipelineBuilder::set_polygon_mode(VkPolygonMode mode) {
     this->_rasterizer.polygonMode = mode;
     this->_rasterizer.lineWidth = 1.0f;
 }
 
-void fmVK::PipelineBuilder::set_cull_mode(VkCullModeFlags cull_mode, VkFrontFace front_face) {
+void fmvk::PipelineBuilder::set_cull_mode(VkCullModeFlags cull_mode, VkFrontFace front_face) {
     this->_rasterizer.cullMode = cull_mode;
     this->_rasterizer.frontFace = front_face;
 }
 
-void fmVK::PipelineBuilder::set_multisampling_none() {
+void fmvk::PipelineBuilder::set_multisampling_none() {
     this->_multisampling.sampleShadingEnable = VK_FALSE;
     this->_multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
     this->_multisampling.minSampleShading = 1.0f;
@@ -104,17 +104,17 @@ void fmVK::PipelineBuilder::set_multisampling_none() {
     this->_multisampling.alphaToOneEnable = VK_FALSE;
 }
 
-void fmVK::PipelineBuilder::set_color_attachment_format(VkFormat format) {
+void fmvk::PipelineBuilder::set_color_attachment_format(VkFormat format) {
     this->_color_attachment_format = format;
     this->_render_info.colorAttachmentCount = 1;
     this->_render_info.pColorAttachmentFormats = &_color_attachment_format;
 }
 
-void fmVK::PipelineBuilder::set_depth_format(VkFormat format) {
+void fmvk::PipelineBuilder::set_depth_format(VkFormat format) {
     this->_render_info.depthAttachmentFormat = format;
 }
 
-void fmVK::PipelineBuilder::disable_blending() {
+void fmvk::PipelineBuilder::disable_blending() {
     this->_color_blend_attachment.colorWriteMask =
         VK_COLOR_COMPONENT_R_BIT
         | VK_COLOR_COMPONENT_G_BIT
@@ -123,7 +123,7 @@ void fmVK::PipelineBuilder::disable_blending() {
     this->_color_blend_attachment.blendEnable = VK_FALSE;
 }
 
-void fmVK::PipelineBuilder::enable_depth_test(bool depth_write_enable, VkCompareOp op)
+void fmvk::PipelineBuilder::enable_depth_test(bool depth_write_enable, VkCompareOp op)
 {
     this->_depth_stencil.depthTestEnable = VK_TRUE;
     this->_depth_stencil.depthWriteEnable = depth_write_enable;
@@ -136,7 +136,7 @@ void fmVK::PipelineBuilder::enable_depth_test(bool depth_write_enable, VkCompare
     this->_depth_stencil.maxDepthBounds = 1.0f;
 }
 
-void fmVK::PipelineBuilder::disable_depth_test()
+void fmvk::PipelineBuilder::disable_depth_test()
 {
     this->_depth_stencil.depthTestEnable = VK_FALSE;
     this->_depth_stencil.depthWriteEnable = VK_FALSE;
@@ -149,7 +149,7 @@ void fmVK::PipelineBuilder::disable_depth_test()
     this->_depth_stencil.maxDepthBounds = 1.0f;
 }
 
-void fmVK::PipelineBuilder::enable_blending_additive() {
+void fmvk::PipelineBuilder::enable_blending_additive() {
     this->_color_blend_attachment.colorWriteMask =
         VK_COLOR_COMPONENT_R_BIT
         | VK_COLOR_COMPONENT_G_BIT
@@ -164,7 +164,7 @@ void fmVK::PipelineBuilder::enable_blending_additive() {
     this->_color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
 }
 
-void fmVK::PipelineBuilder::enable_blending_alphablend() {
+void fmvk::PipelineBuilder::enable_blending_alphablend() {
     this->_color_blend_attachment.colorWriteMask =
         VK_COLOR_COMPONENT_R_BIT
         | VK_COLOR_COMPONENT_G_BIT

@@ -2,9 +2,10 @@
 
 #include <vector>
 #include "vk_types.hpp"
+#include "vk_image.hpp"
 
 
-namespace fmVK {
+namespace fmvk {
 
     bool load_shader_module(const char *file_path, const  VkDevice device, VkShaderModule *out);
 
@@ -22,7 +23,7 @@ namespace fmVK {
     public:
         Pipeline() {}
         ~Pipeline() {}
-        int Init(const VkDevice device, const VkExtent2D window_extent, const char* shader_name, VkDescriptorSetLayout layout, AllocatedImage alloc_image);
+        int Init(const VkDevice device, const VkExtent2D window_extent, const char* shader_name, VkDescriptorSetLayout layout, fmvk::Image::AllocatedImage alloc_image);
         void Cleanup(const VkDevice device);
 
         VkPipeline pipeline;
