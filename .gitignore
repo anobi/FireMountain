@@ -52,6 +52,7 @@ build/
 ## CMake ##
 ###########
 
+.cmake/
 CMakeLists.txt.user
 CMakeCache.txt
 CMakeFiles
@@ -120,3 +121,5 @@ ipch/
 # *.code-workspace
 .DS_Store
 .vscode/c_cpp_properties.json
+
+.idea/

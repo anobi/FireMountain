@@ -3,6 +3,8 @@ project(FireMountain)
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_CXX_STANDARD 23)
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
 add_subdirectory("firemountain")
 add_subdirectory("platform")
 
@@ -11,7 +13,7 @@ include(FetchContent)
 FetchContent_Declare(
   vk-bootstrap
   GIT_REPOSITORY https://github.com/charles-lunarg/vk-bootstrap.git
-  GIT_TAG        v1.3.274
+  GIT_TAG        v1.3.295
 )
 FetchContent_Declare(
   VulkanMemoryAllocator

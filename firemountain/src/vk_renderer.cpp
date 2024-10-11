@@ -21,7 +21,6 @@
 #include "fm_mesh_loader.hpp"
 
 
-// This goes to culling utils or something
 bool is_visible(const RenderObject& obj, const glm::mat4& view_projection) {
     std::array<glm::vec3, 8> corners {
         glm::vec3 { 1,  1,  1 },

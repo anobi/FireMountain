@@ -33,6 +33,8 @@ public:
     Scene scene;
     
 
+    // TODO: There shouldn't be almost anything private here.
+    //       Only stuff like renderer and so on. This is the main interface class.
 private:
     DeletionQueue _deletion_queue;
 

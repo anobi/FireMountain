@@ -7,6 +7,8 @@
 
 int WIDTH = 1920;
 int HEIGHT = 1080;
+float CAMERA_V_SPEED = 0.0040f;
+float CAMERA_H_SPEED = 0.0025f;
 
 
 int RunApp()
@@ -18,14 +20,12 @@ int RunApp()
     display.Init(WIDTH, HEIGHT);
     firemountain.Init(WIDTH, HEIGHT, display.window);
 
-    // auto sun = firemountain.AddLight("sun", LIGHT_SUN);
-
+    auto sponza = firemountain.AddMesh("sponza", "assets/Sponza/glTF/Sponza.gltf");
     auto froge = firemountain.AddMesh("froge", "assets/good_froge.glb");
     // auto structure = firemountain.AddMesh("structure", "assets/structure.glb");
     // auto monke = firemountain.AddMesh("monke", "assets/monke.glb");
-
-    auto sponza = firemountain.AddMesh("sponza", "assets/Sponza/glTF/Sponza.gltf");
     // auto supersponza = firemountain.AddMesh("supersponza", "assets/sponza_next/Main.1_Sponza/NewSponza_Main_glTF_002.gltf");
+    // auto sun = firemountain.AddLight("sun", LIGHT_SUN);
 
     bool running = true;
     SDL_Event event;
@@ -34,7 +34,7 @@ int RunApp()
     float camera_pitch = 0.0f;
     glm::vec3 camera_velocity = glm::vec3(0);
 
-    SDL_bool capture_mouse = SDL_FALSE;
+    SDL_bool capture_mouse = SDL_TRUE;
     SDL_SetRelativeMouseMode(capture_mouse);
 
     while(running) {
@@ -79,8 +79,8 @@ int RunApp()
 
             case SDL_MOUSEMOTION:
                 if (capture_mouse == SDL_TRUE) {
-                    camera_yaw = (float) event.motion.xrel / 200.0f;
-                    camera_pitch = (float) event.motion.yrel / 200.0f;
+                    camera_yaw = (float) event.motion.xrel * CAMERA_H_SPEED;
+                    camera_pitch = (float) event.motion.yrel * CAMERA_V_SPEED;
                 }
                 else {
 
