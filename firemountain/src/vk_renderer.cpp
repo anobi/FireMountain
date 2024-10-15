@@ -80,6 +80,21 @@ int fmvk::Vulkan::Init(const uint32_t width, const uint32_t height, SDL_Window* 
     return 0;
 }
 
+void fmvk::Vulkan::UpdateViewMatrix(glm::mat4 view_matrix)
+{
+    auto projection = glm::perspective(
+        glm::radians(70.0f), 
+        (float)this->_draw_extent.width / (float)this->_draw_extent.height,
+        10000.0f,
+        0.1f
+    );
+    projection[1][1] *= -1;  // Invert the Y axis to get into the gl land
+
+    this->scene_data.view = view_matrix;
+    this->scene_data.projection = projection;
+    this->scene_data.viewprojection = projection * view_matrix;
+}
+
 void fmvk::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
     auto start = std::chrono::system_clock::now();
 
@@ -560,19 +575,6 @@ void fmvk::Vulkan::update_scene()
     auto start = std::chrono::system_clock::now();
 
     this->_main_draw_context.opaque_surfaces.clear();
-    this->_camera->Update();
-    auto view = this->_camera->get_view_matrix();
-    auto projection = glm::perspective(
-        glm::radians(70.0f), 
-        (float)this->_draw_extent.width / (float)this->_draw_extent.height,
-        10000.0f,
-        0.1f
-    );
-    projection[1][1] *= -1;  // Invert the Y axis to get into the gl land
-
-    this->scene_data.view = view;
-    this->scene_data.projection = projection;
-    this->scene_data.viewprojection = projection * view;
 
     this->scene_data.ambient_color = glm::vec4(0.5f);
     this->scene_data.sunlight_color = glm::vec4(1.8f);
@@ -609,13 +611,14 @@ void fmvk::Vulkan::draw_imgui(VkCommandBuffer cmd, VkImageView image_view)
     ImGui::SetNextWindowSize(ImVec2(300, 85));
     ImGui::Begin("Camera");
 
-    ImGui::Text("Pitch: %.2f", this->_camera->pitch);
-    ImGui::Text("Yaw: %.2f", this->_camera->yaw);
-    ImGui::Text("Position x: %.2f y: %.2f z: %.2f",
-        this->_camera->position.x, 
-        this->_camera->position.y, 
-        this->_camera->position.z
-    );
+    // Disabled until we figure out how to draw this from outside the library
+    // ImGui::Text("Pitch: %.2f", this->_camera->pitch);
+    // ImGui::Text("Yaw: %.2f", this->_camera->yaw);
+    // ImGui::Text("Position x: %.2f y: %.2f z: %.2f",
+    //     this->_camera->position.x, 
+    //     this->_camera->position.y, 
+    //     this->_camera->position.z
+    // );
 
     ImGui::End();
     ImGui::Render();

@@ -10,18 +10,13 @@
 
 
 int Firemountain::Init(const int width, const int height, SDL_Window* window) {
-
-    this->_main_camera.position = glm::vec3(0.0f, 0.0f, 5.0f);
-
     this->vulkan.Init(width, height, window);
-    this->vulkan._camera = &this->_main_camera;
-
     return 0;
 }
 
-void Firemountain::Frame() {
+void Firemountain::Frame(glm::mat4 view_matrix) {
+    this->vulkan.UpdateViewMatrix(view_matrix);
     this->vulkan.Draw(this->_renderables.data(), this->_renderables.size());
-    // this->vulkan.Draw(this->loaded_Scenes, this->loaded_Scenes.size());
 }
 
 void Firemountain::Resize(const uint32_t width, const uint32_t height)
@@ -49,24 +44,6 @@ bool Firemountain::AddMesh(const std::string& name, const char* path) {
     
     return true;
 }
-
-// TODO: Calculate position in the actual engine, and just pass those things
-// here to calculate the matrices, which are stored in fireomountain camera
-void Firemountain::UpdateCamera(float pitch, float yaw, glm::vec3 velocity)
-{
-    this->_main_camera.pitch -= pitch;
-    this->_main_camera.yaw += yaw;
-    this->_main_camera.velocity = velocity;
-}
-
-// MaterialInstance* Firemountain::create_material(const std::string& name) {
-//     MaterialInstance mat = {
-//         .pipeline = this->vulkan.GetPipeline("mesh"),
-//         .pipeline_layout = this->vulkan.GetPipelineLayout("mesh")
-//     };
-//     this->_materials[name] = mat;
-//     return &this->_materials[name];
-// }
 
 MaterialInstance* Firemountain::get_material(const std::string& name) {
     auto i = this->_materials.find(name);

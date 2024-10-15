@@ -1,12 +1,16 @@
 #pragma once
 
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
+#include <glm/glm.hpp>
 
 
-class Camera {
-    float pitch { 0.0f };
-    float yaw { 0.0f };
+struct Camera {
+    void Update();
     glm::vec3 velocity;
     glm::vec3 position;
+
+    float pitch { 0.0f };
+    float yaw { 0.0f };
+
+    glm::mat4 get_view_matrix();
+    glm::mat4 get_rotation_matrix();
 };

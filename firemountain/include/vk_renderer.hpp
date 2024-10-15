@@ -17,8 +17,6 @@
 
 #include "fm_utils.hpp"
 #include "fm_renderable.hpp"
-// #include "fm_mesh_loader.hpp"
-#include "camera.hpp"
 
 class SDL_Window;
 union SDL_Event;
@@ -101,6 +99,7 @@ namespace fmvk {
         ~Vulkan() {};
 
         int Init(const uint32_t width, const uint32_t height, SDL_Window* window);
+        void UpdateViewMatrix(glm::mat4 view_matrix);
         void Draw(RenderObject* first_render_object, int render_object_count);
         void Resize(const uint32_t width, const uint32_t height);
         void Destroy();
@@ -116,9 +115,6 @@ namespace fmvk {
 
         std::unordered_map<std::string, fmvk::Pipeline> pipelines;
         std::unordered_map<std::string, fmvk::ComputePipeline> compute_pipelines;
-
-        // These have been moved to public temporarily
-        Camera* _camera;
 
         // deprecated: std::unordered_map<std::string, std::shared_ptr<Node>> loaded_nodes;
         std::unordered_map<std::string, std::shared_ptr<LoadedGLTF>> loaded_Scenes;
