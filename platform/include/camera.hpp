@@ -1,7 +1,7 @@
 #pragma once
 
-#include <glm/glm.hpp>
-
+#include <glm/vec3.hpp>
+#include <glm/mat4x4.hpp>
 
 struct Camera {
     void Update();

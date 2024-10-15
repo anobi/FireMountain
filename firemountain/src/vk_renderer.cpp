@@ -82,17 +82,8 @@ int fmvk::Vulkan::Init(const uint32_t width, const uint32_t height, SDL_Window* 
 
 void fmvk::Vulkan::UpdateViewMatrix(glm::mat4 view_matrix)
 {
-    auto projection = glm::perspective(
-        glm::radians(70.0f), 
-        (float)this->_draw_extent.width / (float)this->_draw_extent.height,
-        10000.0f,
-        0.1f
-    );
-    projection[1][1] *= -1;  // Invert the Y axis to get into the gl land
-
     this->scene_data.view = view_matrix;
-    this->scene_data.projection = projection;
-    this->scene_data.viewprojection = projection * view_matrix;
+    this->scene_data.viewprojection = this->scene_data.projection * view_matrix;
 }
 
 void fmvk::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
@@ -117,6 +108,15 @@ void fmvk::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
 
     this->_draw_extent.width = std::min(this->_swapchain.extent.width, this->_draw_image.extent.width) * this->_render_scale;
     this->_draw_extent.height = std::min(this->_swapchain.extent.height, this->_draw_image.extent.height) * this->_render_scale;
+
+    auto projection = glm::perspective(
+        glm::radians(70.0f), 
+        (float)this->_draw_extent.width / (float)this->_draw_extent.height,
+        10000.0f,
+        0.1f
+    );
+    projection[1][1] *= -1;  // Invert the Y axis to get into the gl land
+    this->scene_data.projection = projection;
 
     update_scene();
 

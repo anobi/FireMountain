@@ -33,6 +33,7 @@ int RunApp()
     SDL_Event event;
 
     camera.position = glm::vec3(0.0f, 0.0f, 5.0f);
+    // firemountain.UpdateView(camera.get_view_matrix());
 
     SDL_bool capture_mouse = SDL_TRUE;
     SDL_SetRelativeMouseMode(capture_mouse);
@@ -78,6 +79,7 @@ int RunApp()
                 if (capture_mouse == SDL_TRUE) {
                     camera.yaw += (float) event.motion.xrel * CAMERA_H_SPEED / 100.0f;
                     camera.pitch -= (float) event.motion.yrel * CAMERA_V_SPEED / 100.0f;
+                    camera.pitch = glm::clamp(camera.pitch, -1.5f, 1.5f);
                 }
                 else {
 
@@ -95,10 +97,11 @@ int RunApp()
             default:
                 break;
             }
-            camera.Update();
             firemountain.ProcessImGuiEvent(&event);
         }
-        firemountain.Frame(camera.get_view_matrix());
+        camera.Update();
+        firemountain.UpdateView(camera.get_view_matrix());
+        firemountain.Frame();
     }
 
     SDL_SetRelativeMouseMode(SDL_FALSE);  // Release mouse before the exit

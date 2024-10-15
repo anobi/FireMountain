@@ -14,8 +14,11 @@ int Firemountain::Init(const int width, const int height, SDL_Window* window) {
     return 0;
 }
 
-void Firemountain::Frame(glm::mat4 view_matrix) {
+void Firemountain::UpdateView(glm::mat4 view_matrix) {
     this->vulkan.UpdateViewMatrix(view_matrix);
+}
+
+void Firemountain::Frame() {
     this->vulkan.Draw(this->_renderables.data(), this->_renderables.size());
 }
 

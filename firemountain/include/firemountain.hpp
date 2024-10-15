@@ -17,7 +17,8 @@ public:
     ~Firemountain() {};
 
     int Init(const int width, const int height, SDL_Window* window);
-    void Frame(glm::mat4 view_matrix);
+    void UpdateView(glm::mat4 view_matrix);
+    void Frame();
     void Resize(const uint32_t width, const uint32_t height);
     void Destroy();
 
