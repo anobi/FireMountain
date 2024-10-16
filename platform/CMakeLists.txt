@@ -16,6 +16,7 @@ include_directories(${CMAKE_BINARY_DIR}/firemountain/include/)
 target_sources(${PROJECT_NAME}
   PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/display.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/camera.cpp
 )
 target_include_directories(${PROJECT_NAME}
   PUBLIC
@@ -25,6 +26,7 @@ target_include_directories(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME} 
   PUBLIC 
     ${SDL2_LIBRARIES}
+    glm
     LibFireMountain
 )
 

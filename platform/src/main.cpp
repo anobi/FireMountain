@@ -4,10 +4,14 @@
 
 #include "firemountain.hpp"
 #include "display.hpp"
+#include "camera.hpp"
 
 int WIDTH = 1920;
 int HEIGHT = 1080;
+float CAMERA_V_SPEED = 1;
+float CAMERA_H_SPEED = 1;
 
+Camera camera;
 
 int RunApp()
 {
@@ -18,28 +22,23 @@ int RunApp()
     display.Init(WIDTH, HEIGHT);
     firemountain.Init(WIDTH, HEIGHT, display.window);
 
-    // auto sun = firemountain.AddLight("sun", LIGHT_SUN);
-
+    auto sponza = firemountain.AddMesh("sponza", "assets/Sponza/glTF/Sponza.gltf");
     auto froge = firemountain.AddMesh("froge", "assets/good_froge.glb");
     // auto structure = firemountain.AddMesh("structure", "assets/structure.glb");
     // auto monke = firemountain.AddMesh("monke", "assets/monke.glb");
-
-    auto sponza = firemountain.AddMesh("sponza", "assets/Sponza/glTF/Sponza.gltf");
     // auto supersponza = firemountain.AddMesh("supersponza", "assets/sponza_next/Main.1_Sponza/NewSponza_Main_glTF_002.gltf");
+    // auto sun = firemountain.AddLight("sun", LIGHT_SUN);
 
     bool running = true;
+    bool resize_requested = false;
     SDL_Event event;
 
-    float camera_yaw = 0.0f;
-    float camera_pitch = 0.0f;
-    glm::vec3 camera_velocity = glm::vec3(0);
+    camera.position = glm::vec3(0.0f, 0.0f, 5.0f);
+    // firemountain.UpdateView(camera.get_view_matrix());
 
-    SDL_bool capture_mouse = SDL_FALSE;
+    SDL_bool capture_mouse = SDL_TRUE;
     SDL_SetRelativeMouseMode(capture_mouse);
-
     while(running) {
-        camera_yaw = 0.0f;
-        camera_pitch = 0.0f;
         while(SDL_PollEvent(&event)) {
             switch (event.type)
             {
@@ -53,21 +52,21 @@ int RunApp()
                     break;
                 }
 
-                if (event.key.keysym.sym == SDLK_w) { camera_velocity.z = -1; }
-                if (event.key.keysym.sym == SDLK_s) { camera_velocity.z =  1; }
-                if (event.key.keysym.sym == SDLK_a) { camera_velocity.x = -1; }
-                if (event.key.keysym.sym == SDLK_d) { camera_velocity.x =  1; }
-                if (event.key.keysym.sym == SDLK_LCTRL) { camera_velocity.y =  -1; }
-                if (event.key.keysym.sym == SDLK_SPACE) { camera_velocity.y =  1; }
+                if (event.key.keysym.sym == SDLK_w) { camera.velocity.z = -1; }
+                if (event.key.keysym.sym == SDLK_s) { camera.velocity.z =  1; }
+                if (event.key.keysym.sym == SDLK_a) { camera.velocity.x = -1; }
+                if (event.key.keysym.sym == SDLK_d) { camera.velocity.x =  1; }
+                if (event.key.keysym.sym == SDLK_LCTRL) { camera.velocity.y =  -1; }
+                if (event.key.keysym.sym == SDLK_SPACE) { camera.velocity.y =  1; }
                 break;
 
             case SDL_KEYUP:
-                if (event.key.keysym.sym == SDLK_w) { camera_velocity.z = 0; }
-                if (event.key.keysym.sym == SDLK_s) { camera_velocity.z = 0; }
-                if (event.key.keysym.sym == SDLK_a) { camera_velocity.x = 0; }
-                if (event.key.keysym.sym == SDLK_d) { camera_velocity.x = 0; }
-                if (event.key.keysym.sym == SDLK_LCTRL) { camera_velocity.y =  0; }
-                if (event.key.keysym.sym == SDLK_SPACE) { camera_velocity.y =  0; }
+                if (event.key.keysym.sym == SDLK_w) { camera.velocity.z = 0; }
+                if (event.key.keysym.sym == SDLK_s) { camera.velocity.z = 0; }
+                if (event.key.keysym.sym == SDLK_a) { camera.velocity.x = 0; }
+                if (event.key.keysym.sym == SDLK_d) { camera.velocity.x = 0; }
+                if (event.key.keysym.sym == SDLK_LCTRL) { camera.velocity.y =  0; }
+                if (event.key.keysym.sym == SDLK_SPACE) { camera.velocity.y =  0; }
 
 
                 if (event.key.keysym.sym == SDLK_RALT) {
@@ -79,8 +78,9 @@ int RunApp()
 
             case SDL_MOUSEMOTION:
                 if (capture_mouse == SDL_TRUE) {
-                    camera_yaw = (float) event.motion.xrel / 200.0f;
-                    camera_pitch = (float) event.motion.yrel / 200.0f;
+                    camera.yaw += (float) event.motion.xrel * CAMERA_H_SPEED / 100.0f;
+                    camera.pitch -= (float) event.motion.yrel * CAMERA_V_SPEED / 100.0f;
+                    camera.pitch = glm::clamp(camera.pitch, -1.5f, 1.5f);
                 }
                 else {
 
@@ -89,19 +89,24 @@ int RunApp()
 
             case SDL_WINDOWEVENT:
                 if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
-                    int w, h;
-                    SDL_GetWindowSize(display.window, &w, &h);
-                    firemountain.Resize((uint32_t)w, (uint32_t)h);
+                    resize_requested = true;
+                    SDL_GetWindowSize(display.window, &WIDTH, &HEIGHT);
                 }
                 break;
             
             default:
                 break;
             }
-            firemountain.UpdateCamera(camera_pitch, camera_yaw, camera_velocity);
             firemountain.ProcessImGuiEvent(&event);
         }
-        firemountain.Frame();
+
+        if (resize_requested) {
+            firemountain.Resize((uint32_t)WIDTH, (uint32_t)HEIGHT);
+            resize_requested = false;
+        }
+
+        camera.Update();
+        firemountain.Frame(camera.GetViewProjectionMatrix(WIDTH, HEIGHT));
     }
 
     SDL_SetRelativeMouseMode(SDL_FALSE);  // Release mouse before the exit
