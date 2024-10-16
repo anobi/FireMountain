@@ -10,9 +10,14 @@ void Camera::Update() {
     this->position += glm::vec3(rotation * glm::vec4(this->velocity * speed_multiplier, 0.0f));
 }
 
-glm::mat4 Camera::GetViewProjectionMatrix(float screen_width, float screen_height) {
+glm::mat4 Camera::GetViewProjectionMatrix(float screen_width, float screen_height, CameraProjectionType type) {
     auto v = this->get_view_matrix();
-    auto p = this->GetPerspectiveProjection(screen_width, screen_height);
+    glm::mat4 p;
+    if (type == CameraProjectionType::ORTHO) {
+        p = this->GetOrthoProjection(screen_width, screen_height);
+    } else {
+        p = this->GetPerspectiveProjection(screen_width, screen_height);
+    }
     return p * v;
 }
 
@@ -24,6 +29,17 @@ glm::mat4 Camera::GetPerspectiveProjection(float screen_width, float screen_heig
         0.1f
     );
     projection[1][1] *= -1;  // Invert the Y axis to get into the gl land
+    return projection;
+}
+
+glm::mat4 Camera::GetOrthoProjection(float screen_width, float screen_height)
+{
+    float ratio = screen_width / screen_height;
+    auto projection = glm::ortho(
+        0.0f, 1.0f,
+        0.0f, 1.0f
+    );
+    projection[1][1] *= -1;
     return projection;
 }
 

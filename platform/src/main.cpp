@@ -12,6 +12,7 @@ float CAMERA_V_SPEED = 1;
 float CAMERA_H_SPEED = 1;
 
 Camera camera;
+CameraProjectionType camera_projection = CameraProjectionType::PERSPECTIVE;
 
 int RunApp()
 {
@@ -33,7 +34,8 @@ int RunApp()
     bool resize_requested = false;
     SDL_Event event;
 
-    camera.position = glm::vec3(0.0f, 0.0f, 5.0f);
+    camera.position = glm::vec3(3.0f, 1.0f, 0.0f);
+    camera.yaw = -1.5f;
     // firemountain.UpdateView(camera.get_view_matrix());
 
     SDL_bool capture_mouse = SDL_TRUE;
@@ -106,7 +108,7 @@ int RunApp()
         }
 
         camera.Update();
-        firemountain.Frame(camera.GetViewProjectionMatrix(WIDTH, HEIGHT));
+        firemountain.Frame(camera.GetViewProjectionMatrix(WIDTH, HEIGHT, camera_projection));
     }
 
     SDL_SetRelativeMouseMode(SDL_FALSE);  // Release mouse before the exit
