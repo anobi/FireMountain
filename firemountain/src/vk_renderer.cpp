@@ -80,13 +80,7 @@ int fmvk::Vulkan::Init(const uint32_t width, const uint32_t height, SDL_Window* 
     return 0;
 }
 
-void fmvk::Vulkan::UpdateViewMatrix(glm::mat4 view_matrix)
-{
-    this->scene_data.view = view_matrix;
-    this->scene_data.viewprojection = this->scene_data.projection * view_matrix;
-}
-
-void fmvk::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
+void fmvk::Vulkan::Draw(RenderObject* render_objects, int render_object_count, glm::mat4 view_projection_matrix) {
     auto start = std::chrono::system_clock::now();
 
     VK_CHECK(vkWaitForFences(this->_device, 1, &get_current_frame()._render_fence, true, 1000000000));
@@ -94,31 +88,23 @@ void fmvk::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
     get_current_frame()._frame_descriptors.clear_pools(this->_device);
 
     if (this->_resize_requested) {
+        // Update extents
+        this->_window_extent.width = this->_requested_extent.width;
+        this->_window_extent.height = this->_requested_extent.height;
+        
         // Recreate swapchain
         vkDeviceWaitIdle(this->_device);
         this->_swapchain.Create(this->_window_extent, this->_surface);
 
         // TODO: When we refresh the swapchain, we also need to refresh all the images with new render image extent?
 
-        // Update extents
-        this->_window_extent.width = this->_requested_extent.width;
-        this->_window_extent.height = this->_requested_extent.height;
         this->_resize_requested = false;
     }
 
     this->_draw_extent.width = std::min(this->_swapchain.extent.width, this->_draw_image.extent.width) * this->_render_scale;
     this->_draw_extent.height = std::min(this->_swapchain.extent.height, this->_draw_image.extent.height) * this->_render_scale;
 
-    auto projection = glm::perspective(
-        glm::radians(70.0f), 
-        (float)this->_draw_extent.width / (float)this->_draw_extent.height,
-        10000.0f,
-        0.1f
-    );
-    projection[1][1] *= -1;  // Invert the Y axis to get into the gl land
-    this->scene_data.projection = projection;
-
-    update_scene();
+    update_scene(view_projection_matrix);
 
     // Request image from the swapchain
     uint32_t swapchain_image_index;
@@ -570,12 +556,13 @@ void fmvk::Vulkan::init_pipelines() {
 }
 
 // TODO: Move to Firemountain actual
-void fmvk::Vulkan::update_scene()
+void fmvk::Vulkan::update_scene(glm::mat4 view_projection_matrix)
 {
     auto start = std::chrono::system_clock::now();
 
     this->_main_draw_context.opaque_surfaces.clear();
 
+    this->scene_data.viewprojection = view_projection_matrix;
     this->scene_data.ambient_color = glm::vec4(0.5f);
     this->scene_data.sunlight_color = glm::vec4(1.8f);
     this->scene_data.sunlight_direction = glm::vec4(0.0, 1.0, 0.5, 2.0);

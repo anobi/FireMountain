@@ -5,6 +5,9 @@
 
 struct Camera {
     void Update();
+    glm::mat4 GetViewProjectionMatrix(float screen_width, float screen_height);
+    glm::mat4 GetPerspectiveProjection(float screen_width, float screen_height);
+    glm::mat4 GetOrthoProjection();
     glm::vec3 velocity;
     glm::vec3 position;
 

@@ -30,6 +30,7 @@ int RunApp()
     // auto sun = firemountain.AddLight("sun", LIGHT_SUN);
 
     bool running = true;
+    bool resize_requested = false;
     SDL_Event event;
 
     camera.position = glm::vec3(0.0f, 0.0f, 5.0f);
@@ -88,9 +89,8 @@ int RunApp()
 
             case SDL_WINDOWEVENT:
                 if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
-                    int w, h;
-                    SDL_GetWindowSize(display.window, &w, &h);
-                    firemountain.Resize((uint32_t)w, (uint32_t)h);
+                    resize_requested = true;
+                    SDL_GetWindowSize(display.window, &WIDTH, &HEIGHT);
                 }
                 break;
             
@@ -99,9 +99,14 @@ int RunApp()
             }
             firemountain.ProcessImGuiEvent(&event);
         }
+
+        if (resize_requested) {
+            firemountain.Resize((uint32_t)WIDTH, (uint32_t)HEIGHT);
+            resize_requested = false;
+        }
+
         camera.Update();
-        firemountain.UpdateView(camera.get_view_matrix());
-        firemountain.Frame();
+        firemountain.Frame(camera.GetViewProjectionMatrix(WIDTH, HEIGHT));
     }
 
     SDL_SetRelativeMouseMode(SDL_FALSE);  // Release mouse before the exit
