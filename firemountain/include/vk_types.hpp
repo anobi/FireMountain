@@ -41,6 +41,8 @@ struct GPUSceneData {
 
     glm::vec4 sunlight_direction;  // w for sun power
     glm::vec4 sunlight_color;
+
+    // TODO: Add lights here
 };
 
 enum class MaterialPass : uint8_t {

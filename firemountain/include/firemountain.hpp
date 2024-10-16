@@ -8,7 +8,6 @@
 #include "vk_mesh.hpp"
 #include "vk_types.hpp"
 #include "vk_renderer.hpp"
-#include "camera.hpp"
 
 //class SDL_Event;
 
@@ -18,16 +17,13 @@ public:
     ~Firemountain() {};
 
     int Init(const int width, const int height, SDL_Window* window);
-    void Update();
-    void Frame();
+    void Frame(glm::mat4 view_projection_matrix);
     void Resize(const uint32_t width, const uint32_t height);
     void Destroy();
 
     void ProcessImGuiEvent(SDL_Event* e);
 
     bool AddMesh(const std::string& name, const char* path);
-    
-    void UpdateCamera(float pitch, float yaw, glm::vec3 velocity);
 
     fmvk::Vulkan vulkan;
     Scene scene;
@@ -37,8 +33,6 @@ public:
     //       Only stuff like renderer and so on. This is the main interface class.
 private:
     DeletionQueue _deletion_queue;
-
-    Camera _main_camera;
 
     std::vector<RenderObject> _renderables;
     // std::vector<IRenderable> _renderables;

@@ -1,6 +1,7 @@
 {
     "tasks": [
         {
+            "type": "shell",
             "label": "cmake-build",
             "command": "cmake",
             "args": ["--build", "."],
