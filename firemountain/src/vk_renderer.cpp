@@ -96,7 +96,10 @@ void fmvk::Vulkan::Draw(RenderObject* render_objects, int render_object_count, g
         vkDeviceWaitIdle(this->_device);
         this->_swapchain.Create(this->_window_extent, this->_surface);
 
-        // TODO: When we refresh the swapchain, we also need to refresh all the images with new render image extent?
+        // Re-create draw and depth targets with new extent
+        destroy_image(this->_draw_image);
+        destroy_image(this->_depth_image);
+        init_render_targets();
 
         this->_resize_requested = false;
     }
@@ -208,6 +211,8 @@ void fmvk::Vulkan::Destroy() {
 
         this->_deletion_queue.flush();
 
+        destroy_image(this->_draw_image);
+        destroy_image(this->_depth_image);
         this->_swapchain.Destroy(this->_device);
         vkDestroySurfaceKHR(this->_instance, this->_surface, nullptr);
         vmaDestroyAllocator(this->_allocator);
@@ -450,10 +455,10 @@ void fmvk::Vulkan::init_render_targets() {
     );
     VK_CHECK(vkCreateImageView(this->_device, &depth_view_info, nullptr, &this->_depth_image.view));
 
-    this->_deletion_queue.push_function([=, this]() {
-        destroy_image(this->_draw_image);
-        destroy_image(this->_depth_image);
-    });
+    // this->_deletion_queue.push_function([=, this]() {
+    //     destroy_image(this->_draw_image);
+    //     destroy_image(this->_depth_image);
+    // });
 }
 
 void fmvk::Vulkan::init_commands() {
