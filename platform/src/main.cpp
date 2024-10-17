@@ -39,8 +39,8 @@ int RunApp()
     // firemountain.UpdateView(camera.get_view_matrix());
 
     SDL_bool capture_mouse = SDL_FALSE;
-    float mouse_captured_x = 0.0f;
-    float mouse_captured_y = 0.0f;
+    int mouse_captured_x = 0;
+    int mouse_captured_y = 0;
     SDL_SetRelativeMouseMode(capture_mouse);
     while(running) {
         while(SDL_PollEvent(&event)) {
@@ -73,8 +73,16 @@ int RunApp()
                 if (event.key.keysym.sym == SDLK_SPACE) { camera.velocity.y =  0; }
 
                 if (event.key.keysym.sym == SDLK_RALT) {
-                    if (capture_mouse == SDL_TRUE) { capture_mouse = SDL_FALSE; }
-                    else { capture_mouse = SDL_TRUE; }
+                    if (capture_mouse == SDL_TRUE) { 
+                        capture_mouse = SDL_FALSE; 
+                        // Return mouse to where it was before grabbing
+                        SDL_WarpMouseInWindow(display.window, mouse_captured_x, mouse_captured_y);
+                    }
+                    else { 
+                        capture_mouse = SDL_TRUE; 
+                        // Save the mouse location so we can return it later
+                        SDL_GetMouseState(&mouse_captured_x, &mouse_captured_y);
+                    }
                 }
                 break;
 
