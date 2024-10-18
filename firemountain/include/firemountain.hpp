@@ -23,7 +23,7 @@ public:
 
     void ProcessImGuiEvent(SDL_Event* e);
 
-    bool AddMesh(const std::string& name, const char* path);
+    MeshID AddMesh(const std::string& name, const char* path);
 
     fmvk::Vulkan vulkan;
     Scene scene;

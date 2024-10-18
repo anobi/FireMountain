@@ -115,8 +115,9 @@ namespace fmvk {
         std::unordered_map<std::string, fmvk::Pipeline> pipelines;
         std::unordered_map<std::string, fmvk::ComputePipeline> compute_pipelines;
 
-        // deprecated: std::unordered_map<std::string, std::shared_ptr<Node>> loaded_nodes;
-        std::unordered_map<std::string, std::shared_ptr<LoadedGLTF>> loaded_Scenes;
+        unsigned int next_id = 0;
+        MeshID AddMesh(const std::string& name, std::shared_ptr<LoadedGLTF> mesh);
+        std::unordered_map<unsigned int, std::shared_ptr<LoadedGLTF>> loaded_meshes;
         
         VkDevice _device;  
         VmaAllocator _allocator;
@@ -190,9 +191,6 @@ namespace fmvk {
 
         // Pipelines
         void init_pipelines();
-        int init_pipeline(const VkDevice device, const VkExtent2D window_extent, const char* shader_name);
-
-
 
         // Draw resources
         // AllocatedImage _draw_image;

@@ -35,13 +35,12 @@ void Firemountain::ProcessImGuiEvent(SDL_Event* e)
 
 int mesh_index = 0;
 
-bool Firemountain::AddMesh(const std::string& name, const char* path) {
-    // this->_meshes[name] = MeshLoader::LoadGltf(path, &this->vulkan);
+MeshID Firemountain::AddMesh(const std::string& name, const char* path) {
+    // Should I move this to renderer?
     auto mesh_file = MeshLoader::load_GLTF(&this->vulkan, path);
     assert(mesh_file.has_value());
-    this->vulkan.loaded_Scenes[name] = *mesh_file;
-    
-    return true;
+    auto id = this->vulkan.AddMesh(name, *mesh_file);
+    return id;
 }
 
 MaterialInstance* Firemountain::get_material(const std::string& name) {

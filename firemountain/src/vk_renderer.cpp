@@ -203,7 +203,7 @@ void fmvk::Vulkan::Resize(const uint32_t width, const uint32_t height)
 void fmvk::Vulkan::Destroy() {
     if(this->_is_initialized) {
         vkDeviceWaitIdle(this->_device);
-        this->loaded_Scenes.clear();
+        this->loaded_meshes.clear();
 
         for (auto& frame : this->_frames) {
             frame._deletion_queue.flush();
@@ -278,6 +278,12 @@ GPUMeshBuffers fmvk::Vulkan::UploadMesh(std::vector<Vertex> vertices, std::vecto
     return new_surface;
 }
 
+MeshID fmvk::Vulkan::AddMesh(const std::string &name, std::shared_ptr<LoadedGLTF> mesh)
+{
+    auto id = this->next_id++;
+    this->loaded_meshes.emplace(id, mesh);
+    return {id};
+}
 
 // =======================================================================================================
 // Private methods
@@ -572,7 +578,7 @@ void fmvk::Vulkan::update_scene(glm::mat4 view_projection_matrix)
     this->scene_data.sunlight_color = glm::vec4(1.8f);
     this->scene_data.sunlight_direction = glm::vec4(0.0, 1.0, 0.5, 2.0);
 
-    for (auto& s : this->loaded_Scenes) {
+    for (auto& s : this->loaded_meshes) {
         s.second->Draw(glm::mat4 { 1.0f }, this->_main_draw_context);
     }
 

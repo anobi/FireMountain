@@ -14,6 +14,29 @@ float CAMERA_H_SPEED = 1;
 Camera camera;
 CameraProjectionType camera_projection = CameraProjectionType::PERSPECTIVE;
 
+struct GameSceneObject {
+    std::string name;
+    std::string mesh_file;
+    MeshID mesh_id;
+    glm::vec3 location;
+    glm::vec3 rotation;
+};
+
+std::vector<GameSceneObject> game_scene = {
+    {
+        .name = "sponza",
+        .mesh_file = "assets/Sponza/glTF/Sponza.gltf",
+        .location = glm::vec3(0.0f, 0.0f, 0.0f),
+        .rotation = glm::vec3(0.0f, 0.0f, 0.0f)
+    },
+    {
+        .name = "froge",
+        .mesh_file = "assets/good_froge.glb",
+        .location = glm::vec3(0.0f, 0.0f, 0.0f),
+        .rotation = glm::vec3(0.0f, 0.0f, 0.0f)
+    }
+};
+
 int RunApp()
 {
     Firemountain firemountain;
@@ -23,12 +46,9 @@ int RunApp()
     display.Init(WIDTH, HEIGHT);
     firemountain.Init(WIDTH, HEIGHT, display.window);
 
-    auto sponza = firemountain.AddMesh("sponza", "assets/Sponza/glTF/Sponza.gltf");
-    auto froge = firemountain.AddMesh("froge", "assets/good_froge.glb");
-    // auto structure = firemountain.AddMesh("structure", "assets/structure.glb");
-    // auto monke = firemountain.AddMesh("monke", "assets/monke.glb");
-    // auto supersponza = firemountain.AddMesh("supersponza", "assets/sponza_next/Main.1_Sponza/NewSponza_Main_glTF_002.gltf");
-    // auto sun = firemountain.AddLight("sun", LIGHT_SUN);
+    for (auto o : game_scene) {
+        o.mesh_id = firemountain.AddMesh(o.name, o.mesh_file.c_str());
+    }
 
     bool running = true;
     bool resize_requested = false;
@@ -36,7 +56,6 @@ int RunApp()
 
     camera.position = glm::vec3(3.0f, 1.0f, 0.0f);
     camera.yaw = -1.5f;
-    // firemountain.UpdateView(camera.get_view_matrix());
 
     SDL_bool capture_mouse = SDL_FALSE;
     int mouse_captured_x = 0;
