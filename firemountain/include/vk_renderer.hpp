@@ -200,9 +200,10 @@ namespace fmvk {
 
         // TODO: move these to FM
         // ----------------------
+    public:
         DrawContext _main_draw_context;
-        
-        void update_scene(glm::mat4 view_projection_matrix);
+        void update_scene(glm::mat4 view_projection_matrix, std::vector<RenderSceneObj> scene);
+    private:
         // ----------------------
         // End of TODO
  

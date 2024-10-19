@@ -1,6 +1,10 @@
 #include <string>
+#include <unordered_map>
 #include <fmt/core.h>
 #include <SDL2/SDL.h>
+
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 #include "firemountain.hpp"
 #include "display.hpp"
@@ -14,27 +18,31 @@ float CAMERA_H_SPEED = 1;
 Camera camera;
 CameraProjectionType camera_projection = CameraProjectionType::PERSPECTIVE;
 
-struct GameSceneObject {
-    std::string name;
-    std::string mesh_file;
-    MeshID mesh_id;
-    glm::vec3 location;
-    glm::vec3 rotation;
+
+struct Transform {
+    glm::vec3 position = { 0.0f, 0.0f, 0.0f };
+    glm::quat rotation = { 1.0f, 0.0f, 0.0f, 0.0f};
+    glm::vec3 scale = { 1.0f, 1.0f, 1.0f };
 };
 
-std::vector<GameSceneObject> game_scene = {
-    {
-        .name = "sponza",
-        .mesh_file = "assets/Sponza/glTF/Sponza.gltf",
-        .location = glm::vec3(0.0f, 0.0f, 0.0f),
-        .rotation = glm::vec3(0.0f, 0.0f, 0.0f)
-    },
-    {
-        .name = "froge",
+struct GameSceneObject {
+    std::string mesh_file;
+    MeshID mesh_id;
+    Transform transform;
+    bool dirty = true;
+};
+
+
+std::unordered_map<std::string, GameSceneObject> game_scene = {
+    {"sponza", {
+        .mesh_file = "assets/Sponza/glTF/Sponza.gltf"
+    }},
+    {"froge", {
         .mesh_file = "assets/good_froge.glb",
-        .location = glm::vec3(0.0f, 0.0f, 0.0f),
-        .rotation = glm::vec3(0.0f, 0.0f, 0.0f)
-    }
+        .transform = {
+            .position = {0.0f, 0.5f, 0.0f}
+        }
+    }}
 };
 
 int RunApp()
@@ -46,10 +54,11 @@ int RunApp()
     display.Init(WIDTH, HEIGHT);
     firemountain.Init(WIDTH, HEIGHT, display.window);
 
-    for (auto o : game_scene) {
-        o.mesh_id = firemountain.AddMesh(o.name, o.mesh_file.c_str());
+    for (auto& [key, obj] : game_scene) {
+        obj.mesh_id = firemountain.AddMesh(key, obj.mesh_file.c_str());
     }
 
+    int tick = 0;
     bool running = true;
     bool resize_requested = false;
     SDL_Event event;
@@ -62,6 +71,7 @@ int RunApp()
     int mouse_captured_y = 0;
     SDL_SetRelativeMouseMode(capture_mouse);
     while(running) {
+        tick += 1;
         while(SDL_PollEvent(&event)) {
             switch (event.type)
             {
@@ -151,8 +161,25 @@ int RunApp()
             resize_requested = false;
         }
 
+        // Rotate the froge
+        game_scene["froge"].transform.position.y += 0.0025 * sin(0.02 * tick);
+        // game_scene["froge"].transform.rotation.y += sin((0.01 + (tick / 1000)) / 2);
+        game_scene["froge"].dirty = true;
+
+        std::vector<RenderSceneObj> render_scene;
+
+        // Send updated transforms to renderer
+        for (auto& [key, obj] : game_scene) {
+            auto m = glm::translate(glm::identity<glm::mat4>(), obj.transform.position)
+                * glm::mat4_cast(obj.transform.rotation)
+                * glm::scale(glm::identity<glm::mat4>(), obj.transform.scale);
+            render_scene.push_back({ obj.mesh_id, m });
+            obj.dirty = false;
+        }
+
         camera.Update();
-        firemountain.Frame(camera.GetViewProjectionMatrix(WIDTH, HEIGHT, camera_projection));
+        auto view_proj = camera.GetViewProjectionMatrix(WIDTH, HEIGHT, camera_projection);
+        firemountain.Frame(view_proj, render_scene);
     }
 
     SDL_SetRelativeMouseMode(SDL_FALSE);  // Release mouse before the exit

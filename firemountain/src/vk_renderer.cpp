@@ -107,7 +107,7 @@ void fmvk::Vulkan::Draw(RenderObject* render_objects, int render_object_count, g
     this->_draw_extent.width = std::min(this->_swapchain.extent.width, this->_draw_image.extent.width) * this->_render_scale;
     this->_draw_extent.height = std::min(this->_swapchain.extent.height, this->_draw_image.extent.height) * this->_render_scale;
 
-    update_scene(view_projection_matrix);
+    // update_scene(view_projection_matrix);
 
     // Request image from the swapchain
     uint32_t swapchain_image_index;
@@ -567,7 +567,7 @@ void fmvk::Vulkan::init_pipelines() {
 }
 
 // TODO: Move to Firemountain actual
-void fmvk::Vulkan::update_scene(glm::mat4 view_projection_matrix)
+void fmvk::Vulkan::update_scene(glm::mat4 view_projection_matrix, std::vector<RenderSceneObj> scene)
 {
     auto start = std::chrono::system_clock::now();
 
@@ -578,9 +578,14 @@ void fmvk::Vulkan::update_scene(glm::mat4 view_projection_matrix)
     this->scene_data.sunlight_color = glm::vec4(1.8f);
     this->scene_data.sunlight_direction = glm::vec4(0.0, 1.0, 0.5, 2.0);
 
-    for (auto& s : this->loaded_meshes) {
-        s.second->Draw(glm::mat4 { 1.0f }, this->_main_draw_context);
+    for (auto o : scene) {
+        auto mesh = this->loaded_meshes.at(o.mesh_id.id);
+        mesh->Draw(o.transform, this->_main_draw_context);
     }
+
+    // for (auto& s : this->loaded_meshes) {
+    //     s.second->Draw(glm::mat4 { 1.0f }, this->_main_draw_context);
+    // }
 
     auto end = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);

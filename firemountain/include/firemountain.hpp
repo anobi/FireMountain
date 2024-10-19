@@ -11,13 +11,14 @@
 
 //class SDL_Event;
 
+
 class Firemountain {
 public:
     Firemountain() {};
     ~Firemountain() {};
 
     int Init(const int width, const int height, SDL_Window* window);
-    void Frame(glm::mat4 view_projection_matrix);
+    void Frame(glm::mat4 view_projection_matrix, std::vector<RenderSceneObj> scene);
     void Resize(const uint32_t width, const uint32_t height);
     void Destroy();
 

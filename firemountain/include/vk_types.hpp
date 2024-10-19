@@ -61,3 +61,18 @@ struct MaterialInstance {
     VkDescriptorSet material_set;
     MaterialPass pass_type;
 };
+
+struct MeshID {
+    operator bool() const noexcept { return id != 0; }
+    uint32_t id;
+};
+
+struct ShaderID {
+    operator bool() const noexcept { return id != 0; }
+    uint32_t id;
+};
+
+struct RenderSceneObj {
+    MeshID mesh_id;
+    glm::mat4 transform;
+};

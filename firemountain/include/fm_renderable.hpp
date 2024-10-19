@@ -5,16 +5,6 @@
 
 
 
-struct MeshID {
-    operator bool() const noexcept { return id != 0; }
-    uint32_t id;
-};
-
-struct ShaderID {
-    operator bool() const noexcept { return id != 0; }
-    uint32_t id;
-};
-
 struct RenderObject {
     uint32_t index_count;
     uint32_t first_index;
@@ -37,7 +27,6 @@ class IRenderable {
 
 
 // Render graph stuff
-
 struct Node : public IRenderable {
     std::weak_ptr<Node> parent;
     std::vector<std::shared_ptr<Node>> children;
