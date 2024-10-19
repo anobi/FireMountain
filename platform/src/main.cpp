@@ -162,8 +162,8 @@ int RunApp()
         }
 
         // Rotate the froge
-        game_scene["froge"].transform.position.y += 0.0025 * sin(0.02 * tick);
-        // game_scene["froge"].transform.rotation.y += sin((0.01 + (tick / 1000)) / 2);
+        game_scene["froge"].transform.position.y += 0.0025f * sin(0.02f * tick);
+        game_scene["froge"].transform.rotation = glm::angleAxis(glm::radians(0.5f * tick), glm::vec3(0, 1, 0));
         game_scene["froge"].dirty = true;
 
         std::vector<RenderSceneObj> render_scene;
