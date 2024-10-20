@@ -161,7 +161,7 @@ int RunApp()
             resize_requested = false;
         }
 
-        // Rotate the froge
+        // Rotate and bob the froge
         game_scene["froge"].transform.position.y += 0.0025f * sin(0.02f * tick);
         game_scene["froge"].transform.rotation = glm::angleAxis(glm::radians(0.5f * tick), glm::vec3(0, 1, 0));
         game_scene["froge"].dirty = true;
