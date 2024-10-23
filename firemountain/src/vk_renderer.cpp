@@ -581,9 +581,9 @@ void fmvk::Vulkan::update_scene(glm::mat4 view_projection_matrix, std::vector<Re
     this->scene_data.sunlight_direction = glm::vec4(0.0, 1.0, 0.5, 2.0);
 
     GPULightData point_light_1 = {
-        .colorIntensity = { 0.8f, 0.2f, 0.2f, 5.0f },
+        .colorIntensity = { 0.8f, 0.2f, 0.2f, 1.0f },
         .attentuation = 0.4f,
-        .position = { 0.0f, 2.0f, 0.0f },
+        .position = { 0.0f, 5.0f, 0.0f },
         .type = LightType::Point
     };
     this->scene_data.lights[0] = point_light_1;

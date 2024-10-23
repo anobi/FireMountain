@@ -91,7 +91,7 @@ namespace fmvk {
         DeletionQueue _deletion_queue;
     };
 
-    constexpr unsigned int FRAME_OVERLAP = 2;
+    constexpr int FRAME_OVERLAP = 2;
 
     class Vulkan {
     public:

@@ -397,7 +397,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
             // Calculate bounds for culling
             glm::vec3 min_pos = vertices[initial_vertex].position;
             glm::vec3 max_pos = vertices[initial_vertex].position;
-            for (int i = initial_vertex; i < vertices.size(); i++) {
+            for (size_t i = initial_vertex; i < vertices.size(); i++) {
                 min_pos = glm::min(min_pos, vertices[i].position);
                 max_pos = glm::max(max_pos, vertices[i].position);
             }
@@ -428,7 +428,16 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
 
         std::visit(fastgltf::visitor {
             [&](fastgltf::Node::TransformMatrix matrix) {
-                memcpy(&new_node->local_transform, matrix.data(), sizeof(matrix));
+                // Can't memcpy with -Werror because fastgltfs flat array based matrix
+                // doesn't implement a trivial copy-assignment to glm matrix
+                // memcpy(&new_node->local_transform, matrix.data(), sizeof(matrix));
+                int i = 0;
+                for (int x = 0; x < 4; x++) { 
+                    for (int y = 0; 0 < 4; y++) {
+                        new_node->local_transform[x][y] = matrix[i];
+                        i++;
+                    }
+                }
             },
             [&](fastgltf::TRS trs) {
                 glm::vec3 t(trs.translation[0], trs.translation[1], trs.translation[2]);
@@ -445,7 +454,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
     }
 
     // Setup transform hierarchy
-    for (int i = 0; i < gltf.nodes.size(); i++) {
+    for (size_t i = 0; i < gltf.nodes.size(); i++) {
         fastgltf::Node& node = gltf.nodes[i];
         std::shared_ptr<Node>& scene_node = nodes[i];
         for (auto& c : node.children) {

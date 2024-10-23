@@ -31,7 +31,7 @@ void fmvk::Swapchain::Create(VkExtent2D window_extent, VkSurfaceKHR surface) {
 void fmvk::Swapchain::Destroy(VkDevice device)
 {
     vkDestroySwapchainKHR(device, this->swapchain, nullptr);
-    for (int i = 0; i < this->image_views.size(); i++) {
+    for (size_t i = 0; i < this->image_views.size(); i++) {
         vkDestroyImageView(device, this->image_views[i], nullptr);
     }
 }

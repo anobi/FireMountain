@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.13)
 project(FirePlateau)
 set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror")
 
 if(WIN32)
     add_executable(${PROJECT_NAME} WIN32 src/main.cpp)
