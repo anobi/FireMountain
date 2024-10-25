@@ -3,17 +3,15 @@
 
 
 layout(set = 0, binding = 0) uniform SceneData {
-    mat4 view;
-    mat4 projection;
     mat4 viewProjection;
+    vec4 cameraPosition;
 
-    vec3 cameraPosition;
     vec4 ambientColor;
     vec4 sunlightDirection;
     vec4 sunlightColor;
 
-    int light_count;
     Light lights[32];
+
 } sceneData;
 
 layout(set = 1, binding = 0) uniform GLTFMaterialData {

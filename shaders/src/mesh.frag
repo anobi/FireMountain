@@ -18,20 +18,19 @@ void main() {
     vec3 ambient = color * sceneData.ambientColor.xyz;
 
     vec3 N = normalize(inNormal);  // Normal unit vector
-    vec3 V = normalize(sceneData.cameraPosition - inWorldPosition);  // View unit vector
-    // for (int i = 0; i < sceneData.light_count; i++) {
-    int i = 0;
-        vec3 L = normalize(sceneData.lights[i].position - inWorldPosition);  // Light unit vector
+    vec3 V = normalize(sceneData.cameraPosition.xyz - inWorldPosition);  // View unit vector
+    for (int i = 0; i < 32; i++) {
+        if (sceneData.lights[i].positionType.w == 0.0f) {
+            continue;
+        }
+        vec3 L = normalize(sceneData.lights[i].positionType.xyz - inWorldPosition);  // Light unit vector
         vec3 H = normalize(V + L);  // Half vector
-        float distance = length(sceneData.lights[i].position - inWorldPosition);
+        float d = distance(sceneData.lights[i].positionType.xyz, inWorldPosition);
         float cosTheta = max(dot(N, L), 0.0);
-        // float attenuation = 1.0f / (distance * distance);
-        float attenuation = 1.0f;
+        float attenuation = 1.0f / (d * d);
         vec3 radiance = sceneData.lights[i].colorIntensity.xyz * attenuation * cosTheta;
-        // float diffuse = max(dot(N, L), 0.0f);
-        light_value += sceneData.lights[i].colorIntensity.w;
-        color += radiance;
-    //}
+        color += radiance * sceneData.lights[i].colorIntensity.w;
+    }
 
     outFragColor = vec4(color * light_value * sceneData.sunlightColor.w + ambient, 1.0f);
 }

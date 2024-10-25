@@ -574,20 +574,17 @@ void fmvk::Vulkan::update_scene(glm::mat4 view_projection_matrix, std::vector<Re
 
     this->_main_draw_context.opaque_surfaces.clear();
 
-    this->scene_data.camera_position = glm::vec3(0.0f);
+    this->scene_data.camera_position = glm::vec4(0.0f);
     this->scene_data.viewprojection = view_projection_matrix;
     this->scene_data.ambient_color = glm::vec4(0.5f);
     this->scene_data.sunlight_color = glm::vec4(1.8f);
     this->scene_data.sunlight_direction = glm::vec4(0.0, 1.0, 0.5, 2.0);
 
-    GPULightData point_light_1 = {
+    this->scene_data.lights[0] = {
+        .positionType = { 0.0f, 3.0f, 0.0f, 1.0f },
         .colorIntensity = { 0.8f, 0.2f, 0.2f, 1.0f },
-        .attentuation = 0.4f,
-        .position = { 0.0f, 5.0f, 0.0f },
-        .type = LightType::Point
+        .directionRange = { 0.0f, 0.0f, 0.0f, 5.0f }
     };
-    this->scene_data.lights[0] = point_light_1;
-    this->scene_data.light_count = 1;
 
     for (auto o : scene) {
         auto mesh = this->loaded_meshes.at(o.mesh_id.id);
@@ -691,6 +688,11 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
     VkRenderingInfo render_info = VKInit::rendering_info(this->_draw_extent, &color_attachment, &depth_attachment);
     vkCmdBeginRendering(cmd, &render_info);
 
+
+    /*
+    * Scene Data buffer
+    */
+
     // Allocate uniform buffer for the scene data
     fmvk::Buffer::AllocatedBuffer gpu_scene_data_buffer = fmvk::Buffer::create_buffer(sizeof(GPUSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, this->_allocator);
     get_current_frame()._deletion_queue.push_function([=, this]() {
@@ -709,6 +711,19 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
     DescriptorWriter writer;
     writer.write_buffer(0, gpu_scene_data_buffer.buffer, sizeof(GPUSceneData), 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
     writer.update_set(this->_device, global_descriptor);
+
+
+     /*
+     * Light data buffer
+     */
+
+    // // Allocate uniform buffer for the light data
+    // fmvk::Buffer::AllocatedBuffer gpu_scene_data_buffer = fmvk::Buffer::create_buffer(sizeof(GPUSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, this->_allocator);
+    // get_current_frame()._deletion_queue.push_function([=, this]() {
+    //     fmvk::Buffer::destroy_buffer(gpu_scene_data_buffer, this->_allocator);
+    // });
+
+
 
     MaterialPipeline* last_pipeline = nullptr;
     MaterialInstance* last_material = nullptr;

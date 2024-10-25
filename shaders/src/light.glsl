@@ -1,8 +1,6 @@
 struct Light {
+    vec4 positionType;
     vec4 colorIntensity;
-    float intensity;
-    float attenuation;
-    highp vec3 position;
-    highp vec3 direction;
-    uint type;
+    vec4 directionRange;
+    vec4 info;
 };

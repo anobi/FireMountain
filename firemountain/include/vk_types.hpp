@@ -32,7 +32,6 @@ struct ComputePushConstants {
     glm::vec4 data_4;
 };
 
-
 enum LightType {
     None,
     Point,
@@ -41,25 +40,28 @@ enum LightType {
 };
 
 struct GPULightData {
-    glm::vec4 colorIntensity;
-    float attentuation;
-    glm::vec3 position;
-    glm::vec3 direction;
-    LightType type;
+    // Position with light type as .w
+    glm::vec4 positionType = glm::vec4 {0.0f};      
+
+    // Color with light intensity as .w
+    glm::vec4 colorIntensity = glm::vec4 {0.0f};
+
+    // Direction with range as .w
+    glm::vec4 directionRange = glm::vec4 {0.0f};
+
+    // Info (spotlights only) with .x as inner cone angle and .y as outer cone angle
+    glm::vec4 info = glm::vec4 {0.0f};
 };
 
 // Structure that gets fed into the shaders as an input structure
 struct GPUSceneData {
-    glm::mat4 view;
-    glm::mat4 projection;
-    glm::mat4 viewprojection;
+    glm::mat4 viewprojection = glm::mat4 {0.0f};
+    glm::vec4 camera_position = glm::vec4 {0.0f};
 
-    glm::vec3 camera_position;
-    glm::vec4 ambient_color;
-    glm::vec4 sunlight_direction;  // w for sun power
-    glm::vec4 sunlight_color;
+    glm::vec4 ambient_color = glm::vec4 {0.0f};
+    glm::vec4 sunlight_direction = glm::vec4 {0.0f};  // w for sun power
+    glm::vec4 sunlight_color = glm::vec4 {0.0f};
 
-    int light_count;
     GPULightData lights[32];
 };
 

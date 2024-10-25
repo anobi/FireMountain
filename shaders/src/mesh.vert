@@ -30,11 +30,13 @@ layout (push_constant) uniform constants {
 void main() {
     Vertex v = PushConstants.vertex_buffer.vertices[gl_VertexIndex];
     vec4 position = vec4(v.position, 1.0f);
-    gl_Position = sceneData.viewProjection * PushConstants.render_matrix * position;
+    vec4 frag_pos = sceneData.viewProjection * PushConstants.render_matrix * position;
+    gl_Position = frag_pos;
 
     outNormal = (PushConstants.render_matrix * vec4(v.normal, 0.0f)).xyz;
     outColor = v.color.xyz * materialData.colorFactors.xyz;
     outUV.x = v.uv_x;
     outUV.y = v.uv_y;
-    outWorldPosition = v.position;
+    outWorldPosition = frag_pos.xyz;
+    // outWorldPosition = v.position;
 }
