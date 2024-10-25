@@ -574,25 +574,24 @@ void fmvk::Vulkan::update_scene(glm::vec3 camera_position, glm::mat4 view_projec
 
     this->_main_draw_context.opaque_surfaces.clear();
 
-    this->scene_data.camera_position = glm::vec4(camera_position, 0.0f);
+    this->scene_data.camera_position = camera_position;
     this->scene_data.viewprojection = view_projection_matrix;
-    this->scene_data.ambient_color = glm::vec4(0.03f);
-    this->scene_data.sunlight_color = glm::vec4(1.8f);
-    this->scene_data.sunlight_direction = glm::vec4(0.0, 1.0, 0.5, 2.0);
 
     // Sun light
     this->scene_data.lights[0] = {
         .positionType = { 0.0f, 0.0f, 0.0f, 0.0f },
-        .colorIntensity = { 1.8f, 1.8f, 1.8f, 50.0f },
-        .directionRange = { 0.0f, 1.0f, 0.5f, 100.0f }
+        .colorIntensity = { 0.8f, 0.8f, 0.8f, 0.4f },
+        .directionRange = { 0.0f, -1.0f, -0.5f, 100.0f }
     };
 
     // Point light
     this->scene_data.lights[1] = {
         .positionType = { 0.0f, 3.0f, 0.0f, 1.0f },
-        .colorIntensity = { 0.8f, 0.8f, 0.8f, 4.0f },
+        .colorIntensity = { 0.8f, 0.4f, 0.2f, 4.0f },
         .directionRange = { 0.0f, 0.0f, 0.0f, 100.0f }
     };
+
+    this->scene_data.light_count = 2;
 
     for (auto o : scene) {
         auto mesh = this->loaded_meshes.at(o.mesh_id.id);

@@ -103,11 +103,7 @@ void main() {
     vec3 lightValue = vec3(0.0f);
     vec3 diffuseColor = baseColor.rgb * (1.0f - metallic);
 
-    for (uint i = 0; i < 32; i++) {
-        if (sceneData.lights[i].positionType.w == 0.0f) {
-            continue;
-        }
-
+    for (uint i = 0; i < sceneData.lightCount; i++) {
         vec3 L = getLightDirection(i);
         vec3 H = normalize(V + L);  // Half vector
         float LdotH = clamp(dot(L, H), 0.0f, 1.0f);

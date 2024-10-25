@@ -56,11 +56,8 @@ struct GPULightData {
 // Structure that gets fed into the shaders as an input structure
 struct GPUSceneData {
     glm::mat4 viewprojection = glm::mat4 {0.0f};
-    glm::vec4 camera_position = glm::vec4 {0.0f};
-
-    glm::vec4 ambient_color = glm::vec4 {0.0f};
-    glm::vec4 sunlight_direction = glm::vec4 {0.0f};  // w for sun power
-    glm::vec4 sunlight_color = glm::vec4 {0.0f};
+    glm::vec3 camera_position = glm::vec3 {0.0f};
+    unsigned int light_count;
 
     GPULightData lights[32];
 };
