@@ -16,7 +16,7 @@ void fmvk::Swapchain::Create(VkExtent2D window_extent, VkSurfaceKHR surface) {
             .format = this->image_format,
             .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
         })
-        .set_old_swapchain(this->swapchain)  // Old swapchain must be destroyed if one exists
+        // .set_old_swapchain(this->swapchain)  // Old swapchain must be destroyed if one exists
         .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
         .set_desired_extent(window_extent.width, window_extent.height)
         .add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT)
@@ -31,7 +31,7 @@ void fmvk::Swapchain::Create(VkExtent2D window_extent, VkSurfaceKHR surface) {
 void fmvk::Swapchain::Destroy(VkDevice device)
 {
     vkDestroySwapchainKHR(device, this->swapchain, nullptr);
-    for (int i = 0; i < this->image_views.size(); i++) {
+    for (size_t i = 0; i < this->image_views.size(); i++) {
         vkDestroyImageView(device, this->image_views[i], nullptr);
     }
 }

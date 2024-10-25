@@ -1,11 +1,14 @@
-layout(set = 0, binding = 0) uniform SceneData {
-    mat4 view;
-    mat4 projection;
-    mat4 viewProjection;
+#extension GL_GOOGLE_include_directive : require
+#include "light.glsl"
 
-    vec4 ambientColor;
-    vec4 sunlightDirection;
-    vec4 sunlightColor;
+
+layout(set = 0, binding = 0) uniform SceneData {
+    mat4 viewProjection;
+    vec3 cameraPosition;
+
+    uint lightCount;
+    Light lights[32];
+
 } sceneData;
 
 layout(set = 1, binding = 0) uniform GLTFMaterialData {

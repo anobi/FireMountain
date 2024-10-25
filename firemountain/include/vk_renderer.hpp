@@ -91,7 +91,7 @@ namespace fmvk {
         DeletionQueue _deletion_queue;
     };
 
-    constexpr unsigned int FRAME_OVERLAP = 2;
+    constexpr int FRAME_OVERLAP = 2;
 
     class Vulkan {
     public:
@@ -202,7 +202,7 @@ namespace fmvk {
         // ----------------------
     public:
         DrawContext _main_draw_context;
-        void update_scene(glm::mat4 view_projection_matrix, std::vector<RenderSceneObj> scene);
+        void update_scene(glm::vec3 camera_position, glm::mat4 view_projection_matrix, std::vector<RenderSceneObj> scene);
     private:
         // ----------------------
         // End of TODO

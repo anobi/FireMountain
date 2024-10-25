@@ -34,7 +34,6 @@ glm::mat4 Camera::GetPerspectiveProjection(float screen_width, float screen_heig
 
 glm::mat4 Camera::GetOrthoProjection(float screen_width, float screen_height)
 {
-    float ratio = screen_width / screen_height;
     auto projection = glm::ortho(
         0.0f, 1.0f,
         0.0f, 1.0f,
