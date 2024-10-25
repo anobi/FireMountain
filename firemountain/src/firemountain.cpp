@@ -14,9 +14,9 @@ int Firemountain::Init(const int width, const int height, SDL_Window* window) {
     return 0;
 }
 
-void Firemountain::Frame(glm::mat4 view_projection_matrix, std::vector<RenderSceneObj> scene) 
+void Firemountain::Frame(glm::vec3 camera_position, glm::mat4 view_projection_matrix, std::vector<RenderSceneObj> scene) 
 {
-    this->vulkan.update_scene(view_projection_matrix, scene);
+    this->vulkan.update_scene(camera_position, view_projection_matrix, scene);
     this->vulkan.Draw(this->_renderables.data(), this->_renderables.size(), view_projection_matrix);
 }
 

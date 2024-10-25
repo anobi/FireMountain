@@ -179,7 +179,7 @@ int RunApp()
 
         camera.Update();
         auto view_proj = camera.GetViewProjectionMatrix(WIDTH, HEIGHT, camera_projection);
-        firemountain.Frame(view_proj, render_scene);
+        firemountain.Frame(camera.position, view_proj, render_scene);
     }
 
     SDL_SetRelativeMouseMode(SDL_FALSE);  // Release mouse before the exit

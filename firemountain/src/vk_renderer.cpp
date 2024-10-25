@@ -568,13 +568,13 @@ void fmvk::Vulkan::init_pipelines() {
 }
 
 // TODO: Move to Firemountain actual
-void fmvk::Vulkan::update_scene(glm::mat4 view_projection_matrix, std::vector<RenderSceneObj> scene)
+void fmvk::Vulkan::update_scene(glm::vec3 camera_position, glm::mat4 view_projection_matrix, std::vector<RenderSceneObj> scene)
 {
     auto start = std::chrono::system_clock::now();
 
     this->_main_draw_context.opaque_surfaces.clear();
 
-    this->scene_data.camera_position = glm::vec4(0.0f);
+    this->scene_data.camera_position = glm::vec4(camera_position, 0.0f);
     this->scene_data.viewprojection = view_projection_matrix;
     this->scene_data.ambient_color = glm::vec4(0.03f);
     this->scene_data.sunlight_color = glm::vec4(1.8f);

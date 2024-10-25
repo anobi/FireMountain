@@ -90,8 +90,8 @@ void main() {
     vec4 baseColor = vec4(1.0, 0.0, 0.0, 1.0);
 
     // TODO: separate to texture and base color based on if material has texture or not
-    baseColor = vec4(inColor, 1.0) * texture(colorTex, inUV);
-    // baseColor = texture(colorTex, inUV);
+    // baseColor = vec4(inColor, 1.0) * texture(colorTex, inUV);
+    baseColor = texture(colorTex, inUV);
 
     // Convert to linear color space
     baseColor = pow(baseColor, vec4(gamma)); 
