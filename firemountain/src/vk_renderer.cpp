@@ -576,14 +576,22 @@ void fmvk::Vulkan::update_scene(glm::mat4 view_projection_matrix, std::vector<Re
 
     this->scene_data.camera_position = glm::vec4(0.0f);
     this->scene_data.viewprojection = view_projection_matrix;
-    this->scene_data.ambient_color = glm::vec4(0.5f);
+    this->scene_data.ambient_color = glm::vec4(0.03f);
     this->scene_data.sunlight_color = glm::vec4(1.8f);
     this->scene_data.sunlight_direction = glm::vec4(0.0, 1.0, 0.5, 2.0);
 
+    // Sun light
     this->scene_data.lights[0] = {
+        .positionType = { 0.0f, 0.0f, 0.0f, 0.0f },
+        .colorIntensity = { 1.8f, 1.8f, 1.8f, 50.0f },
+        .directionRange = { 0.0f, 1.0f, 0.5f, 100.0f }
+    };
+
+    // Point light
+    this->scene_data.lights[1] = {
         .positionType = { 0.0f, 3.0f, 0.0f, 1.0f },
-        .colorIntensity = { 0.8f, 0.2f, 0.2f, 1.0f },
-        .directionRange = { 0.0f, 0.0f, 0.0f, 5.0f }
+        .colorIntensity = { 0.8f, 0.8f, 0.8f, 4.0f },
+        .directionRange = { 0.0f, 0.0f, 0.0f, 100.0f }
     };
 
     for (auto o : scene) {
