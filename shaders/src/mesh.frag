@@ -109,21 +109,23 @@ vec3 normal() {
     vec3 st1    = dFdx(vec3(inUV, 0.0));
     vec3 st2    = dFdy(vec3(inUV, 0.0));
 
-    vec3 T = inTangent.xyz; //vec3(0.0);
-    // if (inTangent.w == 1.0) {
-    //     T = inTangent.xyz;
-    // }
-    // else {
-    //     T = (st2.t * posDx - st1.t * posDy) / (st1.s * st2.t - st2.s * st1.t);
-    // }
+    vec3 T = inTangent.xyz;;
+    float flip = inTangent.w;
+
+    // Calculate tangent if one isn't found in inputs
+    if (length(inTangent) == 0.0) {
+        T = (st2.t * posDx - st1.t * posDy) / (st1.s * st2.t - st2.s * st1.t);
+        float uv2xArea = st1.x * st2.y - st1.y * st2.x;
+        flip = uv2xArea > 0 ? 1 : -1;
+    }
 
     vec3 N      = normalize(inNormal);
     T           = normalize(T - N * dot(N, T));
-    vec3 B      = normalize(cross(N, T) * inTangent.w);
+    vec3 B      = normalize(cross(N, T) * flip);
     mat3 TBN    = mat3(T, B, N);
 
-    vec4 normalMap = texture(normalTex, inUV);
-    if (normalMap.w != 0.0) {
+    if (materialData.hasNormalMap == 1.0) {
+        vec4 normalMap = texture(normalTex, inUV);
         return normalize(TBN * (2.0 * normalMap.rgb - 1.0));
     }
     return normalize(TBN[2].xyz);
@@ -133,18 +135,28 @@ vec3 normal() {
 void main() {
     float gamma = 2.2;
 
-    vec4 metalRough = texture(metalRoughTex, inUV);
-    float metallic = clamp(metalRough.r, 0.0, 1.0);
-    float materialRoughness = clamp(metalRough.g, 0.0, 1.0);
+    float metallic = 0.04;
+    float roughness = 0.8;
+    if (materialData.hasMetalRoughnessMap == 1.0) {
+        vec4 metalRough = texture(metalRoughTex, inUV);
+        metallic = clamp(metalRough.r, 0.04, 0.8);
+        roughness = clamp(metalRough.g, 0.0, 1.0);
+    }
+    else {
+        metallic = materialData.metalRoughFactors.x;
+        roughness = materialData.metalRoughFactors.y;
+    }
+    roughness = roughness * roughness;
 
     vec4 baseColor = vec4(1.0, 0.0, 0.0, 1.0);
-    // TODO: separate to texture and base color based on if material has texture or not
-    // baseColor = vec4(inColor, 1.0) * texture(colorTex, inUV);
-    baseColor = vec4(inColor, 1.0) * texture(colorTex, inUV);
-
-    // Convert to linear color space
-    baseColor = pow(baseColor, vec4(gamma)); 
-
+    if (materialData.hasColorMap == 1.0) {
+        baseColor = texture(colorTex, inUV) * materialData.colorFactors;
+        // Convert to linear color space if in srgb
+        baseColor = pow(baseColor, vec4(gamma));
+    }
+    else {
+        baseColor = vec4(inColor, 1.0) * materialData.colorFactors;
+    }
 
     // Calculate lights
     vec3 n = normal();  // Normal unit vector
@@ -161,7 +173,6 @@ void main() {
         float LoH = clamp(dot(l, h), 0.0, 1.0);
 
         // TODO
-        float roughness = materialRoughness * materialRoughness;
         float D = D_GGX(NoH, roughness);
         vec3 F = F_Schlick(LoH, F0);
         float V = V_SmithGGXCorrelated(NoV, NoL, roughness);
@@ -190,7 +201,9 @@ void main() {
     vec3 ambient = iblDiffuse;
 
     vec3 color = 0.3 * ambient + lightValue;
-    // color = color / (color + vec3(1.0f));
+
+    // Apply gamma correction
+    color = color / (color + vec3(1.0f));
     color = pow(color, vec3(1.0f / gamma));
 
     outFragColor = vec4(color, 1.0);

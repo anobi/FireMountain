@@ -49,8 +49,18 @@ namespace fmvk {
 
         struct MaterialConstants {
             glm::vec4 color_factors;
-            glm::vec4 metal_roughness_factors;
-            glm::vec4 extra[14];  // Padding for uniform buffers
+
+            glm::vec2 metal_roughness_factors;
+            float has_metal_roughness_map;
+            float has_color_map;
+
+            glm::vec4 emissive_factor;
+
+            float has_emissive_map;
+            float has_normal_map;
+            float padding_1;
+            float padding_2;
+            glm::vec4 extra[12];  // Padding for uniform buffers
         };
         static_assert(sizeof(MaterialConstants) == 256);  // Make sure the size is right
 

@@ -43,7 +43,7 @@ std::unordered_map<std::string, GameSceneObject> game_scene = {
     {"froge", {
         .mesh_file = "assets/good_froge.glb",
         .transform = {
-            .position = {0.0f, 0.5f, 0.0f}
+            .position = {0.1f, 0.5f, 0.1f}
         }
     }}
 };

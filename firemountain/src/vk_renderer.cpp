@@ -591,7 +591,7 @@ void fmvk::Vulkan::update_scene(glm::vec3 camera_position, glm::mat4 view_projec
     // Point light
     lights.push_back({
         .positionType = { 0.0f, 3.0f, 0.0f, 1.0f },
-        .colorIntensity = { 0.8f, 0.4f, 0.2f, 4.0f },
+        .colorIntensity = { 0.8f, 0.4f, 0.2f, 8.0f },
         .directionRange = { 0.0f, 0.0f, 0.0f, 100.0f }
     });
 

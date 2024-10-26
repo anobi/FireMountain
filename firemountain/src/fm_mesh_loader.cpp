@@ -286,11 +286,15 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
                 mat.pbrData.baseColorFactor[2],
                 mat.pbrData.baseColorFactor[3],
             },
-            .metal_roughness_factors = glm::vec4 {
+            .metal_roughness_factors = glm::vec2 {
                 mat.pbrData.metallicFactor,
-                mat.pbrData.roughnessFactor,
-                0.0,
-                0.0
+                mat.pbrData.roughnessFactor
+            },
+            .emissive_factor = glm::vec4 {
+                mat.emissiveFactor[0],
+                mat.emissiveFactor[1],
+                mat.emissiveFactor[2],
+                mat.emissiveStrength
             }
         };
         scene_material_constants[data_index] = constants;
@@ -305,7 +309,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
             .color_sampler = engine->_default_sampler_linear,
             .metal_roughness_image = engine->_default_texture_white,
             .metal_roughness_sampler = engine->_default_sampler_linear,
-            .normal_image = engine->_default_texture_white,
+            .normal_image = engine->_default_texture_black,
             .normal_sampler = engine->_default_sampler_linear,
             .data_buffer = file.material_data_buffer.buffer,
             .data_buffer_offset = (uint32_t)(data_index * sizeof(fmvk::GLTFMetallic_Roughness::MaterialConstants))
@@ -316,6 +320,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
             size_t sampler = gltf.textures[mat.pbrData.baseColorTexture.value().textureIndex].samplerIndex.value();
             material_resources.color_image = images[img];
             material_resources.color_sampler = file.samplers[sampler];
+            scene_material_constants[data_index].has_color_map = 1.0;
         }
 
         if (mat.pbrData.metallicRoughnessTexture.has_value()) {
@@ -323,6 +328,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
             size_t sampler = gltf.textures[mat.pbrData.metallicRoughnessTexture.value().textureIndex].samplerIndex.value();
             material_resources.metal_roughness_image = images[img];
             material_resources.metal_roughness_sampler = file.samplers[sampler];
+            scene_material_constants[data_index].has_metal_roughness_map = 1.0;
         }
 
         if (mat.normalTexture.has_value()) {
@@ -330,6 +336,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
             size_t sampler = gltf.textures[mat.normalTexture.value().textureIndex].samplerIndex.value();
             material_resources.normal_image = images[img];
             material_resources.normal_sampler = file.samplers[sampler];
+            scene_material_constants[data_index].has_normal_map = 1.0;
         }
 
         if (mat.emissiveTexture.has_value()) {
