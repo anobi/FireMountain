@@ -34,7 +34,7 @@ bool is_visible(const RenderObject& obj, const glm::mat4& view_projection) {
     };
     glm::mat4 matrix = view_projection * obj.transform;
     glm::vec3 min = {  1.5f,  1.5f, 1.5f };
-    glm::vec3 max = { -1.5f, -1.5, -1.5f };
+    glm::vec3 max = { -1.5f, -1.5f, -1.5f };
 
     for (int c = 0; c < 8; c++) {
         // Project corners into clip space
@@ -577,9 +577,16 @@ void fmvk::Vulkan::update_scene(glm::vec3 camera_position, glm::mat4 view_projec
     // Sun light
     lights.push_back({
         .positionType = { 0.0f, 0.0f, 0.0f, 0.0f },
-        .colorIntensity = { 0.8f, 0.8f, 0.8f, 0.8f },
+        .colorIntensity = { 0.8f, 0.8f, 0.8f, 1.0f },
         .directionRange = { 0.0f, -1.0f, -0.5f, 100.0f }
     });
+
+    // Froglight
+    // lights.push_back({
+    //     .positionType = { 0.0f, 1.0f, 0.0f, 1.0f },
+    //     .colorIntensity = { 1.0f, 1.0f, 1.0f, 5.0f },
+    //     .directionRange = { 0.0f, 0.0f, 0.0f, 100.0f }
+    // });
 
     // Point light
     lights.push_back({
@@ -1031,7 +1038,7 @@ void fmvk::Vulkan::init_default_data()
         .color_sampler = this->_default_sampler_linear,
         .metal_roughness_image = this->_default_texture_white,
         .metal_roughness_sampler = this->_default_sampler_linear,
-        .normal_image = this->_default_texture_white,
+        .normal_image = this->_default_texture_black,
         .normal_sampler = this->_default_sampler_linear
     };
 

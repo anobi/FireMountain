@@ -14,43 +14,66 @@ layout (location = 4) in vec4 inTangent;
 layout (location = 0) out vec4 outFragColor;
 
 const float PI = 3.14159265359;
-vec3 F0 = vec3(0.04f);
+vec3 F0 = vec3(0.04);
 
 
-vec3 fresnelSchlick(vec3 f0, float f90, float u) {
+vec3 F_Schlick(float u, vec3 f0, float f90) {
+    return f0 + (vec3(f90) - f0) * pow(1.0 - u, 5.0);
+}
+
+float F_Schlick(float u, float f0, float f90) {
     return f0 + (f90 - f0) * pow(1.0 - u, 5.0);
 }
 
-vec3 fresnelSchlickRoughness(vec3 f0, float cosTheta, float roughness) {
-    return f0 + (max(vec3(1.0 - roughness), f0) - f0) * pow(1.0f - cosTheta, 5.0f);
+vec3 F_Schlick(float u, vec3 f0) {
+    return f0 + (vec3(1.0) - f0) * pow(1.0 - u, 5.0);
 }
 
-float diffuseTerm(float NdotV, float NdotL, float LdotH, float roughness) {
-    float eBias         = 0.0 * (1.0 - roughness) + 5.0 * roughness;
-    float eFactor       = 1.0 * (1.0 - roughness) + (1.0 / 1.51) * roughness;
-    float fd90          = eBias + 2.0 * LdotH * LdotH * roughness;
-    vec3 f0             = vec3(1.0);
-
-    float lightScatter  = fresnelSchlick(f0, fd90, NdotL).r;
-    float viewScatter   = fresnelSchlick(f0, fd90, NdotV).r;
-    return lightScatter * viewScatter * eFactor;
+float Fd_Lambert() {
+    return 1.0 / PI;
 }
 
-float SmithGGXCorrelated(float NdotV, float NdotL, float roughness) {
-    float alphaRoughessSq = roughness * roughness;
-    float GGXV = NdotL * sqrt(NdotV * NdotV * (1.0 - alphaRoughessSq) + alphaRoughessSq);
-    float GGXL = NdotV * sqrt(NdotL * NdotL * (1.0 - alphaRoughessSq) + alphaRoughessSq);
-    float GGX = GGXV + GGXL;
-    if (GGX > 0.0) {
-        return 0.5 / GGX;
-    }
-    return 0.0;
+float Fd_Burley(float NoV, float NoL, float LoH, float roughness) {
+    float f90 = 0.5 + 2.0 * roughness * LoH * LoH;
+    float lightScatter  = F_Schlick(NoL, 1.0, f90);
+    float viewScatter   = F_Schlick(NoV, 1.0, f90);
+    return lightScatter * viewScatter * (1.0 / PI);
 }
 
-float distributionGGX(float NdotH, float roughness) {
-    float a2    = roughness * roughness;
-    float f     = (NdotH * a2 - NdotH) * NdotH + 1.0;
-    return a2 / (PI * f * f);
+float V_SmithGGXCorrelated(float NoV, float NoL, float a) {
+    float a2 = a * a;
+    float GGXV = NoL * sqrt((-NoV * a2 + NoV) * NoV + a2);
+    float GGXL = NoV * sqrt((-NoL * a2 + NoL) * NoL + a2);
+    return 0.5 / (GGXV + GGXL);
+}
+
+// float V_SmithGGXCorrelated(float NdotV, float NdotL, float roughness) {
+//     float a2 = roughness * roughness;
+//     float GGXV = NdotL * sqrt(NdotV * NdotV * (1.0 - a2) + a2);
+//     float GGXL = NdotV * sqrt(NdotL * NdotL * (1.0 - a2) + a2);
+//     return 0.5 / (GGXV + GGXL);
+// }
+
+// Faster, mathematically wrong approximation for mobile etc.
+float V_SmithGGXCorrelatedFast(float NdotV, float NdotL, float roughness) {
+    float a = roughness;
+    float GGXV = NdotL * (NdotV * (1.0 - a) + 1);
+    float GGXL = NdotV * (NdotL * (1.0 - a) + 1);
+    return 0.5 / (GGXV + GGXL);
+}
+
+float D_GGX(float NdotH, float roughness) {
+    float a    = NdotH * roughness;
+    float k    = roughness / (1.0 - NdotH * NdotH + a * a);
+    return k * k * (1.0 / PI);
+}
+
+float D_GGX(float roughness, float NdotH, const vec3 n, const vec3 h) {
+    vec3 NxH = cross(n, h);
+    float a = NdotH * roughness;
+    float k = roughness / (dot(NdotH, NdotH) + a * a);
+    float d = k * k * (1.0 / PI);
+    return min(d, 65504.0);
 }
 
 vec3 pointLight(uint index, vec3 normal) {
@@ -100,67 +123,73 @@ vec3 normal() {
     mat3 TBN    = mat3(T, B, N);
 
     vec4 normalMap = texture(normalTex, inUV);
-    return normalize(TBN * (2.0 * normalMap.rgb - 1.0));
-
-    // if (normalMap.w != 1.0) {
-    //     return normalize(TBN * (2.0 * normalMap.rgb - 1.0));
-    // }
-    // return normalize(TBN[2].xyz);
+    if (normalMap.w != 0.0) {
+        return normalize(TBN * (2.0 * normalMap.rgb - 1.0));
+    }
+    return normalize(TBN[2].xyz);
 }
 
 
 void main() {
     float gamma = 2.2;
-    float F90 = clamp(50.0 * F0.r, 0.0, 1.0);
 
     vec4 metalRough = texture(metalRoughTex, inUV);
     float metallic = clamp(metalRough.r, 0.0, 1.0);
-    float roughness = clamp(metalRough.g, 0.0, 1.0);
+    float materialRoughness = clamp(metalRough.g, 0.0, 1.0);
 
     vec4 baseColor = vec4(1.0, 0.0, 0.0, 1.0);
     // TODO: separate to texture and base color based on if material has texture or not
     // baseColor = vec4(inColor, 1.0) * texture(colorTex, inUV);
-    baseColor = texture(colorTex, inUV) * vec4(inColor, 1.0);
+    baseColor = vec4(inColor, 1.0) * texture(colorTex, inUV);
 
     // Convert to linear color space
     baseColor = pow(baseColor, vec4(gamma)); 
 
 
     // Calculate lights
-    vec3 N = normal();  // Normal unit vector
-    vec3 V = normalize(sceneData.cameraPosition.xyz - inWorldPosition);  // View unit vector
-    float NdotV = clamp(dot(N, V), 0.0, 1.0);
+    vec3 n = normal();  // Normal unit vector
+    vec3 v = normalize(sceneData.cameraPosition.xyz - inWorldPosition);  // View unit vector
 
     vec3 lightValue = vec3(0.0);
-    vec3 diffuseColor = baseColor.rgb * (1.0f - metallic);
+    vec3 diffuseColor = (1.0 - metallic) * baseColor.rgb;
     for (uint i = 0; i < sceneData.lightCount; i++) {
-        vec3 L = getLightDirection(i);
-        vec3 H = normalize(V + L);
-        float LdotH = clamp(dot(L, H), 0.0, 1.0);
-        float NdotH = clamp(dot(N, H), 0.0, 1.0);
-        float NdotL = clamp(dot(N, L), 0.0, 1.0);
+        vec3 l = getLightDirection(i);
+        vec3 h = normalize(v + l);
+        float NoV = abs(dot(n, v)) + 1e-5;
+        float NoL = clamp(dot(n, l), 0.0, 1.0);
+        float NoH = clamp(dot(n, h), 0.0, 1.0);
+        float LoH = clamp(dot(l, h), 0.0, 1.0);
 
-        vec3 F = fresnelSchlick(F0, F90, LdotH);
-        float Vis = SmithGGXCorrelated(NdotV, NdotL, roughness);
-        float D = distributionGGX(NdotH, roughness);
-        vec3 Fr = F * D * Vis;
+        // TODO
+        float roughness = materialRoughness * materialRoughness;
+        float D = D_GGX(NoH, roughness);
+        vec3 F = F_Schlick(LoH, F0);
+        float V = V_SmithGGXCorrelated(NoV, NoL, roughness);
 
-        float Fd = diffuseTerm(NdotV, NdotL, LdotH, roughness);
+        // Specular BRDF
+        vec3 Fr = (D * V) * F;
 
+        // Diffuse BRDF
+        vec3 Fd = diffuseColor * Fd_Burley(NoV, NoL, LoH, roughness);
+        // vec3 Fd = diffuseColor * Fd_Lambert();
+        vec3 shading = Fd + Fr;
+
+        // Apply directional lighting 
         if (sceneData.lights[i].positionType.w == 0.0) {
-            lightValue += directionalLight(i, N) * (diffuseColor * (vec3(1.0) - F) * Fd + Fr);
+            lightValue += directionalLight(i, n) * shading;
         }
+
+        // Apply point lights
         if (sceneData.lights[i].positionType.w == 1.0) {
-            lightValue += pointLight(i, N) * (diffuseColor * (vec3(1.0) - F) * Fd + Fr);
+            lightValue +=  pointLight(i, n) * shading;
         }
     }
 
     vec3 irradiance = vec3(0.5);
-    vec3 F = fresnelSchlickRoughness(F0, max(dot(N, V), 0.0), roughness * roughness * roughness * roughness);
     vec3 iblDiffuse = irradiance * baseColor.rgb;
     vec3 ambient = iblDiffuse;
 
-    vec3 color = vec3(0.3 * ambient + lightValue);
+    vec3 color = 0.3 * ambient + lightValue;
     // color = color / (color + vec3(1.0f));
     color = pow(color, vec3(1.0f / gamma));
 
