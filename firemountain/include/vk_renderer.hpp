@@ -62,6 +62,9 @@ namespace fmvk {
             AllocatedImage metal_roughness_image;
             VkSampler metal_roughness_sampler;
 
+            AllocatedImage normal_image;
+            VkSampler normal_sampler;
+
             VkBuffer data_buffer;
             uint32_t data_buffer_offset;
         };

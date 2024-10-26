@@ -216,7 +216,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
     }
 
     std::vector<DescriptorAllocatorGrowable::PoolSizeRatio> sizes = {
-        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3},
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4},
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3},
         {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1}
     };
@@ -305,6 +305,8 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
             .color_sampler = engine->_default_sampler_linear,
             .metal_roughness_image = engine->_default_texture_white,
             .metal_roughness_sampler = engine->_default_sampler_linear,
+            .normal_image = engine->_default_texture_white,
+            .normal_sampler = engine->_default_sampler_linear,
             .data_buffer = file.material_data_buffer.buffer,
             .data_buffer_offset = (uint32_t)(data_index * sizeof(fmvk::GLTFMetallic_Roughness::MaterialConstants))
         };
@@ -314,6 +316,24 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
             size_t sampler = gltf.textures[mat.pbrData.baseColorTexture.value().textureIndex].samplerIndex.value();
             material_resources.color_image = images[img];
             material_resources.color_sampler = file.samplers[sampler];
+        }
+
+        if (mat.pbrData.metallicRoughnessTexture.has_value()) {
+            size_t img = gltf.textures[mat.pbrData.metallicRoughnessTexture.value().textureIndex].imageIndex.value();
+            size_t sampler = gltf.textures[mat.pbrData.metallicRoughnessTexture.value().textureIndex].samplerIndex.value();
+            material_resources.metal_roughness_image = images[img];
+            material_resources.metal_roughness_sampler = file.samplers[sampler];
+        }
+
+        if (mat.normalTexture.has_value()) {
+            size_t img = gltf.textures[mat.normalTexture.value().textureIndex].imageIndex.value();
+            size_t sampler = gltf.textures[mat.normalTexture.value().textureIndex].samplerIndex.value();
+            material_resources.normal_image = images[img];
+            material_resources.normal_sampler = file.samplers[sampler];
+        }
+
+        if (mat.emissiveTexture.has_value()) {
+            // TODO
         }
 
         new_material->data = engine->metal_roughness_material.write_material(engine->_device, pass_type, material_resources, file.descriptor_pool);

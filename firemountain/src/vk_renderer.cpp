@@ -461,11 +461,6 @@ void fmvk::Vulkan::init_render_targets() {
         VK_IMAGE_ASPECT_DEPTH_BIT
     );
     VK_CHECK(vkCreateImageView(this->_device, &depth_view_info, nullptr, &this->_depth_image.view));
-
-    // this->_deletion_queue.push_function([=, this]() {
-    //     destroy_image(this->_draw_image);
-    //     destroy_image(this->_depth_image);
-    // });
 }
 
 void fmvk::Vulkan::init_commands() {
@@ -577,30 +572,31 @@ void fmvk::Vulkan::update_scene(glm::vec3 camera_position, glm::mat4 view_projec
     this->scene_data.camera_position = camera_position;
     this->scene_data.viewprojection = view_projection_matrix;
 
+    std::vector<GPULightData> lights;
+
     // Sun light
-    this->scene_data.lights[0] = {
+    lights.push_back({
         .positionType = { 0.0f, 0.0f, 0.0f, 0.0f },
         .colorIntensity = { 0.8f, 0.8f, 0.8f, 0.4f },
         .directionRange = { 0.0f, -1.0f, -0.5f, 100.0f }
-    };
+    });
 
     // Point light
-    this->scene_data.lights[1] = {
+    lights.push_back({
         .positionType = { 0.0f, 3.0f, 0.0f, 1.0f },
         .colorIntensity = { 0.8f, 0.4f, 0.2f, 4.0f },
         .directionRange = { 0.0f, 0.0f, 0.0f, 100.0f }
-    };
+    });
 
-    this->scene_data.light_count = 2;
+    this->scene_data.light_count = lights.size();
+    for (size_t i = 0; i < lights.size(); i++) {
+        this->scene_data.lights[i] = lights[i];
+    }
 
     for (auto o : scene) {
         auto mesh = this->loaded_meshes.at(o.mesh_id.id);
         mesh->Draw(o.transform, this->_main_draw_context);
     }
-
-    // for (auto& s : this->loaded_meshes) {
-    //     s.second->Draw(glm::mat4 { 1.0f }, this->_main_draw_context);
-    // }
 
     auto end = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
@@ -1007,7 +1003,9 @@ void fmvk::Vulkan::init_default_data()
         .color_image = this->_texture_missing_error_image,
         .color_sampler = this->_default_sampler_linear,
         .metal_roughness_image = this->_default_texture_white,
-        .metal_roughness_sampler = this->_default_sampler_linear
+        .metal_roughness_sampler = this->_default_sampler_linear,
+        .normal_image = this->_default_texture_white,
+        .normal_sampler = this->_default_sampler_linear
     };
 
     fmvk::Buffer::AllocatedBuffer material_constants = fmvk::Buffer::create_buffer(
@@ -1094,6 +1092,7 @@ void fmvk::GLTFMetallic_Roughness::build_pipelines(fmvk::Vulkan* renderer)
     layout_builder.add_binding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
     layout_builder.add_binding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     layout_builder.add_binding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    layout_builder.add_binding(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     this->material_layout = layout_builder.build(
         renderer->_device,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
@@ -1186,6 +1185,13 @@ MaterialInstance fmvk::GLTFMetallic_Roughness::write_material(VkDevice device, M
         2,
         resources.metal_roughness_image.view,
         resources.metal_roughness_sampler,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+    );
+    this->writer.write_image(
+        3,
+        resources.normal_image.view,
+        resources.normal_sampler,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
     );
