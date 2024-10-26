@@ -90,19 +90,30 @@ vec3 normal() {
     vec3 B      = normalize(cross(N, T));
     mat3 TBN    = mat3(T, B, N);
 
-    vec3 n = texture(normalTex, inUV).rgb;
-    return normalize(TBN * (2.0 * n - 1.0));
+    vec4 normalMap = texture(normalTex, inUV);
+    return normalize(TBN * (2.0 * normalMap.rgb - 1.0));
+
+    // if (normalMap.w != 1.0) {
+    //     return normalize(TBN * (2.0 * normalMap.rgb - 1.0));
+    // }
+    // return normalize(TBN[2].xyz);
 }
 
 
 void main() {
-    float gamma = 2.0;
+    float gamma = 2.2;
     float F90 = clamp(50.0 * F0.r, 0.0, 1.0);
 
-    float metallic = 0.04;
-    float roughness = 0.8f;
+    // float metallic = 0.04;
+    // float roughness = 0.8f;
     // float metallic = materialData.metalRoughFactors.x;
     // float roughness = materialData.metalRoughFactors.y;
+
+    vec4 metalRough = texture(metalRoughTex, inUV);
+    float metallic = clamp(metalRough.r, 0.0, 1.0);
+    float roughness = clamp(metalRough.g, 0.0, 1.0);
+
+
     vec4 baseColor = vec4(1.0, 0.0, 0.0, 1.0);
 
     // TODO: separate to texture and base color based on if material has texture or not
@@ -116,16 +127,16 @@ void main() {
     // Calculate lights
     vec3 N = normal();  // Normal unit vector
     vec3 V = normalize(sceneData.cameraPosition.xyz - inWorldPosition);  // View unit vector
-    float NdotV = clamp(dot(N, V), 0.0f, 1.0f);
-    vec3 lightValue = vec3(0.0f);
-    vec3 diffuseColor = baseColor.rgb * (1.0f - metallic);
+    float NdotV = clamp(dot(N, V), 0.0, 1.0);
 
+    vec3 lightValue = vec3(0.0);
+    vec3 diffuseColor = baseColor.rgb * (1.0f - metallic);
     for (uint i = 0; i < sceneData.lightCount; i++) {
         vec3 L = getLightDirection(i);
-        vec3 H = normalize(V + L);  // Half vector
-        float LdotH = clamp(dot(L, H), 0.0f, 1.0f);
-        float NdotH = clamp(dot(N, H), 0.0f, 1.0f);
-        float NdotL = clamp(dot(N, L), 0.0f, 1.0f);
+        vec3 H = normalize(V + L);
+        float LdotH = clamp(dot(L, H), 0.0, 1.0);
+        float NdotH = clamp(dot(N, H), 0.0, 1.0);
+        float NdotL = clamp(dot(N, L), 0.0, 1.0);
 
         vec3 F = fresnelSchlick(F0, F90, LdotH);
         float Vis = SmithGGXCorrelated(NdotV, NdotL, roughness);
@@ -135,10 +146,10 @@ void main() {
         float Fd = diffuseTerm(NdotV, NdotL, LdotH, roughness);
 
         if (sceneData.lights[i].positionType.w == 0.0) {
-            lightValue += directionalLight(i, N) * diffuseColor * (vec3(1.0) - F) * Fd + Fr;
+            lightValue += directionalLight(i, N) * (diffuseColor * (vec3(1.0) - F) * Fd + Fr);
         }
         if (sceneData.lights[i].positionType.w == 1.0) {
-            lightValue += pointLight(i, N) * diffuseColor * (vec3(1.0) - F) * Fd + Fr;
+            lightValue += pointLight(i, N) * (diffuseColor * (vec3(1.0) - F) * Fd + Fr);
         }
     }
 
