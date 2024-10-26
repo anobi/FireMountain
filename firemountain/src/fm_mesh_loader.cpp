@@ -229,6 +229,8 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
             .magFilter = extract_filter(sampler.magFilter.value_or(fastgltf::Filter::Nearest)),
             .minFilter = extract_filter(sampler.minFilter.value_or(fastgltf::Filter::Nearest)),
             .mipmapMode = extract_mipmap_mode(sampler.minFilter.value_or(fastgltf::Filter::Nearest)),
+            .anisotropyEnable = VK_TRUE,
+            .maxAnisotropy = 16,
             .minLod = 0,
             .maxLod = VK_LOD_CLAMP_NONE
         };
