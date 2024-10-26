@@ -37,6 +37,9 @@ std::unordered_map<std::string, GameSceneObject> game_scene = {
     {"sponza", {
         .mesh_file = "assets/Sponza/glTF/Sponza.gltf"
     }},
+    // {"structure", {
+    //     .mesh_file = "assets/structure.glb"
+    // }},
     {"froge", {
         .mesh_file = "assets/good_froge.glb",
         .transform = {

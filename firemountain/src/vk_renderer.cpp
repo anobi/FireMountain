@@ -577,7 +577,7 @@ void fmvk::Vulkan::update_scene(glm::vec3 camera_position, glm::mat4 view_projec
     // Sun light
     lights.push_back({
         .positionType = { 0.0f, 0.0f, 0.0f, 0.0f },
-        .colorIntensity = { 0.8f, 0.8f, 0.8f, 0.4f },
+        .colorIntensity = { 0.8f, 0.8f, 0.8f, 0.8f },
         .directionRange = { 0.0f, -1.0f, -0.5f, 100.0f }
     });
 
@@ -585,6 +585,34 @@ void fmvk::Vulkan::update_scene(glm::vec3 camera_position, glm::mat4 view_projec
     lights.push_back({
         .positionType = { 0.0f, 3.0f, 0.0f, 1.0f },
         .colorIntensity = { 0.8f, 0.4f, 0.2f, 4.0f },
+        .directionRange = { 0.0f, 0.0f, 0.0f, 100.0f }
+    });
+
+    // Blue corner torch 
+    lights.push_back({
+        .positionType = { 8.8f, 1.5f, 3.2f, 1.0f },
+        .colorIntensity = { 0.2f, 0.4f, 0.8f, 4.0f },
+        .directionRange = { 0.0f, 0.0f, 0.0f, 100.0f }
+    });
+
+    // Green corner torch
+    lights.push_back({
+        .positionType = { 9.0f, 1.5f, -3.6f, 1.0f },
+        .colorIntensity = { 0.2f, 0.8f, 0.4f, 4.0f },
+        .directionRange = { 0.0f, 0.0f, 0.0f, 100.0f }
+    });
+
+    // Red corner torch
+    lights.push_back({
+        .positionType = { -9.5f, 1.5f, -3.65f, 1.0f },
+        .colorIntensity = { 0.8f, 0.2f, 0.1f, 4.0f },
+        .directionRange = { 0.0f, 0.0f, 0.0f, 100.0f }
+    });
+
+    // Purple corner torch
+    lights.push_back({
+        .positionType = { -9.5f, 1.5f, 3.2f, 1.0f },
+        .colorIntensity = { 0.8f, 0.2f, 0.8f, 4.0f },
         .directionRange = { 0.0f, 0.0f, 0.0f, 100.0f }
     });
 
@@ -625,14 +653,13 @@ void fmvk::Vulkan::draw_imgui(VkCommandBuffer cmd, VkImageView image_view)
     ImGui::SetNextWindowSize(ImVec2(300, 85));
     ImGui::Begin("Camera");
 
-    // Disabled until we figure out how to draw this from outside the library
     // ImGui::Text("Pitch: %.2f", this->_camera->pitch);
     // ImGui::Text("Yaw: %.2f", this->_camera->yaw);
-    // ImGui::Text("Position x: %.2f y: %.2f z: %.2f",
-    //     this->_camera->position.x, 
-    //     this->_camera->position.y, 
-    //     this->_camera->position.z
-    // );
+    ImGui::Text("Position x: %.2f y: %.2f z: %.2f",
+        this->scene_data.camera_position.x,
+        this->scene_data.camera_position.y,
+        this->scene_data.camera_position.z
+    );
 
     ImGui::End();
     ImGui::Render();
@@ -1123,7 +1150,7 @@ void fmvk::GLTFMetallic_Roughness::build_pipelines(fmvk::Vulkan* renderer)
     pipeline_builder.set_shaders(vertex_shader, fragment_shader);
     pipeline_builder.set_input_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
     pipeline_builder.set_polygon_mode(VK_POLYGON_MODE_FILL);
-    pipeline_builder.set_cull_mode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
+    pipeline_builder.set_cull_mode(VK_CULL_MODE_NONE, VK_FRONT_FACE_COUNTER_CLOCKWISE);
     pipeline_builder.set_multisampling_none();
     pipeline_builder.disable_blending();
     pipeline_builder.enable_depth_test(true, VK_COMPARE_OP_GREATER_OR_EQUAL);

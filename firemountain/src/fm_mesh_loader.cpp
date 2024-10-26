@@ -375,7 +375,8 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
                             .uv_x = 0.0f,
                             .normal = { 1, 0, 0 },
                             .uv_y = 0.0f,
-                            .color = glm::vec4 { 1.0f }
+                            .color = glm::vec4 { 1.0f },
+                            .tangent = glm::vec4 { 0.0f }
                         };
                         vertices[initial_vertex + index] = new_vertex;
                 });
@@ -387,6 +388,15 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
                 fastgltf::iterateAccessorWithIndex<glm::vec3>(gltf, gltf.accessors[(*normals).second],
                 [&](glm::vec3 v, size_t index) {
                     vertices[initial_vertex + index].normal = v;
+                });
+            }
+
+            // Load tangents
+            auto tangents = p.findAttribute("TANGENT");
+            if (tangents != p.attributes.end()) {
+                fastgltf::iterateAccessorWithIndex<glm::vec4>(gltf, gltf.accessors[(*tangents).second],
+                [&](glm::vec4 t, size_t index) {
+                    vertices[initial_vertex + index].tangent = t;
                 });
             }
 
@@ -407,6 +417,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
                     vertices[initial_vertex + index].color = c;
                 });
             }
+
 
             if (p.materialIndex.has_value()) {
                 new_surface.material = materials[p.materialIndex.value()];

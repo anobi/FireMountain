@@ -8,6 +8,7 @@ layout (location = 0) in vec3 inNormal;
 layout (location = 1) in vec3 inColor;
 layout (location = 2) in vec2 inUV;
 layout (location = 3) in vec3 inWorldPosition;
+layout (location = 4) in vec4 inTangent;
 
 // Output
 layout (location = 0) out vec4 outFragColor;
@@ -84,10 +85,18 @@ vec3 normal() {
     vec3 posDy  = dFdy(inWorldPosition);
     vec3 st1    = dFdx(vec3(inUV, 0.0));
     vec3 st2    = dFdy(vec3(inUV, 0.0));
-    vec3 T      = (st2.t * posDx - st1.t * posDy) / (st1.s * st2.t - st2.s * st1.t);
+
+    vec3 T = inTangent.xyz; //vec3(0.0);
+    // if (inTangent.w == 1.0) {
+    //     T = inTangent.xyz;
+    // }
+    // else {
+    //     T = (st2.t * posDx - st1.t * posDy) / (st1.s * st2.t - st2.s * st1.t);
+    // }
+
     vec3 N      = normalize(inNormal);
     T           = normalize(T - N * dot(N, T));
-    vec3 B      = normalize(cross(N, T));
+    vec3 B      = normalize(cross(N, T) * inTangent.w);
     mat3 TBN    = mat3(T, B, N);
 
     vec4 normalMap = texture(normalTex, inUV);
@@ -104,21 +113,14 @@ void main() {
     float gamma = 2.2;
     float F90 = clamp(50.0 * F0.r, 0.0, 1.0);
 
-    // float metallic = 0.04;
-    // float roughness = 0.8f;
-    // float metallic = materialData.metalRoughFactors.x;
-    // float roughness = materialData.metalRoughFactors.y;
-
     vec4 metalRough = texture(metalRoughTex, inUV);
     float metallic = clamp(metalRough.r, 0.0, 1.0);
     float roughness = clamp(metalRough.g, 0.0, 1.0);
 
-
     vec4 baseColor = vec4(1.0, 0.0, 0.0, 1.0);
-
     // TODO: separate to texture and base color based on if material has texture or not
     // baseColor = vec4(inColor, 1.0) * texture(colorTex, inUV);
-    baseColor = texture(colorTex, inUV);
+    baseColor = texture(colorTex, inUV) * vec4(inColor, 1.0);
 
     // Convert to linear color space
     baseColor = pow(baseColor, vec4(gamma)); 
@@ -162,5 +164,5 @@ void main() {
     // color = color / (color + vec3(1.0f));
     color = pow(color, vec3(1.0f / gamma));
 
-    outFragColor = vec4(color, baseColor.a);
+    outFragColor = vec4(color, 1.0);
 }
