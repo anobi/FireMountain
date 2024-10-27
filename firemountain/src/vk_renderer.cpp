@@ -281,9 +281,16 @@ GPUMeshBuffers fmvk::Vulkan::UploadMesh(std::vector<Vertex> vertices, std::vecto
 
 MeshID fmvk::Vulkan::AddMesh(const std::string &name, std::shared_ptr<LoadedGLTF> mesh)
 {
-    auto id = this->next_id++;
+    auto id = ++this->next_id;
     this->loaded_meshes.emplace(id, mesh);
     return {id};
+}
+
+LightID fmvk::Vulkan::AddLight(const std::string &name)
+{
+    auto id = ++this->next_id;
+    this->lights.push_back(id);
+    return { id };
 }
 
 // =======================================================================================================
@@ -306,6 +313,11 @@ void fmvk::Vulkan::init_vulkan(SDL_Window *window) {
     // TODO: How to do this without including SDL headers in this project?
     SDL_Vulkan_CreateSurface(this->_window, this->_instance, &this->_surface);
 
+    // Generic device features
+    VkPhysicalDeviceFeatures device_features = {
+        .samplerAnisotropy = true
+    };
+
     // Vulkan 1.3 features
     VkPhysicalDeviceVulkan13Features features_13 {
         .synchronization2 = true,
@@ -322,6 +334,7 @@ void fmvk::Vulkan::init_vulkan(SDL_Window *window) {
     vkb::PhysicalDeviceSelector selector { vkb_instance };
     vkb::PhysicalDevice device = selector
         .set_minimum_version(1, 1)
+        .set_required_features(device_features)
         .set_required_features_13(features_13)
         .set_required_features_12(features_12)
         .set_surface(this->_surface)
@@ -572,66 +585,23 @@ void fmvk::Vulkan::update_scene(glm::vec3 camera_position, glm::mat4 view_projec
     this->scene_data.camera_position = camera_position;
     this->scene_data.viewprojection = view_projection_matrix;
 
-    std::vector<GPULightData> lights;
-
-    // Sun light
-    lights.push_back({
-        .positionType = { 0.0f, 0.0f, 0.0f, 0.0f },
-        .colorIntensity = { 0.8f, 0.8f, 0.8f, 1.0f },
-        .directionRange = { 0.0f, -1.0f, -0.5f, 100.0f }
-    });
-
-    // Froglight
-    // lights.push_back({
-    //     .positionType = { 0.0f, 1.0f, 0.0f, 1.0f },
-    //     .colorIntensity = { 1.0f, 1.0f, 1.0f, 5.0f },
-    //     .directionRange = { 0.0f, 0.0f, 0.0f, 100.0f }
-    // });
-
-    // Point light
-    lights.push_back({
-        .positionType = { 0.0f, 3.0f, 0.0f, 1.0f },
-        .colorIntensity = { 0.8f, 0.4f, 0.2f, 8.0f },
-        .directionRange = { 0.0f, 0.0f, 0.0f, 100.0f }
-    });
-
-    // Blue corner torch 
-    lights.push_back({
-        .positionType = { 8.8f, 1.5f, 3.2f, 1.0f },
-        .colorIntensity = { 0.2f, 0.4f, 0.8f, 4.0f },
-        .directionRange = { 0.0f, 0.0f, 0.0f, 100.0f }
-    });
-
-    // Green corner torch
-    lights.push_back({
-        .positionType = { 9.0f, 1.5f, -3.6f, 1.0f },
-        .colorIntensity = { 0.2f, 0.8f, 0.4f, 4.0f },
-        .directionRange = { 0.0f, 0.0f, 0.0f, 100.0f }
-    });
-
-    // Red corner torch
-    lights.push_back({
-        .positionType = { -9.5f, 1.5f, -3.65f, 1.0f },
-        .colorIntensity = { 0.8f, 0.2f, 0.1f, 4.0f },
-        .directionRange = { 0.0f, 0.0f, 0.0f, 100.0f }
-    });
-
-    // Purple corner torch
-    lights.push_back({
-        .positionType = { -9.5f, 1.5f, 3.2f, 1.0f },
-        .colorIntensity = { 0.8f, 0.2f, 0.8f, 4.0f },
-        .directionRange = { 0.0f, 0.0f, 0.0f, 100.0f }
-    });
-
-    this->scene_data.light_count = lights.size();
-    for (size_t i = 0; i < lights.size(); i++) {
-        this->scene_data.lights[i] = lights[i];
-    }
-
+    size_t scene_light_idx = 0;
     for (auto o : scene) {
-        auto mesh = this->loaded_meshes.at(o.mesh_id.id);
-        mesh->Draw(o.transform, this->_main_draw_context);
+        if (o.light_id) {
+            GPULightData light = {
+                .positionType = o.light_position_type,
+                .colorIntensity = o.light_color_intensity,
+                .directionRange = o.light_direction_range
+            };
+            this->scene_data.lights[scene_light_idx] = light;
+            scene_light_idx += 1;
+        }
+        if (o.mesh_id) {
+            auto mesh = this->loaded_meshes.at(o.mesh_id.id);
+            mesh->Draw(o.transform, this->_main_draw_context);
+        }
     }
+    this->scene_data.light_count = scene_light_idx + 1;
 
     auto end = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);

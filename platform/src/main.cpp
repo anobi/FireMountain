@@ -20,31 +20,93 @@ CameraProjectionType camera_projection = CameraProjectionType::PERSPECTIVE;
 
 
 struct Transform {
-    glm::vec3 position = { 0.0f, 0.0f, 0.0f };
+    glm::vec3 position = { 0.0f, 0.0f, 0.0f};
     glm::quat rotation = { 1.0f, 0.0f, 0.0f, 0.0f};
-    glm::vec3 scale = { 1.0f, 1.0f, 1.0f };
+    glm::vec3 scale = { 1.0f, 1.0f, 1.0f};
 };
 
 struct GameSceneObject {
     std::string mesh_file;
     MeshID mesh_id;
     Transform transform;
+
+    bool is_light;
+
+    LightID light_id;
+    LightType light_type;
+    float light_intensity;
+    float light_range;
+    glm::vec3 light_direction;
+    glm::vec3 light_color;
+
     bool dirty = true;
 };
 
 
 std::unordered_map<std::string, GameSceneObject> game_scene = {
-    {"sponza", {
+    {"sponza", (GameSceneObject) {
         .mesh_file = "assets/Sponza/glTF/Sponza.gltf"
     }},
     // {"structure", {
     //     .mesh_file = "assets/structure.glb"
     // }},
-    {"froge", {
+    {"froge", (GameSceneObject) {
         .mesh_file = "assets/good_froge.glb",
-        .transform = {
+        .transform = (Transform) {
             .position = {0.1f, 0.5f, 0.1f}
         }
+    }},
+    {"sun", (GameSceneObject) {
+        .light_type = LightType::Area,
+        .light_intensity = 1.0f,
+        .light_range = 100.0f,
+        .light_direction = { 0.0f, -1.0f, -0.5f },
+        .light_color = { 0.8f, 0.8f, 0.8f }
+    }},
+    {"mid_point_light", (GameSceneObject) {
+        .transform = (Transform) { 
+            .position = { 0.0f, 3.0f, 0.0f }
+        },
+        .light_type = LightType::Point,
+        .light_intensity = 8.0f,
+        .light_range = 100.0f,
+        .light_color = { 0.8f, 0.4f, 0.2f }
+    }},
+    {"corner_torch_blue", (GameSceneObject) {
+        .transform = (Transform) { 
+            .position = { 8.8f, 1.5f, 3.2f }
+        },
+        .light_type = LightType::Point,
+        .light_intensity = 4.0f,
+        .light_range = 100.0f,
+        .light_color = { 0.2f, 0.4f, 0.8f }
+    }},
+    {"corner_torch_green", (GameSceneObject) {
+        .transform = (Transform) {
+            .position = { 9.0f, 1.5f, -3.6f }
+        },
+        .light_type = LightType::Point,
+        .light_intensity = 4.0f,
+        .light_range = 100.0f,
+        .light_color = { 0.2f, 0.8f, 0.4f }
+    }},
+    {"corner_torch_red", (GameSceneObject) {
+        .transform = (Transform) { 
+            .position = { -9.5f, 1.5f, -3.65f }
+        },
+        .light_type = LightType::Point,
+        .light_intensity = 4.0f,
+        .light_range = 100.0f,
+        .light_color = { 0.8f, 0.2f, 0.1f }
+    }},
+    {"corner_torch_purple", (GameSceneObject) {
+        .transform = (Transform) { 
+            .position = { -9.5f, 1.5f, 3.2f }
+        },
+        .light_type = LightType::Point,
+        .light_intensity = 4.0f,
+        .light_range = 100.0f,
+        .light_color = { 0.8f, 0.2f, 0.8f }
     }}
 };
 
@@ -58,7 +120,11 @@ int RunApp()
     firemountain.Init(WIDTH, HEIGHT, display.window);
 
     for (auto& [key, obj] : game_scene) {
-        obj.mesh_id = firemountain.AddMesh(key, obj.mesh_file.c_str());
+        if (obj.light_type != LightType::None) {
+            obj.light_id = firemountain.AddLight(key);
+        } else {
+            obj.mesh_id = firemountain.AddMesh(key, obj.mesh_file.c_str());
+        }
     }
 
     int tick = 0;
@@ -173,10 +239,26 @@ int RunApp()
 
         // Send updated transforms to renderer
         for (auto& [key, obj] : game_scene) {
-            auto m = glm::translate(glm::identity<glm::mat4>(), obj.transform.position)
-                * glm::mat4_cast(obj.transform.rotation)
-                * glm::scale(glm::identity<glm::mat4>(), obj.transform.scale);
-            render_scene.push_back({ obj.mesh_id, m });
+            // Push meshes
+            if (obj.mesh_id) {
+                auto m = glm::translate(glm::identity<glm::mat4>(), obj.transform.position)
+                    * glm::mat4_cast(obj.transform.rotation)
+                    * glm::scale(glm::identity<glm::mat4>(), obj.transform.scale);
+                render_scene.push_back({ 
+                    .mesh_id = obj.mesh_id, 
+                    .transform = m 
+                });
+            }
+
+            // Push lights
+            if (obj.light_id)  {
+                render_scene.push_back({
+                    .light_id = obj.light_id,
+                    .light_position_type = { obj.transform.position, obj.light_type },
+                    .light_color_intensity = { obj.light_color, obj.light_intensity },
+                    .light_direction_range = { obj.light_direction, obj.light_range}
+                });
+            }
             obj.dirty = false;
         }
 

@@ -25,6 +25,7 @@ public:
     void ProcessImGuiEvent(SDL_Event* e);
 
     MeshID AddMesh(const std::string& name, const char* path);
+    LightID AddLight(const std::string& name);
 
     fmvk::Vulkan vulkan;
     Scene scene;

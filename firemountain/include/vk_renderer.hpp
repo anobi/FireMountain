@@ -131,6 +131,9 @@ namespace fmvk {
         unsigned int next_id = 0;
         MeshID AddMesh(const std::string& name, std::shared_ptr<LoadedGLTF> mesh);
         std::unordered_map<unsigned int, std::shared_ptr<LoadedGLTF>> loaded_meshes;
+
+        LightID AddLight(const std::string& name);
+        std::vector<unsigned int> lights;
         
         VkDevice _device;  
         VmaAllocator _allocator;

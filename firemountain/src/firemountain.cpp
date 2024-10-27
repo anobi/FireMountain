@@ -45,6 +45,12 @@ MeshID Firemountain::AddMesh(const std::string& name, const char* path) {
     return id;
 }
 
+LightID Firemountain::AddLight(const std::string &name)
+{
+    auto id = this->vulkan.AddLight(name);
+    return id;
+}
+
 // void Firemountain::DrawMesh(const MeshID id, const glm::mat4& transform_matrix) {
 //     auto mesh = this->vulkan.loaded_meshes.at(id.id);
 //     mesh->Draw(transform_matrix, this->vulkan._main_draw_context);

@@ -32,6 +32,12 @@ struct ComputePushConstants {
     glm::vec4 data_4;
 };
 
+
+struct LightID {
+    operator bool() const noexcept { return id != 0; }
+    uint32_t id;
+};
+
 enum LightType {
     None,
     Point,
@@ -92,4 +98,9 @@ struct ShaderID {
 struct RenderSceneObj {
     MeshID mesh_id;
     glm::mat4 transform;
+
+    LightID light_id;
+    glm::vec4 light_position_type;
+    glm::vec4 light_color_intensity;
+    glm::vec4 light_direction_range;
 };

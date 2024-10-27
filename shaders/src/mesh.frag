@@ -94,12 +94,13 @@ vec3 directionalLight(uint index, vec3 normal) {
 
 vec3 getLightDirection(uint index) {
     // Directional light
-    if (sceneData.lights[index].positionType.w == 0.0) {
-        return -sceneData.lights[index].directionRange.xyz;
-    }
     // Point light
     if (sceneData.lights[index].positionType.w == 1.0) {
         return sceneData.lights[index].directionRange.xyz - inWorldPosition.xyz;
+    }
+    else {
+    // if (sceneData.lights[index].positionType.w == 0.0) {
+        return -sceneData.lights[index].directionRange.xyz;
     }
 }
 
