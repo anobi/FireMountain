@@ -13,6 +13,7 @@ layout (location = 4) in vec4 inTangent;
 // Output
 layout (location = 0) out vec4 outFragColor;
 
+const float GAMMA = 2.2;
 const float PI = 3.14159265359;
 vec3 F0 = vec3(0.04);
 
@@ -132,27 +133,37 @@ vec3 normal() {
     return normalize(TBN[2].xyz);
 }
 
-void addEmissive(inout vec4 color) {
+float addEmissive(inout vec4 color) {
+    vec4 emissive = vec4(0.0);
     if (materialData.hasEmissiveMap == 1.0) {
-        vec4 emissive = materialData.emissiveFactor;
+        emissive = texture(emissiveTex, inUV) * materialData.emissiveFactor;
+    }
+    else {
+        emissive = materialData.emissiveFactor;
+    }
+
+
+
+    float is_emissive = length(emissive) > 1.0 ? 1.0 : 0.0;
+    if (is_emissive == 1.0) {
+        // Transparency / fade thing
         float exposure = 1.0; // Placeholder basically
         float attenuation = mix(1.0, exposure, emissive.w);
 
-        // Transparency / fade thing
+        emissive = pow(emissive, vec4(GAMMA));
         attenuation *= color.a;
-
         color.rgb += emissive.rgb * attenuation;
     }
+
+    return is_emissive;
 }
 
 void main() {
-    float gamma = 2.2;
-
     vec4 baseColor = vec4(1.0, 0.0, 0.0, 1.0);
     if (materialData.hasColorMap == 1.0) {
         baseColor = texture(colorTex, inUV) * materialData.colorFactors;
         // Convert to linear color space if in srgb
-        baseColor = pow(baseColor, vec4(gamma));
+        baseColor = pow(baseColor, vec4(GAMMA));
     }
     else {
         baseColor = vec4(inColor, 1.0) * materialData.colorFactors;
@@ -215,17 +226,19 @@ void main() {
         }
     }
 
-    addEmissive(lightValue);
+    float is_emissive = addEmissive(lightValue);
 
-    vec3 irradiance = vec3(0.5);
+    vec3 irradiance = vec3(0.1);
     vec3 iblDiffuse = irradiance * baseColor.rgb;
     vec3 ambient = iblDiffuse;
 
     vec3 color = vec3(0.3 * ambient + lightValue.rgb);
 
     // Apply gamma correction
-    color = color / (color + vec3(1.0f));
-    color = pow(color, vec3(1.0f / gamma));
+    if (is_emissive == 0.0) {
+        color = color / (color + vec3(1.0f));
+        color = pow(color, vec3(1.0f / GAMMA));
+    }
 
     outFragColor = vec4(color.rgb, alpha);
 }

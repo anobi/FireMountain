@@ -314,6 +314,8 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
             .metal_roughness_sampler = engine->_default_sampler_linear,
             .normal_image = engine->_default_texture_black,
             .normal_sampler = engine->_default_sampler_linear,
+            .emissive_image = engine->_default_texture_black,
+            .emissive_sampler = engine->_default_sampler_linear,
             .data_buffer = file.material_data_buffer.buffer,
             .data_buffer_offset = (uint32_t)(data_index * sizeof(fmvk::GLTFMetallic_Roughness::MaterialConstants))
         };
@@ -343,7 +345,11 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
         }
 
         if (mat.emissiveTexture.has_value()) {
-            // TODO
+            size_t img = gltf.textures[mat.emissiveTexture.value().textureIndex].imageIndex.value();
+            size_t sampler = gltf.textures[mat.emissiveTexture.value().textureIndex].samplerIndex.value();
+            material_resources.emissive_image = images[img];
+            material_resources.emissive_sampler = file.samplers[sampler];
+            scene_material_constants[data_index].has_emissive_map = 1.0;
         }
 
         new_material->data = engine->metal_roughness_material.write_material(engine->_device, pass_type, material_resources, file.descriptor_pool);

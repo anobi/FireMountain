@@ -75,6 +75,9 @@ namespace fmvk {
             AllocatedImage normal_image;
             VkSampler normal_sampler;
 
+            AllocatedImage emissive_image;
+            VkSampler emissive_sampler;
+
             VkBuffer data_buffer;
             uint32_t data_buffer_offset;
         };

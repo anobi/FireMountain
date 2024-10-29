@@ -1009,7 +1009,9 @@ void fmvk::Vulkan::init_default_data()
         .metal_roughness_image = this->_default_texture_white,
         .metal_roughness_sampler = this->_default_sampler_linear,
         .normal_image = this->_default_texture_black,
-        .normal_sampler = this->_default_sampler_linear
+        .normal_sampler = this->_default_sampler_linear,
+        .emissive_image = this->_default_texture_black,
+        .emissive_sampler = this->_default_sampler_linear
     };
 
     fmvk::Buffer::AllocatedBuffer material_constants = fmvk::Buffer::create_buffer(
@@ -1097,6 +1099,7 @@ void fmvk::GLTFMetallic_Roughness::build_pipelines(fmvk::Vulkan* renderer)
     layout_builder.add_binding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     layout_builder.add_binding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     layout_builder.add_binding(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    layout_builder.add_binding(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     this->material_layout = layout_builder.build(
         renderer->_device,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
@@ -1196,6 +1199,13 @@ MaterialInstance fmvk::GLTFMetallic_Roughness::write_material(VkDevice device, M
         3,
         resources.normal_image.view,
         resources.normal_sampler,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+    );
+    this->writer.write_image(
+        4,
+        resources.emissive_image.view,
+        resources.emissive_sampler,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
     );
