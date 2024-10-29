@@ -127,10 +127,10 @@ std::unordered_map<std::string, GameSceneObject> game_scene = {
     }},
     {"sun", (GameSceneObject) {
         .light_type = LightType::Area,
-        .light_intensity = 0.1f,
+        .light_intensity = 2.0f,
         .light_range = 100.0f,
         .light_direction = { 0.0f, -1.0f, -0.5f },
-        .light_color = { 0.8f, 0.2f, 0.1f }
+        .light_color = { 0.8f, 0.15f, 0.1f }
     }},
     {"mid_point_light", (GameSceneObject) {
         .transform = (Transform) { 

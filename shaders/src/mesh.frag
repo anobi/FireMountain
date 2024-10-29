@@ -215,14 +215,13 @@ void main() {
         // vec3 Fd = diffuseColor * Fd_Lambert();
         vec3 shading = Fd + Fr;
 
-        // Apply directional lighting 
-        if (sceneData.lights[i].positionType.w == 0.0) {
-            lightValue.rgb += directionalLight(i, n) * shading;
-        }
-
         // Apply point lights
         if (sceneData.lights[i].positionType.w == 1.0) {
             lightValue.rgb += pointLight(i, n) * shading;
+        } 
+        // Apply directional lighting 
+        else {
+            lightValue.rgb += directionalLight(i, n) * shading;
         }
     }
 
