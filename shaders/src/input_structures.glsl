@@ -18,6 +18,7 @@ layout(set = 1, binding = 0) uniform GLTFMaterialData {
     float hasColorMap;
 
     vec4 emissiveFactor;
+    float useAlphaBlending;
     float hasEmissiveMap;
     float hasNormalMap;
 

@@ -171,8 +171,8 @@ void fmvk::PipelineBuilder::enable_blending_alphablend() {
         | VK_COLOR_COMPONENT_B_BIT
         | VK_COLOR_COMPONENT_A_BIT;
     this->_color_blend_attachment.blendEnable = VK_TRUE;
-    this->_color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
-    this->_color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
+    this->_color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    this->_color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
     this->_color_blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
     this->_color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
     this->_color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;

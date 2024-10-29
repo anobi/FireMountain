@@ -304,6 +304,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
         MaterialPass pass_type = MaterialPass::FM_MATERIAL_PASS_OPAQUE;
         if (mat.alphaMode == fastgltf::AlphaMode::Blend) {
             pass_type = MaterialPass::FM_MATERIAL_PASS_TRANSPARENT;
+            constants.use_alpha_blending = 1.0f;
         }
 
         fmvk::GLTFMetallic_Roughness::MaterialResources material_resources = {

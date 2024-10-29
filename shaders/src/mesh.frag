@@ -132,9 +132,38 @@ vec3 normal() {
     return normalize(TBN[2].xyz);
 }
 
+void addEmissive(inout vec4 color) {
+    if (materialData.hasEmissiveMap == 1.0) {
+        vec4 emissive = materialData.emissiveFactor;
+        float exposure = 1.0; // Placeholder basically
+        float attenuation = mix(1.0, exposure, emissive.w);
+
+        // Transparency / fade thing
+        attenuation *= color.a;
+
+        color.rgb += emissive.rgb * attenuation;
+    }
+}
 
 void main() {
     float gamma = 2.2;
+
+    vec4 baseColor = vec4(1.0, 0.0, 0.0, 1.0);
+    if (materialData.hasColorMap == 1.0) {
+        baseColor = texture(colorTex, inUV) * materialData.colorFactors;
+        // Convert to linear color space if in srgb
+        baseColor = pow(baseColor, vec4(gamma));
+    }
+    else {
+        baseColor = vec4(inColor, 1.0) * materialData.colorFactors;
+    }
+
+    if (baseColor.a == 0.0) {
+        discard;
+    }
+
+    // Do we need to properly alpha blend things or not?
+    float alpha = (materialData.useAlphaBlending == 1.0) ? baseColor.a : 1.0;
 
     float metallic = 0.04;
     float roughness = 0.8;
@@ -149,21 +178,11 @@ void main() {
     }
     roughness = roughness * roughness;
 
-    vec4 baseColor = vec4(1.0, 0.0, 0.0, 1.0);
-    if (materialData.hasColorMap == 1.0) {
-        baseColor = texture(colorTex, inUV) * materialData.colorFactors;
-        // Convert to linear color space if in srgb
-        baseColor = pow(baseColor, vec4(gamma));
-    }
-    else {
-        baseColor = vec4(inColor, 1.0) * materialData.colorFactors;
-    }
-
     // Calculate lights
     vec3 n = normal();  // Normal unit vector
     vec3 v = normalize(sceneData.cameraPosition.xyz - inWorldPosition);  // View unit vector
 
-    vec3 lightValue = vec3(0.0);
+    vec4 lightValue = vec4(vec3(0.0), baseColor.a);
     vec3 diffuseColor = (1.0 - metallic) * baseColor.rgb;
     for (uint i = 0; i < sceneData.lightCount; i++) {
         vec3 l = getLightDirection(i);
@@ -173,7 +192,6 @@ void main() {
         float NoH = clamp(dot(n, h), 0.0, 1.0);
         float LoH = clamp(dot(l, h), 0.0, 1.0);
 
-        // TODO
         float D = D_GGX(NoH, roughness);
         vec3 F = F_Schlick(LoH, F0);
         float V = V_SmithGGXCorrelated(NoV, NoL, roughness);
@@ -188,24 +206,26 @@ void main() {
 
         // Apply directional lighting 
         if (sceneData.lights[i].positionType.w == 0.0) {
-            lightValue += directionalLight(i, n) * shading;
+            lightValue.rgb += directionalLight(i, n) * shading;
         }
 
         // Apply point lights
         if (sceneData.lights[i].positionType.w == 1.0) {
-            lightValue +=  pointLight(i, n) * shading;
+            lightValue.rgb += pointLight(i, n) * shading;
         }
     }
+
+    addEmissive(lightValue);
 
     vec3 irradiance = vec3(0.5);
     vec3 iblDiffuse = irradiance * baseColor.rgb;
     vec3 ambient = iblDiffuse;
 
-    vec3 color = 0.3 * ambient + lightValue;
+    vec3 color = vec3(0.3 * ambient + lightValue.rgb);
 
     // Apply gamma correction
     color = color / (color + vec3(1.0f));
     color = pow(color, vec3(1.0f / gamma));
 
-    outFragColor = vec4(color, 1.0);
+    outFragColor = vec4(color.rgb, alpha);
 }

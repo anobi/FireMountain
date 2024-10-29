@@ -1127,9 +1127,9 @@ void fmvk::GLTFMetallic_Roughness::build_pipelines(fmvk::Vulkan* renderer)
     pipeline_builder.set_shaders(vertex_shader, fragment_shader);
     pipeline_builder.set_input_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
     pipeline_builder.set_polygon_mode(VK_POLYGON_MODE_FILL);
-    pipeline_builder.set_cull_mode(VK_CULL_MODE_NONE, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+    pipeline_builder.set_cull_mode(VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
     pipeline_builder.set_multisampling_none();
-    pipeline_builder.disable_blending();
+    pipeline_builder.enable_blending_alphablend();
     pipeline_builder.enable_depth_test(true, VK_COMPARE_OP_GREATER_OR_EQUAL);
 
     // Set formats
