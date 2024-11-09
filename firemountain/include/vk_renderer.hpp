@@ -115,7 +115,7 @@ namespace fmvk {
         ~Vulkan() {};
 
         int Init(const uint32_t width, const uint32_t height, SDL_Window* window);
-        void Draw(RenderObject* first_render_object, int render_object_count, glm::mat4 view_projection_matrix);
+        void Draw(RenderObject* first_render_object, int render_object_count);
         void Resize(const uint32_t width, const uint32_t height);
         void Destroy();
         void ProcessImGuiEvent(SDL_Event* e);
@@ -221,7 +221,7 @@ namespace fmvk {
         // ----------------------
     public:
         DrawContext _main_draw_context;
-        void update_scene(glm::vec3 camera_position, glm::mat4 view_projection_matrix, std::vector<RenderSceneObj> scene);
+        void update_scene(fmCamera camera, std::vector<RenderSceneObj> scene);
     private:
         // ----------------------
         // End of TODO

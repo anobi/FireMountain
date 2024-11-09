@@ -21,6 +21,14 @@ glm::mat4 Camera::GetViewProjectionMatrix(float screen_width, float screen_heigh
     return p * v;
 }
 
+glm::mat4 Camera::GetProjectionMatrix(float screen_width, float screen_height, CameraProjectionType projection_type) {
+    if (projection_type == CameraProjectionType::ORTHO) {
+        return this->GetOrthoProjection(screen_width, screen_height);
+    } else {
+        return this->GetPerspectiveProjection(screen_width, screen_height);
+    }
+} 
+
 glm::mat4 Camera::GetPerspectiveProjection(float screen_width, float screen_height) {
     auto projection = glm::perspective(
         glm::radians(70.0f), 

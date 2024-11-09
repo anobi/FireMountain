@@ -80,7 +80,7 @@ int fmvk::Vulkan::Init(const uint32_t width, const uint32_t height, SDL_Window* 
     return 0;
 }
 
-void fmvk::Vulkan::Draw(RenderObject* render_objects, int render_object_count, glm::mat4 view_projection_matrix) {
+void fmvk::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
     auto start = std::chrono::system_clock::now();
 
     VK_CHECK(vkWaitForFences(this->_device, 1, &get_current_frame()._render_fence, true, 1000000000));
@@ -108,7 +108,6 @@ void fmvk::Vulkan::Draw(RenderObject* render_objects, int render_object_count, g
     this->_draw_extent.width = std::min(this->_swapchain.extent.width, this->_draw_image.extent.width) * this->_render_scale;
     this->_draw_extent.height = std::min(this->_swapchain.extent.height, this->_draw_image.extent.height) * this->_render_scale;
 
-    // update_scene(view_projection_matrix);
 
     // Request image from the swapchain
     uint32_t swapchain_image_index;
@@ -576,14 +575,15 @@ void fmvk::Vulkan::init_pipelines() {
 }
 
 // TODO: Move to Firemountain actual
-void fmvk::Vulkan::update_scene(glm::vec3 camera_position, glm::mat4 view_projection_matrix, std::vector<RenderSceneObj> scene)
+void fmvk::Vulkan::update_scene(fmCamera camera, std::vector<RenderSceneObj> scene)
 {
     auto start = std::chrono::system_clock::now();
 
     this->_main_draw_context.opaque_surfaces.clear();
 
-    this->scene_data.camera_position = camera_position;
-    this->scene_data.viewprojection = view_projection_matrix;
+    this->scene_data.camera_position = camera.position;
+    this->scene_data.view = camera.view;
+    this->scene_data.projection = camera.projection;
 
     size_t scene_light_idx = 0;
     for (auto o : scene) {
@@ -601,7 +601,7 @@ void fmvk::Vulkan::update_scene(glm::vec3 camera_position, glm::mat4 view_projec
             mesh->Draw(o.transform, this->_main_draw_context);
         }
     }
-    this->scene_data.light_count = scene_light_idx + 1;
+    this->scene_data.light_count = scene_light_idx;
 
     auto end = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
@@ -673,8 +673,11 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
 
     std::vector<uint32_t> opaque_draws;
     opaque_draws.reserve(this->_main_draw_context.opaque_surfaces.size());
+
+    // TODO do culling in a compute shader
+    glm::mat4 view_projection = scene_data.projection * scene_data.view;
     for (uint32_t i = 0; i < this->_main_draw_context.opaque_surfaces.size(); i++) {
-        if (is_visible(this->_main_draw_context.opaque_surfaces[i], scene_data.viewprojection)) {
+        if (is_visible(this->_main_draw_context.opaque_surfaces[i], view_projection)) {
             opaque_draws.push_back(i);
         }
     }

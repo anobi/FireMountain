@@ -15,19 +15,18 @@ layout (location = 0) out vec4 outFragColor;
 
 const float GAMMA = 2.2;
 const float PI = 3.14159265359;
-vec3 F0 = vec3(0.04);
 
-
-vec3 F_Schlick(float u, vec3 f0, float f90) {
-    return f0 + (vec3(f90) - f0) * pow(1.0 - u, 5.0);
+vec3 F_Schlick(const vec3 f0, float f90, float VoH) {
+    return f0 + (f90 - f0) * pow(1.0 - VoH, 5.0);
 }
 
-float F_Schlick(float u, float f0, float f90) {
-    return f0 + (f90 - f0) * pow(1.0 - u, 5.0);
+vec3 F_Schlick(const vec3 f0, float VoH) {
+    float f = pow(1.0 - VoH, 5.0);
+    return f + f0 * (1.0 - f);
 }
 
-vec3 F_Schlick(float u, vec3 f0) {
-    return f0 + (vec3(1.0) - f0) * pow(1.0 - u, 5.0);
+float F_Schlick(float f0, float f90, float VoH) {
+    return f0 + (f90 - f0) * pow(1.0 - VoH, 5.0);
 }
 
 float Fd_Lambert() {
@@ -36,8 +35,8 @@ float Fd_Lambert() {
 
 float Fd_Burley(float NoV, float NoL, float LoH, float roughness) {
     float f90 = 0.5 + 2.0 * roughness * LoH * LoH;
-    float lightScatter  = F_Schlick(NoL, 1.0, f90);
-    float viewScatter   = F_Schlick(NoV, 1.0, f90);
+    float lightScatter  = F_Schlick(1.0, f90, NoL);
+    float viewScatter   = F_Schlick(1.0, f90, NoV);
     return lightScatter * viewScatter * (1.0 / PI);
 }
 
@@ -65,31 +64,26 @@ float V_SmithGGXCorrelatedFast(float NdotV, float NdotL, float roughness) {
 
 float D_GGX(float NdotH, float roughness) {
     float a    = NdotH * roughness;
-    float k    = roughness / (1.0 - NdotH * NdotH + a * a);
-    return k * k * (1.0 / PI);
-}
-
-float D_GGX(float roughness, float NdotH, const vec3 n, const vec3 h) {
-    vec3 NxH = cross(n, h);
-    float a = NdotH * roughness;
-    float k = roughness / (dot(NdotH, NdotH) + a * a);
-    float d = k * k * (1.0 / PI);
+    float k    = roughness / ((1.0 - NdotH * NdotH) + a * a);
+    float d    = k * k * (1.0 / PI);
     return min(d, 65504.0);
 }
 
 vec3 pointLight(uint index, vec3 normal) {
+    // inWorldPosition needs to be for the fragment, not the vertex.
+    // This is why the main floor in sponza has speculars always in the middle of it.
     vec3 worldToLight = sceneData.lights[index].positionType.xyz - inWorldPosition.xyz;
     float dist = length(worldToLight);
-    float attenuation = 1.0f / (dist * dist);
+    float attenuation = 1.0 / (dist * dist);
 
     worldToLight = normalize(worldToLight);
-    float NdotL = clamp(dot(normal, worldToLight), 0.0f, 1.0f);
+    float NdotL = clamp(dot(normal, worldToLight), 0.0, 1.0);
     return NdotL * sceneData.lights[index].colorIntensity.w * attenuation * sceneData.lights[index].colorIntensity.rgb;
 }
 
 vec3 directionalLight(uint index, vec3 normal) {
     vec3 worldToLight = normalize(-sceneData.lights[index].directionRange.xyz);
-    float NdotL = clamp(dot(normal, worldToLight), 0.0f, 1.0f);
+    float NdotL = clamp(dot(normal, worldToLight), 0.0, 1.0);
     return NdotL * sceneData.lights[index].colorIntensity.w * sceneData.lights[index].colorIntensity.rgb;
 }
 
@@ -163,7 +157,7 @@ void main() {
     if (materialData.hasColorMap == 1.0) {
         baseColor = texture(colorTex, inUV) * materialData.colorFactors;
         // Convert to linear color space if in srgb
-        baseColor = pow(baseColor, vec4(GAMMA));
+        // baseColor = pow(baseColor, vec4(GAMMA));
     }
     else {
         baseColor = vec4(inColor, 1.0) * materialData.colorFactors;
@@ -180,7 +174,7 @@ void main() {
     float roughness = 0.8;
     if (materialData.hasMetalRoughnessMap == 1.0) {
         vec4 metalRough = texture(metalRoughTex, inUV);
-        metallic = clamp(metalRough.r, 0.04, 0.8);
+        metallic = clamp(metalRough.r, 0.0, 1.0);
         roughness = clamp(metalRough.g, 0.0, 1.0);
     }
     else {
@@ -192,19 +186,22 @@ void main() {
     // Calculate lights
     vec3 n = normal();  // Normal unit vector
     vec3 v = normalize(sceneData.cameraPosition.xyz - inWorldPosition);  // View unit vector
+    vec3 f0 = 0.16 * roughness * roughness * (1.0 - metallic) + baseColor.rgb * metallic;
+    //vec3 f0 = vec3(0.04);
+    float f90 = clamp(dot(f0, vec3(50.0 * 0.33)), 0.0, 1.0);
 
     vec4 lightValue = vec4(vec3(0.0), baseColor.a);
     vec3 diffuseColor = (1.0 - metallic) * baseColor.rgb;
     for (uint i = 0; i < sceneData.lightCount; i++) {
         vec3 l = getLightDirection(i);
         vec3 h = normalize(v + l);
-        float NoV = abs(dot(n, v)) + 1e-5;
+        float NoV = max(dot(n, v), 1e-4);
         float NoL = clamp(dot(n, l), 0.0, 1.0);
         float NoH = clamp(dot(n, h), 0.0, 1.0);
         float LoH = clamp(dot(l, h), 0.0, 1.0);
 
         float D = D_GGX(NoH, roughness);
-        vec3 F = F_Schlick(LoH, F0);
+        vec3 F = F_Schlick(f0, f90, LoH);
         float V = V_SmithGGXCorrelated(NoV, NoL, roughness);
 
         // Specular BRDF
@@ -231,7 +228,7 @@ void main() {
     vec3 iblDiffuse = irradiance * baseColor.rgb;
     vec3 ambient = iblDiffuse;
 
-    vec3 color = vec3(0.3 * ambient + lightValue.rgb);
+    vec3 color = vec3(ambient + lightValue.rgb);
 
     // Apply gamma correction
     if (is_emissive == 0.0) {

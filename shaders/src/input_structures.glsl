@@ -3,7 +3,8 @@
 
 
 layout(set = 0, binding = 0) uniform SceneData {
-    mat4 viewProjection;
+    mat4 viewMatrix;
+    mat4 projectionMatrix;
     vec3 cameraPosition;
 
     uint lightCount;

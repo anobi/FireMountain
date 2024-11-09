@@ -18,7 +18,7 @@ public:
     ~Firemountain() {};
 
     int Init(const int width, const int height, SDL_Window* window);
-    void Frame(glm::vec3 camera_position, glm::mat4 view_projection_matrix, std::vector<RenderSceneObj> scene);
+    void Frame(fmCamera camera, std::vector<RenderSceneObj> scene);
     void Resize(const uint32_t width, const uint32_t height);
     void Destroy();
 

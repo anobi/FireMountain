@@ -61,8 +61,9 @@ struct GPULightData {
 
 // Structure that gets fed into the shaders as an input structure
 struct GPUSceneData {
-    glm::mat4 viewprojection = glm::mat4 {0.0f};
-    glm::vec3 camera_position = glm::vec3 {0.0f};
+    glm::mat4 view = glm::mat4 { 0.0f };
+    glm::mat4 projection = glm::mat4 { 0.0f };
+    glm::vec3 camera_position = glm::vec3 { 0.0f };
     unsigned int light_count;
 
     GPULightData lights[32];
@@ -93,6 +94,12 @@ struct MeshID {
 struct ShaderID {
     operator bool() const noexcept { return id != 0; }
     uint32_t id;
+};
+
+struct fmCamera {
+    glm::vec3 position;
+    glm::mat4 view;
+    glm::mat4 projection;
 };
 
 struct RenderSceneObj {
