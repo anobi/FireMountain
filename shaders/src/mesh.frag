@@ -17,7 +17,7 @@ const float GAMMA = 2.2;
 const float PI = 3.14159265359;
 
 vec3 F_Schlick(const vec3 f0, float f90, float VoH) {
-    return f0 + (f90 - f0) * pow(1.0 - VoH, 5.0);
+    return f0 + (vec3(f90) - f0) * pow(1.0 - VoH, 5.0);
 }
 
 vec3 F_Schlick(const vec3 f0, float VoH) {
@@ -40,38 +40,37 @@ float Fd_Burley(float NoV, float NoL, float LoH, float roughness) {
     return lightScatter * viewScatter * (1.0 / PI);
 }
 
-float V_SmithGGXCorrelated(float NoV, float NoL, float a) {
-    float a2 = a * a;
-    float GGXV = NoL * sqrt((-NoV * a2 + NoV) * NoV + a2);
-    float GGXL = NoV * sqrt((-NoL * a2 + NoL) * NoL + a2);
+float V_SmithGGXCorrelated(float NoV, float NoL, float roughness) {
+    float a2 = roughness * roughness;
+    float GGXV = NoL * sqrt(NoV * NoV * (1.0 - a2) + a2);
+    float GGXL = NoV * sqrt(NoL * NoL * (1.0 - a2) + a2);
     return 0.5 / (GGXV + GGXL);
 }
-
-// float V_SmithGGXCorrelated(float NdotV, float NdotL, float roughness) {
-//     float a2 = roughness * roughness;
-//     float GGXV = NdotL * sqrt(NdotV * NdotV * (1.0 - a2) + a2);
-//     float GGXL = NdotV * sqrt(NdotL * NdotL * (1.0 - a2) + a2);
-//     return 0.5 / (GGXV + GGXL);
-// }
 
 // Faster, mathematically wrong approximation for mobile etc.
 float V_SmithGGXCorrelatedFast(float NdotV, float NdotL, float roughness) {
     float a = roughness;
-    float GGXV = NdotL * (NdotV * (1.0 - a) + 1);
-    float GGXL = NdotV * (NdotL * (1.0 - a) + 1);
+    float GGXV = NdotL * (NdotV * (1.0 - a) + a);
+    float GGXL = NdotV * (NdotL * (1.0 - a) + a);
     return 0.5 / (GGXV + GGXL);
 }
 
 float D_GGX(float NdotH, float roughness) {
     float a    = NdotH * roughness;
-    float k    = roughness / ((1.0 - NdotH * NdotH) + a * a);
+    float k    = roughness / (1.0 - NdotH * NdotH + a * a);
+    float d    = k * k * (1.0 / PI);
+    return d;
+}
+
+float D_GGX(float NdotH, float roughness, const vec3 n, const vec3 h) {
+    vec3 NxH   = cross(n, h);
+    float a    = NdotH * roughness;
+    float k    = roughness / (dot(NxH, NxH) + a * a);
     float d    = k * k * (1.0 / PI);
     return min(d, 65504.0);
 }
 
 vec3 pointLight(uint index, vec3 normal) {
-    // inWorldPosition needs to be for the fragment, not the vertex.
-    // This is why the main floor in sponza has speculars always in the middle of it.
     vec3 worldToLight = sceneData.lights[index].positionType.xyz - inWorldPosition.xyz;
     float dist = length(worldToLight);
     float attenuation = 1.0 / (dist * dist);
@@ -88,11 +87,11 @@ vec3 directionalLight(uint index, vec3 normal) {
 }
 
 vec3 getLightDirection(uint index) {
-    // Directional light
     // Point light
     if (sceneData.lights[index].positionType.w == 1.0) {
-        return sceneData.lights[index].directionRange.xyz - inWorldPosition.xyz;
+        return sceneData.lights[index].positionType.xyz - inWorldPosition.xyz;
     }
+    // Directional light
     else {
     // if (sceneData.lights[index].positionType.w == 0.0) {
         return -sceneData.lights[index].directionRange.xyz;
@@ -105,7 +104,7 @@ vec3 normal() {
     vec3 st1    = dFdx(vec3(inUV, 0.0));
     vec3 st2    = dFdy(vec3(inUV, 0.0));
 
-    vec3 T = inTangent.xyz;;
+    vec3 T = inTangent.xyz;
     float flip = inTangent.w;
 
     // Calculate tangent if one isn't found in inputs
@@ -157,7 +156,7 @@ void main() {
     if (materialData.hasColorMap == 1.0) {
         baseColor = texture(colorTex, inUV) * materialData.colorFactors;
         // Convert to linear color space if in srgb
-        // baseColor = pow(baseColor, vec4(GAMMA));
+        baseColor = pow(baseColor, vec4(GAMMA));
     }
     else {
         baseColor = vec4(inColor, 1.0) * materialData.colorFactors;
@@ -169,7 +168,6 @@ void main() {
 
     // Do we need to properly alpha blend things or not?
     float alpha = (materialData.useAlphaBlending == 1.0) ? baseColor.a : 1.0;
-
     float metallic = 0.04;
     float roughness = 0.8;
     if (materialData.hasMetalRoughnessMap == 1.0) {
@@ -187,7 +185,6 @@ void main() {
     vec3 n = normal();  // Normal unit vector
     vec3 v = normalize(sceneData.cameraPosition.xyz - inWorldPosition);  // View unit vector
     vec3 f0 = 0.16 * roughness * roughness * (1.0 - metallic) + baseColor.rgb * metallic;
-    //vec3 f0 = vec3(0.04);
     float f90 = clamp(dot(f0, vec3(50.0 * 0.33)), 0.0, 1.0);
 
     vec4 lightValue = vec4(vec3(0.0), baseColor.a);
@@ -199,9 +196,10 @@ void main() {
         float NoL = clamp(dot(n, l), 0.0, 1.0);
         float NoH = clamp(dot(n, h), 0.0, 1.0);
         float LoH = clamp(dot(l, h), 0.0, 1.0);
+        float VoH = clamp(dot(v, h), 0.0, 1.0);
 
-        float D = D_GGX(NoH, roughness);
-        vec3 F = F_Schlick(f0, f90, LoH);
+        float D = D_GGX(NoH, roughness, n, h);
+        vec3 F = F_Schlick(f0, f90, VoH);
         float V = V_SmithGGXCorrelated(NoV, NoL, roughness);
 
         // Specular BRDF
@@ -223,11 +221,9 @@ void main() {
     }
 
     float is_emissive = addEmissive(lightValue);
-
     vec3 irradiance = vec3(0.1);
     vec3 iblDiffuse = irradiance * baseColor.rgb;
     vec3 ambient = iblDiffuse;
-
     vec3 color = vec3(ambient + lightValue.rgb);
 
     // Apply gamma correction

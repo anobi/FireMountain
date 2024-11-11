@@ -58,7 +58,7 @@ std::unordered_map<std::string, GameSceneObject> game_scene = {
     }},
     {"sun", (GameSceneObject) {
         .light_type = LightType::Area,
-        .light_intensity = 0.8f,
+        .light_intensity = 1.8f,
         .light_range = 100.0f,
         .light_direction = { 0.0f, -1.0f, -0.5f },
         .light_color = { 0.8f, 0.4f, 0.2f }
@@ -77,7 +77,7 @@ std::unordered_map<std::string, GameSceneObject> game_scene = {
             .position = { 8.8f, 1.5f, 3.2f }
         },
         .light_type = LightType::Point,
-        .light_intensity = 4.0f,
+        .light_intensity = 8.0f,
         .light_range = 100.0f,
         .light_color = { 0.2f, 0.4f, 0.8f }
     }},
@@ -86,7 +86,7 @@ std::unordered_map<std::string, GameSceneObject> game_scene = {
             .position = { 9.0f, 1.5f, -3.6f }
         },
         .light_type = LightType::Point,
-        .light_intensity = 4.0f,
+        .light_intensity = 8.0f,
         .light_range = 100.0f,
         .light_color = { 0.2f, 0.8f, 0.4f }
     }},
@@ -95,7 +95,7 @@ std::unordered_map<std::string, GameSceneObject> game_scene = {
             .position = { -9.5f, 1.5f, -3.65f }
         },
         .light_type = LightType::Point,
-        .light_intensity = 4.0f,
+        .light_intensity = 8.0f,
         .light_range = 100.0f,
         .light_color = { 0.8f, 0.2f, 0.1f }
     }},
@@ -104,7 +104,7 @@ std::unordered_map<std::string, GameSceneObject> game_scene = {
             .position = { -9.5f, 1.5f, 3.2f }
         },
         .light_type = LightType::Point,
-        .light_intensity = 4.0f,
+        .light_intensity = 8.0f,
         .light_range = 100.0f,
         .light_color = { 0.8f, 0.2f, 0.8f }
     }}

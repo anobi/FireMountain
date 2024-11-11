@@ -31,7 +31,6 @@ layout (push_constant) uniform constants {
 
 void main() {
     Vertex vert = PushConstants.vertex_buffer.vertices[gl_VertexIndex];
-    vec4 position = vec4(vert.position, 1.0f);
 
     mat4 m = PushConstants.model_matrix;
     mat4 v = sceneData.viewMatrix;
@@ -41,10 +40,13 @@ void main() {
 
     // TODO: Calculate TBN here too
 
-    vec4 frag_pos = mvp * position;
+    vec4 position = vec4(vert.position, 1.0f);
+    vec4 worldPos = m * position;
+    vec4 frag_pos = vp * worldPos;
     gl_Position = frag_pos;
 
-    outWorldPosition = vec3(m * position);
+
+    outWorldPosition = worldPos.xyz;
     outNormal = vec3(m * vec4(vert.normal, 0.0f)).xyz;
     outColor = vert.color.xyz * materialData.colorFactors.xyz;
     outUV.x = vert.uv_x;
