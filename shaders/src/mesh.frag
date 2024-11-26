@@ -16,17 +16,17 @@ layout (location = 0) out vec4 outFragColor;
 const float GAMMA = 2.2;
 const float PI = 3.14159265359;
 
-vec3 F_Schlick(const vec3 f0, float f90, float VoH) {
-    return f0 + (vec3(f90) - f0) * pow(1.0 - VoH, 5.0);
+vec3 F_Schlick(const vec3 f0, float f90, float u) {
+    return f0 + (vec3(f90) - f0) * pow(1.0 - u, 5.0);
 }
 
-vec3 F_Schlick(const vec3 f0, float VoH) {
-    float f = pow(1.0 - VoH, 5.0);
+vec3 F_Schlick(const vec3 f0, float u) {
+    float f = pow(1.0 - u, 5.0);
     return f + f0 * (1.0 - f);
 }
 
-float F_Schlick(float f0, float f90, float VoH) {
-    return f0 + (f90 - f0) * pow(1.0 - VoH, 5.0);
+float F_Schlick(float f0, float f90, float u) {
+    return f0 + (f90 - f0) * pow(1.0 - u, 5.0);
 }
 
 float Fd_Lambert() {
@@ -196,10 +196,9 @@ void main() {
         float NoL = clamp(dot(n, l), 0.0, 1.0);
         float NoH = clamp(dot(n, h), 0.0, 1.0);
         float LoH = clamp(dot(l, h), 0.0, 1.0);
-        float VoH = clamp(dot(v, h), 0.0, 1.0);
 
         float D = D_GGX(NoH, roughness, n, h);
-        vec3 F = F_Schlick(f0, f90, VoH);
+        vec3 F = F_Schlick(f0, f90, LoH);
         float V = V_SmithGGXCorrelated(NoV, NoL, roughness);
 
         // Specular BRDF

@@ -102,6 +102,13 @@ void fmvk::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
         destroy_image(this->_depth_image);
         init_render_targets();
 
+        // Update draw image descriptors
+        {
+            DescriptorWriter writer;
+            writer.write_image(0, this->_draw_image.view, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_GENERAL, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+            writer.update_set(this->_device, this->_draw_image_descriptors);
+        }
+
         this->_resize_requested = false;
     }
 
