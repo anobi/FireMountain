@@ -267,10 +267,12 @@ int RunApp()
                 if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
                     int new_width, new_height = 0;
                     SDL_GetWindowSize(display.window, &new_width, &new_height);
-                    if (new_width != WIDTH || new_height != HEIGHT) {
-                        WIDTH = new_width;
-                        HEIGHT = new_height;
-                        resize_requested = true;
+                    if (new_width > 0 && new_height > 0) {
+                        if (new_width != WIDTH || new_height != HEIGHT) {
+                            WIDTH = new_width;
+                            HEIGHT = new_height;
+                            resize_requested = true;
+                        }
                     }
                 }
                 break;
@@ -283,6 +285,7 @@ int RunApp()
         }
 
         if (resize_requested) {
+            assert(WIDTH > 0 && HEIGHT > 0);
             firemountain.Resize(static_cast<uint32_t>(WIDTH), static_cast<uint32_t>(HEIGHT));
             resize_requested = false;
         }

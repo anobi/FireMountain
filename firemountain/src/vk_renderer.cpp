@@ -89,8 +89,10 @@ void fmvk::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
 
     if (this->_resize_requested) {
         // Update extents
-        this->_window_extent.width = this->_requested_extent.width;
-        this->_window_extent.height = this->_requested_extent.height;
+        if (this->_requested_extent.width > 0 && this->_requested_extent.height > 0) {
+            this->_window_extent.width = this->_requested_extent.width;
+            this->_window_extent.height = this->_requested_extent.height;
+        }
         
         // Recreate swapchain
         vkDeviceWaitIdle(this->_device);
@@ -448,7 +450,7 @@ void fmvk::Vulkan::init_render_targets() {
     );
     VmaAllocationCreateInfo draw_image_allocinfo = {
         .usage = VMA_MEMORY_USAGE_GPU_ONLY,
-        .requiredFlags = static_cast<VkMemoryPropertyFlags>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+        .requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
     };
     vmaCreateImage(
         this->_allocator,
