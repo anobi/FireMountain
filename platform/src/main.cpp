@@ -43,123 +43,120 @@ struct GameSceneObject {
 };
 
 
+// std::unordered_map<std::string, GameSceneObject> game_scene = {
+//     {"sponza", (GameSceneObject) {
+//         .mesh_file = "assets/Sponza/glTF/Sponza.gltf"
+//     }},
+//     // {"structure", {
+//     //     .mesh_file = "assets/structure.glb"
+//     // }},
+//     {"froge", (GameSceneObject) {
+//         .mesh_file = "assets/good_froge.glb",
+//         .transform = (Transform) {
+//             .position = {0.1f, 0.5f, 0.1f}
+//         }
+//     }},
+//     {"sun", (GameSceneObject) {
+//         .light_type = LightType::Area,
+//         .light_intensity = 1.8f,
+//         .light_range = 100.0f,
+//         .light_direction = { 0.0f, -1.0f, -0.5f },
+//         .light_color = { 0.8f, 0.4f, 0.2f }
+//     }},
+//     {"mid_point_light", (GameSceneObject) {
+//         .transform = (Transform) {
+//             .position = { 0.0f, 3.0f, 0.0f }
+//         },
+//         .light_type = LightType::Point,
+//         .light_intensity = 8.0f,
+//         .light_range = 100.0f,
+//         .light_color = { 0.8f, 0.4f, 0.2f }
+//     }},
+//     {"corner_torch_blue", (GameSceneObject) {
+//         .transform = (Transform) {
+//             .position = { 8.8f, 1.5f, 3.2f }
+//         },
+//         .light_type = LightType::Point,
+//         .light_intensity = 8.0f,
+//         .light_range = 100.0f,
+//         .light_color = { 0.2f, 0.4f, 0.8f }
+//     }},
+//     {"corner_torch_green", (GameSceneObject) {
+//         .transform = (Transform) {
+//             .position = { 9.0f, 1.5f, -3.6f }
+//         },
+//         .light_type = LightType::Point,
+//         .light_intensity = 8.0f,
+//         .light_range = 100.0f,
+//         .light_color = { 0.2f, 0.8f, 0.4f }
+//     }},
+//     {"corner_torch_red", (GameSceneObject) {
+//         .transform = (Transform) {
+//             .position = { -9.5f, 1.5f, -3.65f }
+//         },
+//         .light_type = LightType::Point,
+//         .light_intensity = 8.0f,
+//         .light_range = 100.0f,
+//         .light_color = { 0.8f, 0.2f, 0.1f }
+//     }},
+//     {"corner_torch_purple", (GameSceneObject) {
+//         .transform = (Transform) {
+//             .position = { -9.5f, 1.5f, 3.2f }
+//         },
+//         .light_type = LightType::Point,
+//         .light_intensity = 8.0f,
+//         .light_range = 100.0f,
+//         .light_color = { 0.8f, 0.2f, 0.8f }
+//     }}
+// };
+
+
+// Spooky halloween scene
 std::unordered_map<std::string, GameSceneObject> game_scene = {
     {"sponza", (GameSceneObject) {
         .mesh_file = "assets/Sponza/glTF/Sponza.gltf"
     }},
-    // {"structure", {
-    //     .mesh_file = "assets/structure.glb"
-    // }},
     {"froge", (GameSceneObject) {
-        .mesh_file = "assets/good_froge.glb",
+        .mesh_file = "assets/evil_froge.glb",
         .transform = (Transform) {
             .position = {0.1f, 0.5f, 0.1f}
         }
     }},
     {"sun", (GameSceneObject) {
         .light_type = LightType::Area,
-        .light_intensity = 1.8f,
+        .light_intensity = 0.8f,
         .light_range = 100.0f,
         .light_direction = { 0.0f, -1.0f, -0.5f },
-        .light_color = { 0.8f, 0.4f, 0.2f }
+        .light_color = { 0.8f, 0.15f, 0.1f }
     }},
     {"mid_point_light", (GameSceneObject) {
-        .transform = (Transform) { 
-            .position = { 0.0f, 3.0f, 0.0f }
-        },
-        .light_type = LightType::Point,
-        .light_intensity = 8.0f,
-        .light_range = 100.0f,
-        .light_color = { 0.8f, 0.4f, 0.2f }
-    }},
-    {"corner_torch_blue", (GameSceneObject) {
-        .transform = (Transform) { 
-            .position = { 8.8f, 1.5f, 3.2f }
-        },
-        .light_type = LightType::Point,
-        .light_intensity = 8.0f,
-        .light_range = 100.0f,
-        .light_color = { 0.2f, 0.4f, 0.8f }
-    }},
-    {"corner_torch_green", (GameSceneObject) {
         .transform = (Transform) {
-            .position = { 9.0f, 1.5f, -3.6f }
+            .position = { -3.0f, 3.0f, 0.0f }
         },
         .light_type = LightType::Point,
-        .light_intensity = 8.0f,
+        .light_intensity = 0.02f,
         .light_range = 100.0f,
-        .light_color = { 0.2f, 0.8f, 0.4f }
+        .light_color = { 0.9f, 0.2f, 0.1f }
     }},
     {"corner_torch_red", (GameSceneObject) {
-        .transform = (Transform) { 
+        .transform = (Transform) {
             .position = { -9.5f, 1.5f, -3.65f }
         },
         .light_type = LightType::Point,
-        .light_intensity = 8.0f,
+        .light_intensity = 12.0f,
         .light_range = 100.0f,
         .light_color = { 0.8f, 0.2f, 0.1f }
     }},
     {"corner_torch_purple", (GameSceneObject) {
-        .transform = (Transform) { 
+        .transform = (Transform) {
             .position = { -9.5f, 1.5f, 3.2f }
         },
         .light_type = LightType::Point,
-        .light_intensity = 8.0f,
+        .light_intensity = 12.0f,
         .light_range = 100.0f,
         .light_color = { 0.8f, 0.2f, 0.8f }
     }}
 };
-
-
-// Spooky halloween scene
-// std::unordered_map<std::string, GameSceneObject> game_scene = {
-//     {"sponza", (GameSceneObject) {
-//         .mesh_file = "assets/Sponza/glTF/Sponza.gltf"
-//     }},
-    // {"structure", {
-    //     .mesh_file = "assets/structure.glb"
-    // }},
-    // {"froge", (GameSceneObject) {
-    //     .mesh_file = "assets/evil_froge.glb",
-    //     .transform = (Transform) {
-    //         .position = {0.1f, 0.5f, 0.1f}
-    //     }
-    // }},
-    // {"sun", (GameSceneObject) {
-    //     .light_type = LightType::Area,
-    //     .light_intensity = 0.8f,
-    //     .light_range = 100.0f,
-    //     .light_direction = { 0.0f, -1.0f, -0.5f },
-    //     .light_color = { 0.8f, 0.15f, 0.1f }
-    // }},
-    // {"mid_point_light", (GameSceneObject) {
-    //     .transform = (Transform) { 
-    //         .position = { -3.0f, 3.0f, 0.0f }
-    //     },
-    //     .light_type = LightType::Point,
-    //     .light_intensity = 0.02f,
-    //     .light_range = 100.0f,
-    //     .light_color = { 0.9f, 0.2f, 0.1f }
-    // }},
-//     {"corner_torch_red", (GameSceneObject) {
-//         .transform = (Transform) { 
-//             .position = { -9.5f, 1.5f, -3.65f }
-//         },
-//         .light_type = LightType::Point,
-//         .light_intensity = 12.0f,
-//         .light_range = 100.0f,
-//         .light_color = { 0.8f, 0.2f, 0.1f }
-//     }},
-//     {"corner_torch_purple", (GameSceneObject) {
-//         .transform = (Transform) { 
-//             .position = { -9.5f, 1.5f, 3.2f }
-//         },
-//         .light_type = LightType::Point,
-//         .light_intensity = 12.0f,
-//         .light_range = 100.0f,
-//         .light_color = { 0.8f, 0.2f, 0.8f }
-//     }}
-// };
 
 
 int RunApp()

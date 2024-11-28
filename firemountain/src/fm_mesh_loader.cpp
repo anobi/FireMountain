@@ -63,6 +63,7 @@ std::optional<AllocatedImage> load_image(fmvk::Vulkan* engine, fastgltf::Asset& 
 
             const std::string path(file_path.uri.path().begin(), file_path.uri.path().end());
             auto full_path = working_dir / file_path.uri.fspath();
+            fmt::println("* Loading image: {}", full_path.string());
             unsigned char* data = stbi_load(full_path.c_str(), &width, &height, &nr_channels, 4);
             if (data) {
                 VkExtent3D image_size = {
@@ -74,8 +75,10 @@ std::optional<AllocatedImage> load_image(fmvk::Vulkan* engine, fastgltf::Asset& 
                 stbi_image_free(data);
             }
         },
-        [&](fastgltf::sources::Vector& vector) {
-            unsigned char* data = stbi_load_from_memory(reinterpret_cast<stbi_uc const *>(vector.bytes.data()), static_cast<int>(vector.bytes.size()),
+        [&](fastgltf::sources::Array& vector) {
+            unsigned char* data = stbi_load_from_memory(
+                reinterpret_cast<const stbi_uc*>(vector.bytes.data()),
+                static_cast<int>(vector.bytes.size()),
                 &width, &height, &nr_channels, 4);
             if (data) {
                 VkExtent3D image_size = {
@@ -92,9 +95,9 @@ std::optional<AllocatedImage> load_image(fmvk::Vulkan* engine, fastgltf::Asset& 
             auto& buffer = asset.buffers[buffer_view.bufferIndex];
             std::visit(fastgltf::visitor {
                 [](auto& arg) {},
-                [&](fastgltf::sources::Vector& vector) {
+                [&](fastgltf::sources::Array& vector) {
                     unsigned char* data = stbi_load_from_memory(
-                        reinterpret_cast<stbi_uc const *>(vector.bytes.data() + buffer_view.byteOffset),
+                        reinterpret_cast<const stbi_uc *>(vector.bytes.data() + buffer_view.byteOffset),
                         static_cast<int>(buffer_view.byteLength),
                         &width,
                         &height,
@@ -265,7 +268,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
             file.images[image.name.c_str()] = *img;
         } else {
             images.push_back(engine->_texture_missing_error_image);
-            fmt::println("[GLTF] Failed to load  texture {}", image.name);
+            fmt::println("[GLTF] Failed to load texture {} ({})", image.name, working_dir.string());
         }
     }
 
