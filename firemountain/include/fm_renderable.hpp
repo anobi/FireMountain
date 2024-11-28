@@ -22,6 +22,10 @@ struct DrawContext {
 };
 
 class IRenderable {
+public:
+    virtual ~IRenderable() = default;
+
+private:
     virtual void Draw(const glm::mat4& top_matrix, DrawContext& ctx) = 0;
 };
 

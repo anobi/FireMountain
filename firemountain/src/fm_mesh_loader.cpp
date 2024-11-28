@@ -7,7 +7,7 @@
 #include <glm/gtx/quaternion.hpp>
 
 #include <fastgltf/glm_element_traits.hpp>
-#include <fastgltf/parser.hpp>
+#include <fastgltf/core.hpp>
 #include <fastgltf/tools.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -75,7 +75,7 @@ std::optional<AllocatedImage> load_image(fmvk::Vulkan* engine, fastgltf::Asset& 
             }
         },
         [&](fastgltf::sources::Vector& vector) {
-            unsigned char* data = stbi_load_from_memory(vector.bytes.data(), static_cast<int>(vector.bytes.size()), 
+            unsigned char* data = stbi_load_from_memory(reinterpret_cast<stbi_uc const *>(vector.bytes.data()), static_cast<int>(vector.bytes.size()),
                 &width, &height, &nr_channels, 4);
             if (data) {
                 VkExtent3D image_size = {
@@ -94,7 +94,7 @@ std::optional<AllocatedImage> load_image(fmvk::Vulkan* engine, fastgltf::Asset& 
                 [](auto& arg) {},
                 [&](fastgltf::sources::Vector& vector) {
                     unsigned char* data = stbi_load_from_memory(
-                        vector.bytes.data() + buffer_view.byteOffset, 
+                        reinterpret_cast<stbi_uc const *>(vector.bytes.data() + buffer_view.byteOffset),
                         static_cast<int>(buffer_view.byteLength),
                         &width,
                         &height,
@@ -182,19 +182,22 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
     constexpr auto gltf_options = 
         fastgltf::Options::DontRequireValidAssetMember 
         | fastgltf::Options::AllowDouble
-        | fastgltf::Options::LoadGLBBuffers
         | fastgltf::Options::LoadExternalBuffers;
 
-    fastgltf::GltfDataBuffer data;
-    data.loadFromFile(file_path);
+    auto data = fastgltf::GltfDataBuffer::FromPath(file_path);
+    if (data.error() != fastgltf::Error::None) {
+        // The file couldn't be loaded, or the buffer could not be allocated.
+        fmt::println("Error loading GLTF data from file: {}", getErrorMessage(data.error()));
+        return {};
+    }
 
     fastgltf::Asset gltf;
     std::filesystem::path path = file_path;
     auto working_dir = path.parent_path();
 
-    auto type = fastgltf::determineGltfFileType(&data);
+    auto type = fastgltf::determineGltfFileType(data.get());
     if (type == fastgltf::GltfType::glTF) {
-        auto load = parser.loadGltf(&data, path.parent_path(), gltf_options);
+        auto load = parser.loadGltf(data.get(), path.parent_path(), gltf_options);
         if (load) {
             gltf = std::move(load.get());
         } else {
@@ -202,7 +205,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
             return {};
         }
     } else if (type == fastgltf::GltfType::GLB) {
-        auto load = parser.loadGltfBinary(&data, path.parent_path(), gltf_options);
+        auto load = parser.loadGltfBinary(data.get(), path.parent_path(), gltf_options);
         if (load) {
             gltf = std::move(load.get());
         } else {
@@ -254,7 +257,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
         if (img.has_value()) {
             // Generate a name if image doesn't have one to avoid overwrites and assure proper unloading
             // since the images are stored in a map
-            if (image.name == "") {
+            if (image.name.empty()) {
                 image.name = "__Texture_" + std::to_string(image_idx);
                 image_idx += 1;
             }
@@ -274,7 +277,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
         engine->_allocator
     );
     int data_index = 0;
-    fmvk::GLTFMetallic_Roughness::MaterialConstants* scene_material_constants = (fmvk::GLTFMetallic_Roughness::MaterialConstants*)file.material_data_buffer.info.pMappedData;
+    auto scene_material_constants = static_cast<fmvk::GLTFMetallic_Roughness::MaterialConstants *>(file.material_data_buffer.info.pMappedData);
 
     for (fastgltf::Material& mat : gltf.materials) {
         std::shared_ptr<GLTFMaterial> new_material = std::make_shared<GLTFMaterial>();
@@ -382,7 +385,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
             }
 
             {   // Load vertex positions
-                fastgltf::Accessor& position_accessor = gltf.accessors[p.findAttribute("POSITION")->second];
+                fastgltf::Accessor& position_accessor = gltf.accessors[p.findAttribute("POSITION")->accessorIndex];
                 vertices.resize(vertices.size() + position_accessor.count);
                 fastgltf::iterateAccessorWithIndex<glm::vec3>(gltf, position_accessor,
                     [&](glm::vec3 v, size_t index) {
@@ -401,7 +404,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
             // Load vertex normals
             auto normals = p.findAttribute("NORMAL");
             if (normals != p.attributes.end()) {
-                fastgltf::iterateAccessorWithIndex<glm::vec3>(gltf, gltf.accessors[(*normals).second],
+                fastgltf::iterateAccessorWithIndex<glm::vec3>(gltf, gltf.accessors[normals->accessorIndex],
                 [&](glm::vec3 v, size_t index) {
                     vertices[initial_vertex + index].normal = v;
                 });
@@ -410,7 +413,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
             // Load tangents
             auto tangents = p.findAttribute("TANGENT");
             if (tangents != p.attributes.end()) {
-                fastgltf::iterateAccessorWithIndex<glm::vec4>(gltf, gltf.accessors[(*tangents).second],
+                fastgltf::iterateAccessorWithIndex<glm::vec4>(gltf, gltf.accessors[tangents->accessorIndex],
                 [&](glm::vec4 t, size_t index) {
                     vertices[initial_vertex + index].tangent = t;
                 });
@@ -419,7 +422,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
             // Load UVs
             auto uv = p.findAttribute("TEXCOORD_0");
             if (uv != p.attributes.end()) {
-                fastgltf::iterateAccessorWithIndex<glm::vec2>(gltf, gltf.accessors[(*uv).second],
+                fastgltf::iterateAccessorWithIndex<glm::vec2>(gltf, gltf.accessors[uv->accessorIndex],
                 [&](glm::vec2 uv, size_t index) {
                     vertices[initial_vertex + index].uv_x = uv.x;
                     vertices[initial_vertex + index].uv_y = uv.y;
@@ -428,7 +431,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
 
             auto colors = p.findAttribute("COLOR_0");
             if (colors != p.attributes.end()) {
-                fastgltf::iterateAccessorWithIndex<glm::vec4>(gltf, gltf.accessors[(*colors).second],
+                fastgltf::iterateAccessorWithIndex<glm::vec4>(gltf, gltf.accessors[colors->accessorIndex],
                 [&](glm::vec4 c, size_t index) {
                     vertices[initial_vertex + index].color = c;
                 });
@@ -474,15 +477,15 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
         file.nodes[node.name.c_str()];
 
         std::visit(fastgltf::visitor {
-            [&](fastgltf::Node::TransformMatrix matrix) {
+            [&](fastgltf::math::fmat4x4 matrix) {
                 // Can't memcpy with -Werror because fastgltfs flat array based matrix
                 // doesn't implement a trivial copy-assignment to glm matrix
                 // memcpy(&new_node->local_transform, matrix.data(), sizeof(matrix));
-                int i = 0;
-                for (int x = 0; x < 4; x++) { 
+                //int i = 0;
+                for (int x = 0; x < 4; x++) {
                     for (int y = 0; 0 < 4; y++) {
-                        new_node->local_transform[x][y] = matrix[i];
-                        i++;
+                        new_node->local_transform[x][y] = matrix[x][y];
+                        //i++;
                     }
                 }
             },

@@ -229,15 +229,15 @@ void fmvk::Vulkan::Destroy() {
     }
 }
 
-void fmvk::Vulkan::ProcessImGuiEvent(SDL_Event* e)
+void fmvk::Vulkan::ProcessImGuiEvent(const SDL_Event* e)
 {
     ImGui_ImplSDL2_ProcessEvent(e);
 }
 
-GPUMeshBuffers fmvk::Vulkan::UploadMesh(std::vector<Vertex> vertices, std::vector<uint32_t> indices) {
+GPUMeshBuffers fmvk::Vulkan::UploadMesh(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices) {
     const size_t vertex_buffer_size = vertices.size() * sizeof(Vertex);
     const size_t index_buffer_size = indices.size() * sizeof(uint32_t);
-    GPUMeshBuffers new_surface;
+    GPUMeshBuffers new_surface = {};
 
     VkBufferUsageFlags vertex_buffer_flags = 
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
@@ -285,7 +285,7 @@ GPUMeshBuffers fmvk::Vulkan::UploadMesh(std::vector<Vertex> vertices, std::vecto
     return new_surface;
 }
 
-MeshID fmvk::Vulkan::AddMesh(const std::string &name, std::shared_ptr<LoadedGLTF> mesh)
+MeshID fmvk::Vulkan::AddMesh(const std::string &name, const std::shared_ptr<LoadedGLTF>& mesh)
 {
     auto id = ++this->next_id;
     this->loaded_meshes.emplace(id, mesh);
@@ -405,9 +405,15 @@ void fmvk::Vulkan::init_imgui() {
         .ImageCount = 3,
         .MSAASamples = VK_SAMPLE_COUNT_1_BIT,
         .UseDynamicRendering = true,
-        .ColorAttachmentFormat = this->_swapchain.image_format
+        .PipelineRenderingCreateInfo = {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR,
+            .pNext = nullptr,
+            .colorAttachmentCount = 1,
+            .pColorAttachmentFormats = &this->_swapchain.image_format
+        }
+        //
     };
-    ImGui_ImplVulkan_Init(&init_info, VK_NULL_HANDLE);
+    ImGui_ImplVulkan_Init(&init_info);
 
     immediate_submit([&](VkCommandBuffer cmd) { ImGui_ImplVulkan_CreateFontsTexture(); });
 
@@ -425,7 +431,7 @@ void fmvk::Vulkan::init_swapchain() {
 
 // Create render and depth buffer images
 void fmvk::Vulkan::init_render_targets() {
-    VkExtent3D render_image_extent = {this->_window_extent.width, this->_window_extent.height, 1};
+    VkExtent3D render_image_extent = { this->_window_extent.width, this->_window_extent.height, 1 };
     this->_draw_image.format = VK_FORMAT_R16G16B16A16_SFLOAT;
     this->_draw_image.extent = render_image_extent;
 
@@ -442,12 +448,22 @@ void fmvk::Vulkan::init_render_targets() {
     );
     VmaAllocationCreateInfo draw_image_allocinfo = {
         .usage = VMA_MEMORY_USAGE_GPU_ONLY,
-        .requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+        .requiredFlags = static_cast<VkMemoryPropertyFlags>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
     };
-    vmaCreateImage(this->_allocator, &draw_image_info, &draw_image_allocinfo,&this->_draw_image.image, &this->_draw_image.allocation, nullptr);
-    
-    
-    VkImageViewCreateInfo draw_view_info = VKInit::imageview_create_info(this->_draw_image.format, this->_draw_image.image,VK_IMAGE_ASPECT_COLOR_BIT);
+    vmaCreateImage(
+        this->_allocator,
+        &draw_image_info,
+        &draw_image_allocinfo,
+        &this->_draw_image.image,
+        &this->_draw_image.allocation,
+        nullptr
+    );
+
+    VkImageViewCreateInfo draw_view_info = VKInit::imageview_create_info(
+        this->_draw_image.format,
+        this->_draw_image.image,
+        VK_IMAGE_ASPECT_COLOR_BIT
+    );
     VK_CHECK(vkCreateImageView(this->_device, &draw_view_info, nullptr, &this->_draw_image.view));
 
     //
@@ -489,13 +505,13 @@ void fmvk::Vulkan::init_commands() {
         VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
     );
 
-    for (int i = 0; i < FRAME_OVERLAP; i++) {
-        VK_CHECK(vkCreateCommandPool(this->_device, &cmdp_info, nullptr, &this->_frames[i]._command_pool));
-        VkCommandBufferAllocateInfo alloc_info = VKInit::command_buffer_allocate_info(this->_frames[i]._command_pool, 1);
-        VK_CHECK(vkAllocateCommandBuffers(this->_device, &alloc_info, &this->_frames[i]._main_command_buffer));
+    for (auto & _frame : this->_frames) {
+        VK_CHECK(vkCreateCommandPool(this->_device, &cmdp_info, nullptr, &_frame._command_pool));
+        VkCommandBufferAllocateInfo alloc_info = VKInit::command_buffer_allocate_info(_frame._command_pool, 1);
+        VK_CHECK(vkAllocateCommandBuffers(this->_device, &alloc_info, &_frame._main_command_buffer));
     
         this->_deletion_queue.push_function([=, this]() {
-            vkDestroyCommandPool(this->_device, this->_frames[i]._command_pool, nullptr);
+            vkDestroyCommandPool(this->_device, _frame._command_pool, nullptr);
         });
     }
 
@@ -522,17 +538,17 @@ void fmvk::Vulkan::init_sync_structures() {
         .flags = 0
     };
 
-    for (int i = 0; i < FRAME_OVERLAP; i++) {
-        VK_CHECK(vkCreateFence(this->_device, &fence_create_info, nullptr, &this->_frames[i]._render_fence));
-        VK_CHECK(vkCreateSemaphore(this->_device, &semaphore_create_info, nullptr, &this->_frames[i]._swapchain_semaphore));
-        VK_CHECK(vkCreateSemaphore(this->_device, &semaphore_create_info, nullptr, &this->_frames[i]._render_semaphore));
+    for (auto & _frame : this->_frames) {
+        VK_CHECK(vkCreateFence(this->_device, &fence_create_info, nullptr, &_frame._render_fence));
+        VK_CHECK(vkCreateSemaphore(this->_device, &semaphore_create_info, nullptr, &_frame._swapchain_semaphore));
+        VK_CHECK(vkCreateSemaphore(this->_device, &semaphore_create_info, nullptr, &_frame._render_semaphore));
     }
     
-    for (int i = 0; i < FRAME_OVERLAP; i++) {
+    for (const auto & _frame : this->_frames) {
         this->_deletion_queue.push_function([=, this]() {
-            vkDestroySemaphore(this->_device, this->_frames[i]._render_semaphore, nullptr);
-            vkDestroySemaphore(this->_device, this->_frames[i]._swapchain_semaphore, nullptr);
-            vkDestroyFence(this->_device, this->_frames[i]._render_fence, nullptr);
+            vkDestroySemaphore(this->_device, _frame._render_semaphore, nullptr);
+            vkDestroySemaphore(this->_device, _frame._swapchain_semaphore, nullptr);
+            vkDestroyFence(this->_device, _frame._render_fence, nullptr);
         });
     }
 
@@ -542,11 +558,11 @@ void fmvk::Vulkan::init_sync_structures() {
     });
 }
 
-void fmvk::Vulkan::immediate_submit(std::function<void(VkCommandBuffer cmd)> &&function) {
+void fmvk::Vulkan::immediate_submit(std::function<void(VkCommandBuffer cmd)> &&function) const {
     VK_CHECK(vkResetFences(this->_device, 1, &_immediate_fence));
     VK_CHECK(vkResetCommandBuffer(this->_immediate_command_buffer, 0));
 
-    VkCommandBuffer cmd = this->_immediate_command_buffer;
+    auto cmd = this->_immediate_command_buffer;
     VkCommandBufferBeginInfo cmd_begin_info = VKInit::command_buffer_begin_info(
         VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
     );
@@ -563,7 +579,7 @@ void fmvk::Vulkan::immediate_submit(std::function<void(VkCommandBuffer cmd)> &&f
 }
 
 void fmvk::Vulkan::init_pipelines() {
-    fmvk::ComputePipeline background_pipeline;
+    fmvk::ComputePipeline background_pipeline = {};
     background_pipeline.Init(this->_device, "bg_gradient", this->_draw_image_descriptor_layout);
     this->compute_pipelines["background"] = background_pipeline;
 
@@ -615,10 +631,9 @@ void fmvk::Vulkan::update_scene(fmCamera camera, std::vector<RenderSceneObj> sce
     stats.scene_update_time = elapsed.count() / 1000.f;
 }
 
-void fmvk::Vulkan::draw_imgui(VkCommandBuffer cmd, VkImageView image_view)
-{
+void fmvk::Vulkan::draw_imgui(VkCommandBuffer cmd, const VkImageView image_view) const {
     ImGui_ImplVulkan_NewFrame();
-    ImGui_ImplSDL2_NewFrame(this->_window);
+    ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
     // Setup stats window
@@ -717,7 +732,7 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
     });
 
     // Write the buffer
-    GPUSceneData* scene_uniform_data = (GPUSceneData*) gpu_scene_data_buffer.allocation->GetMappedData();
+    auto scene_uniform_data = (GPUSceneData*) gpu_scene_data_buffer.allocation->GetMappedData();
     *scene_uniform_data = this->scene_data;
 
     // Create a descriptor set that binds the buffer and update it
@@ -864,8 +879,7 @@ void fmvk::Vulkan::init_descriptors() {
     }
 }
 
-AllocatedImage fmvk::Vulkan::create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped)
-{
+AllocatedImage fmvk::Vulkan::create_image(const VkExtent3D size, const VkFormat format, const VkImageUsageFlags usage, const bool mipmapped) const {
     AllocatedImage new_image = {
         .extent = size,
         .format = format
@@ -925,7 +939,7 @@ AllocatedImage fmvk::Vulkan::create_image(void *data, VkExtent3D size, VkFormat 
         );
 
         if (mipmapped) {
-            VkExtent2D mip_extent = VkExtent2D { new_image.extent.width, new_image.extent.height};
+            auto mip_extent = VkExtent2D { new_image.extent.width, new_image.extent.height};
             VKUtil::generate_mipmaps(cmd, new_image.image, mip_extent);
         } else {
             VKUtil::transition_image(cmd, new_image.image, 
@@ -939,8 +953,7 @@ AllocatedImage fmvk::Vulkan::create_image(void *data, VkExtent3D size, VkFormat 
     return new_image;
 }
 
-void fmvk::Vulkan::destroy_image(const AllocatedImage &image)
-{
+void fmvk::Vulkan::destroy_image(const AllocatedImage &image) const {
     vkDestroyImageView(this->_device, image.view, nullptr);
     vmaDestroyImage(this->_allocator, image.image, image.allocation);
 }
@@ -1031,7 +1044,7 @@ void fmvk::Vulkan::init_default_data()
         this->_allocator
     );
 
-    GLTFMetallic_Roughness::MaterialConstants* scene_uniform_data = (GLTFMetallic_Roughness::MaterialConstants*) material_constants.allocation->GetMappedData();
+    auto scene_uniform_data = (GLTFMetallic_Roughness::MaterialConstants*) material_constants.allocation->GetMappedData();
     scene_uniform_data->color_factors = glm::vec4 { 1.0f, 1.0f, 1.0f, 1.0f};
     scene_uniform_data->metal_roughness_factors = glm::vec4 { 1.0f, 0.5f, 0.0f, 0.0f };
 
@@ -1074,7 +1087,7 @@ void MeshNode::Draw(const glm::mat4 &top_matrix, DrawContext &ctx)
     Node::Draw(top_matrix, ctx);
 }
 
-void fmvk::GLTFMetallic_Roughness::build_pipelines(fmvk::Vulkan* renderer)
+void fmvk::GLTFMetallic_Roughness::build_pipelines(const fmvk::Vulkan* renderer)
 {
     // Shaders
     // -------------------------------------------------------------------------

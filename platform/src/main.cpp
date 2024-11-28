@@ -30,12 +30,12 @@ struct GameSceneObject {
     MeshID mesh_id;
     Transform transform;
 
-    bool is_light;
+    bool is_light = false;
 
     LightID light_id;
     LightType light_type;
-    float light_intensity;
-    float light_range;
+    float light_intensity = 0.0f;
+    float light_range = 0.0f;
     glm::vec3 light_direction;
     glm::vec3 light_color;
 
@@ -265,8 +265,13 @@ int RunApp()
 
             case SDL_WINDOWEVENT:
                 if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
-                    resize_requested = true;
-                    SDL_GetWindowSize(display.window, &WIDTH, &HEIGHT);
+                    int new_width, new_height = 0;
+                    SDL_GetWindowSize(display.window, &new_width, &new_height);
+                    if (new_width != WIDTH || new_height != HEIGHT) {
+                        WIDTH = new_width;
+                        HEIGHT = new_height;
+                        resize_requested = true;
+                    }
                 }
                 break;
             
@@ -278,7 +283,7 @@ int RunApp()
         }
 
         if (resize_requested) {
-            firemountain.Resize((uint32_t)WIDTH, (uint32_t)HEIGHT);
+            firemountain.Resize(static_cast<uint32_t>(WIDTH), static_cast<uint32_t>(HEIGHT));
             resize_requested = false;
         }
 

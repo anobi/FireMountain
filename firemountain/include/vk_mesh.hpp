@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <memory>
 #include <span>
 #include <glm/vec3.hpp>
 #include "vk_types.hpp"

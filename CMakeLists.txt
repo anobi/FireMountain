@@ -14,12 +14,12 @@ include(FetchContent)
 FetchContent_Declare(
   vk-bootstrap
   GIT_REPOSITORY https://github.com/charles-lunarg/vk-bootstrap.git
-  GIT_TAG        v1.3.295
+  GIT_TAG        v1.3.302
 )
 FetchContent_Declare(
   VulkanMemoryAllocator
   GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
-  GIT_TAG        5e43c795daf43dd09398d8307212e85025215052  # Master
+  GIT_TAG        v3.1.0
   SYSTEM
 )
 FetchContent_Declare(
@@ -30,7 +30,7 @@ FetchContent_Declare(
 FetchContent_Declare(
   fastgltf
   GIT_REPOSITORY https://github.com/spnda/fastgltf.git
-  GIT_TAG        73fa4209b883f4614fda2f516a53ebc1c53aec70
+  GIT_TAG        v0.8.0
 )
 FetchContent_Declare(
   glm
@@ -40,12 +40,12 @@ FetchContent_Declare(
 FetchContent_Declare(
   fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG        10.2.1
+  GIT_TAG        11.0.2
 )
 FetchContent_Declare(
   imgui
   GIT_REPOSITORY https://github.com/ocornut/imgui.git
-  GIT_TAG        v1.90.1
+  GIT_TAG        v1.91.5
 )
 FetchContent_MakeAvailable(
   vk-bootstrap

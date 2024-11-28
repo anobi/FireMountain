@@ -18,7 +18,7 @@
 #include "fm_utils.hpp"
 #include "fm_renderable.hpp"
 
-class SDL_Window;
+struct SDL_Window;
 union SDL_Event;
 
 class LoadedGLTF;
@@ -27,7 +27,7 @@ class LoadedGLTF;
 struct MeshNode : public Node {
     std::shared_ptr<MeshAsset> mesh;
     
-    virtual void Draw(const glm::mat4& top_matrix, DrawContext& ctx) override;
+    void Draw(const glm::mat4& top_matrix, DrawContext& ctx) override;
 };
 
 struct EngineStats {
@@ -84,7 +84,7 @@ namespace fmvk {
 
         DescriptorWriter writer;
 
-        void build_pipelines(fmvk::Vulkan* renderer);
+        void build_pipelines(const fmvk::Vulkan* renderer);
         void clear_resources(VkDevice device);
 
         MaterialInstance write_material(
@@ -111,16 +111,16 @@ namespace fmvk {
 
     class Vulkan {
     public:
-        Vulkan() {};
-        ~Vulkan() {};
+        Vulkan() = default;
+        ~Vulkan() = default;
 
-        int Init(const uint32_t width, const uint32_t height, SDL_Window* window);
+        int Init(uint32_t width, uint32_t height, SDL_Window* window);
         void Draw(RenderObject* first_render_object, int render_object_count);
-        void Resize(const uint32_t width, const uint32_t height);
+        void Resize(uint32_t width, uint32_t height);
         void Destroy();
-        void ProcessImGuiEvent(SDL_Event* e);
+        void ProcessImGuiEvent(const SDL_Event* e);
         
-        GPUMeshBuffers UploadMesh(std::vector<Vertex> vertices, std::vector<uint32_t> indices);
+        GPUMeshBuffers UploadMesh(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
 
         void CreateMaterial();
         void CreatePipeline(const char* shader_name);
@@ -132,39 +132,39 @@ namespace fmvk {
         std::unordered_map<std::string, fmvk::ComputePipeline> compute_pipelines;
 
         unsigned int next_id = 0;
-        MeshID AddMesh(const std::string& name, std::shared_ptr<LoadedGLTF> mesh);
+        MeshID AddMesh(const std::string& name, const std::shared_ptr<LoadedGLTF>& mesh);
         std::unordered_map<unsigned int, std::shared_ptr<LoadedGLTF>> loaded_meshes;
 
         LightID AddLight(const std::string& name);
         std::vector<unsigned int> lights;
         
-        VkDevice _device;  
-        VmaAllocator _allocator;
-        VkDescriptorSetLayout _gpu_scene_data_descriptor_layout;
+        VkDevice _device{};
+        VmaAllocator _allocator{};
+        VkDescriptorSetLayout _gpu_scene_data_descriptor_layout{};
 
-        MaterialInstance default_data;
-        AllocatedImage _texture_missing_error_image;
-        AllocatedImage _default_texture_white;
-        AllocatedImage _default_texture_black;
-        AllocatedImage _default_texture_grey;
+        MaterialInstance default_data{};
+        AllocatedImage _texture_missing_error_image{};
+        AllocatedImage _default_texture_white{};
+        AllocatedImage _default_texture_black{};
+        AllocatedImage _default_texture_grey{};
 
-        VkSampler _default_sampler_linear;
-        VkSampler _default_sampler_nearest;
+        VkSampler _default_sampler_linear{};
+        VkSampler _default_sampler_nearest{};
 
         GLTFMetallic_Roughness metal_roughness_material;
 
         // New stuff, where these go?
         // fmvk::Image::AllocatedImage create_image(void *data, VkDevice device, VmaAllocator allocator, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
-        AllocatedImage create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
+        AllocatedImage create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false) const;
         AllocatedImage create_image(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
-        void destroy_image(const AllocatedImage& image);
+        void destroy_image(const AllocatedImage& image) const;
 
 
-        EngineStats stats;
+        EngineStats stats {};
 
         // These should be private, but the current gltf pipeline build prevents it
-        AllocatedImage _draw_image;
-        AllocatedImage _depth_image;
+        AllocatedImage _draw_image {};
+        AllocatedImage _depth_image {};
         void init_render_targets();
 
     private:
@@ -175,15 +175,15 @@ namespace fmvk {
             .color = {{0.02f, 0.02f, 0.02f, 1.0f}}
         };
 
-        SDL_Window* _window;
-        VkExtent2D _window_extent;
-        VkExtent2D _requested_extent;
-        VkInstance _instance;
-        VkPhysicalDevice _gpu;
+        SDL_Window* _window {};
+        VkExtent2D _window_extent {};
+        VkExtent2D _requested_extent {};
+        VkInstance _instance {};
+        VkPhysicalDevice _gpu {};
         // VkDevice _device;
 
-        VkSurfaceKHR _surface;
-        VkDebugUtilsMessengerEXT _debug_messenger;
+        VkSurfaceKHR _surface {};
+        VkDebugUtilsMessengerEXT _debug_messenger {};
         DeletionQueue _deletion_queue;
 
         void init_vulkan(SDL_Window *window);
@@ -191,11 +191,11 @@ namespace fmvk {
         fmvk::Swapchain _swapchain;
         void init_swapchain();
 
-        VkQueue _graphics_queue;
-        uint32_t _graphics_queue_family;
+        VkQueue _graphics_queue {};
+        uint32_t _graphics_queue_family {};
 
-        VkCommandPool _command_pool;
-        VkCommandBuffer _command_buffer;
+        VkCommandPool _command_pool {};
+        VkCommandBuffer _command_buffer {};
         void init_commands();
 
         FrameData _frames[FRAME_OVERLAP];
@@ -203,10 +203,10 @@ namespace fmvk {
         void init_sync_structures();
 
         // Immediate submit structures
-        VkFence _immediate_fence;
-        VkCommandBuffer _immediate_command_buffer;
-        VkCommandPool _immediate_command_pool;
-        void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
+        VkFence _immediate_fence {};
+        VkCommandBuffer _immediate_command_buffer {};
+        VkCommandPool _immediate_command_pool {};
+        void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function) const;
 
         // Pipelines
         void init_pipelines();
@@ -214,7 +214,7 @@ namespace fmvk {
         // Draw resources
         // AllocatedImage _draw_image;
         // AllocatedImage _depth_image;
-        VkExtent2D _draw_extent;
+        VkExtent2D _draw_extent {};
         float _render_scale = 1.0f;
 
         // TODO: move these to FM
@@ -227,7 +227,7 @@ namespace fmvk {
         // End of TODO
  
         void init_imgui();
-        void draw_imgui(VkCommandBuffer cmd, VkImageView image_view);
+        void draw_imgui(VkCommandBuffer cmd, VkImageView image_view) const;
         void draw_background(VkCommandBuffer cmd);
         void draw_geometry(VkCommandBuffer cmd, RenderObject* render_objects, uint32_t render_object_count);
 
@@ -235,8 +235,8 @@ namespace fmvk {
 
         // Descriptor sets
         DescriptorAllocatorGrowable global_descriptor_allocator;
-        VkDescriptorSet _draw_image_descriptors;
-        VkDescriptorSetLayout _draw_image_descriptor_layout;
+        VkDescriptorSet _draw_image_descriptors{};
+        VkDescriptorSetLayout _draw_image_descriptor_layout{};
         void init_descriptors();
 
         GPUSceneData scene_data;
