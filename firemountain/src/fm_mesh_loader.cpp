@@ -63,7 +63,7 @@ std::optional<AllocatedImage> load_image(fmvk::Vulkan* engine, fastgltf::Asset& 
 
             const std::string path(file_path.uri.path().begin(), file_path.uri.path().end());
             auto full_path = working_dir / file_path.uri.fspath();
-            fmt::println("* Loading image: {}", full_path.string());
+            // fmt::println("* Loading image: {}", full_path.string());
             unsigned char* data = stbi_load(full_path.c_str(), &width, &height, &nr_channels, 4);
             if (data) {
                 VkExtent3D image_size = {
