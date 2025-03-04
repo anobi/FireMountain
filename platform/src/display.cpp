@@ -1,16 +1,17 @@
 #include <assert.h>
 #include <cstdio>
+#include <SDL3/SDL_video.h>
 #include "display.hpp"
+
+#include <cstdlib>
 
 
 int Display::Init(const int width, const int height) {
     this->window = SDL_CreateWindow(
         "FireMountain",
-        SDL_WINDOWPOS_CENTERED,
-        SDL_WINDOWPOS_CENTERED,
         width,
         height,
-        SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
+        SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE
     );
 
     if (this->window == NULL) {

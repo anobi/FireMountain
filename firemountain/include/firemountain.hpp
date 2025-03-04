@@ -1,6 +1,6 @@
 #pragma once
 
-#include <SDL2/SDL.h>
+#include <SDL3/SDL_events.h>
 #include <filesystem>
 
 #include "fm_utils.hpp"
@@ -17,9 +17,9 @@ public:
     Firemountain() {};
     ~Firemountain() {};
 
-    int Init(const int width, const int height, SDL_Window* window);
-    void Frame(fmCamera camera, std::vector<RenderSceneObj> scene);
-    void Resize(const uint32_t width, const uint32_t height);
+    int Init(int width, int height, SDL_Window* window);
+    void Frame(const fmCamera* camera, std::vector<RenderSceneObj> scene);
+    void Resize(uint32_t width, uint32_t height);
     void Destroy();
 
     void ProcessImGuiEvent(SDL_Event* e);

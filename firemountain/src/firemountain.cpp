@@ -14,7 +14,7 @@ int Firemountain::Init(const int width, const int height, SDL_Window* window) {
     return 0;
 }
 
-void Firemountain::Frame(fmCamera camera, std::vector<RenderSceneObj> scene) 
+void Firemountain::Frame(const fmCamera* camera, std::vector<RenderSceneObj> scene)
 {
     this->vulkan.update_scene(camera, scene);
     this->vulkan.Draw(this->_renderables.data(), this->_renderables.size());

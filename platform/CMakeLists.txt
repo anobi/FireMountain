@@ -9,9 +9,8 @@ else()
     add_executable(${PROJECT_NAME} src/main.cpp)
 endif()
 
-find_package(SDL2 REQUIRED)
+find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3)
 
-include_directories(${SDL2_INCLUDE_DIRS})
 include_directories(${CMAKE_BINARY_DIR}/firemountain/include/)
 
 target_sources(${PROJECT_NAME}
@@ -24,9 +23,9 @@ target_include_directories(${PROJECT_NAME}
     ${CMAKE_CURRENT_SOURCE_DIR}/include/
 )
 
-target_link_libraries(${PROJECT_NAME} 
-  PUBLIC 
-    ${SDL2_LIBRARIES}
+target_link_libraries(${PROJECT_NAME}
+  PRIVATE
+    SDL3::SDL3
     glm
     LibFireMountain
 )

@@ -1,6 +1,12 @@
 #include <fstream>
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_vulkan.h>
+
+#include "imgui.h"
+#include "imgui_impl_sdl3.h"
+#include "imgui_impl_vulkan.h"
+
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
+#include <SDL3/SDL_events.h>
 #include <VkBootstrap.h>
 
 #define VMA_IMPLEMENTATION
@@ -8,10 +14,6 @@
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
-
-#include "imgui.h"
-#include "imgui_impl_sdl2.h"
-#include "imgui_impl_vulkan.h"
 
 #include "vk_renderer.hpp"
 #include "vk_init.hpp"
@@ -233,7 +235,7 @@ void fmvk::Vulkan::Destroy() {
 
 void fmvk::Vulkan::ProcessImGuiEvent(const SDL_Event* e)
 {
-    ImGui_ImplSDL2_ProcessEvent(e);
+    ImGui_ImplSDL3_ProcessEvent(e);
 }
 
 GPUMeshBuffers fmvk::Vulkan::UploadMesh(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices) {
@@ -317,9 +319,8 @@ void fmvk::Vulkan::init_vulkan(SDL_Window *window) {
     this->_instance = vkb_instance.instance;
     this->_debug_messenger = vkb_instance.debug_messenger;
 
-
     // TODO: How to do this without including SDL headers in this project?
-    SDL_Vulkan_CreateSurface(this->_window, this->_instance, &this->_surface);
+    SDL_Vulkan_CreateSurface(this->_window, this->_instance, nullptr, &this->_surface);
 
     // Generic device features
     VkPhysicalDeviceFeatures device_features = {
@@ -363,6 +364,8 @@ void fmvk::Vulkan::init_vulkan(SDL_Window *window) {
         .instance = this->_instance
     };
     vmaCreateAllocator(&allocator_info, &this->_allocator);
+
+
 }
 
 
@@ -396,7 +399,7 @@ void fmvk::Vulkan::init_imgui() {
     // 2: Init library
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGui_ImplSDL2_InitForVulkan(this->_window);
+    ImGui_ImplSDL3_InitForVulkan(this->_window);
     ImGui_ImplVulkan_InitInfo init_info = {
         .Instance = this->_instance,
         .PhysicalDevice = this->_gpu,
@@ -600,15 +603,15 @@ void fmvk::Vulkan::init_pipelines() {
 }
 
 // TODO: Move to Firemountain actual
-void fmvk::Vulkan::update_scene(fmCamera camera, std::vector<RenderSceneObj> scene)
+void fmvk::Vulkan::update_scene(const fmCamera* camera, std::vector<RenderSceneObj> scene)
 {
     auto start = std::chrono::system_clock::now();
 
     this->_main_draw_context.opaque_surfaces.clear();
 
-    this->scene_data.camera_position = camera.position;
-    this->scene_data.view = camera.view;
-    this->scene_data.projection = camera.projection;
+    this->scene_data.camera_position = camera->position;
+    this->scene_data.view = camera->view;
+    this->scene_data.projection = camera->projection;
 
     size_t scene_light_idx = 0;
     for (auto o : scene) {
@@ -635,7 +638,7 @@ void fmvk::Vulkan::update_scene(fmCamera camera, std::vector<RenderSceneObj> sce
 
 void fmvk::Vulkan::draw_imgui(VkCommandBuffer cmd, const VkImageView image_view) const {
     ImGui_ImplVulkan_NewFrame();
-    ImGui_ImplSDL2_NewFrame();
+    ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
     // Setup stats window

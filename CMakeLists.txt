@@ -14,12 +14,12 @@ include(FetchContent)
 FetchContent_Declare(
   vk-bootstrap
   GIT_REPOSITORY https://github.com/charles-lunarg/vk-bootstrap.git
-  GIT_TAG        v1.3.302
+  GIT_TAG        v1.4.307
 )
 FetchContent_Declare(
   VulkanMemoryAllocator
   GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
-  GIT_TAG        v3.1.0
+  GIT_TAG        v3.2.1
   SYSTEM
 )
 FetchContent_Declare(
@@ -45,7 +45,7 @@ FetchContent_Declare(
 FetchContent_Declare(
   imgui
   GIT_REPOSITORY https://github.com/ocornut/imgui.git
-  GIT_TAG        v1.91.5
+  GIT_TAG        v1.91.8
 )
 FetchContent_MakeAvailable(
   vk-bootstrap
@@ -60,22 +60,24 @@ FetchContent_MakeAvailable(
 # ---------------------------------------------------------------
 # Build imgui as library
 # ---------------------------------------------------------------
-find_package(SDL2 REQUIRED)
+find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3)
 add_library(imgui STATIC
   "_deps/imgui-src/imgui.cpp"
   "_deps/imgui-src/imgui_draw.cpp"
   "_deps/imgui-src/imgui_demo.cpp"
   "_deps/imgui-src/imgui_tables.cpp"
   "_deps/imgui-src/imgui_widgets.cpp"
-  "_deps/imgui-src/backends/imgui_impl_sdl2.cpp"
+  "_deps/imgui-src/backends/imgui_impl_sdl3.cpp"
   "_deps/imgui-src/backends/imgui_impl_vulkan.cpp"
 )
 set(IMGUI_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/_deps/imgui-src)
 set(IMGUI_BACKEND_DIR ${CMAKE_CURRENT_SOURCE_DIR}/_deps/imgui-src/backends)
 
+target_link_libraries(imgui
+    SDL3::SDL3
+)
 target_include_directories(imgui
   PUBLIC
-    ${SDL2_INCLUDE_DIRS}
     ${IMGUI_INCLUDE_DIR}
     ${IMGUI_INCLUDE_DIR}/backends
 )

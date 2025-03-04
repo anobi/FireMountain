@@ -9,8 +9,6 @@
 #include "vk_types.hpp"
 
 #include "vk_mesh.hpp"
-#include "vk_buffer.hpp"
-#include "vk_image.hpp"
 #include "vk_pipeline.hpp"
 #include "vk_swapchain.hpp"
 #include "vk_descriptors.hpp"
@@ -221,7 +219,7 @@ namespace fmvk {
         // ----------------------
     public:
         DrawContext _main_draw_context;
-        void update_scene(fmCamera camera, std::vector<RenderSceneObj> scene);
+        void update_scene(const fmCamera* camera, std::vector<RenderSceneObj> scene);
     private:
         // ----------------------
         // End of TODO
