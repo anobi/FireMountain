@@ -9,7 +9,7 @@ else()
     add_executable(${PROJECT_NAME} src/main.cpp)
 endif()
 
-find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3)
+#find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3)
 
 include_directories(${CMAKE_BINARY_DIR}/firemountain/include/)
 

@@ -19,7 +19,7 @@
 struct SDL_Window;
 union SDL_Event;
 
-class LoadedGLTF;
+struct LoadedGLTF;
 
 
 struct MeshNode : public Node {

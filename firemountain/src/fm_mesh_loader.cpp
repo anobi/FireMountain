@@ -17,7 +17,7 @@
 
 
 const int FACE_VERTICES = 3;
-constexpr bool OVERRIDE_COLORS = true;
+// constexpr bool OVERRIDE_COLORS = true;
 
 
 VkFilter extract_filter(fastgltf::Filter filter) {

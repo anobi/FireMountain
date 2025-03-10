@@ -5,10 +5,6 @@ set(CMAKE_CXX_STANDARD 23)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-add_subdirectory("firemountain")
-add_subdirectory("shaders")
-add_subdirectory("platform")
-
 include(FetchContent)
 
 FetchContent_Declare(
@@ -21,6 +17,11 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
   GIT_TAG        v3.2.1
   SYSTEM
+)
+FetchContent_Declare(
+    SDL3
+    GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
+    GIT_TAG        release-3.2.8
 )
 FetchContent_Declare(
   tinyobjloader
@@ -48,6 +49,7 @@ FetchContent_Declare(
   GIT_TAG        v1.91.8
 )
 FetchContent_MakeAvailable(
+  SDL3
   vk-bootstrap
   VulkanMemoryAllocator
   tinyobjloader
@@ -57,10 +59,11 @@ FetchContent_MakeAvailable(
   imgui
 )
 
+find_package(Vulkan REQUIRED)
+
 # ---------------------------------------------------------------
 # Build imgui as library
 # ---------------------------------------------------------------
-find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3)
 add_library(imgui STATIC
   "_deps/imgui-src/imgui.cpp"
   "_deps/imgui-src/imgui_draw.cpp"
@@ -74,8 +77,14 @@ set(IMGUI_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/_deps/imgui-src)
 set(IMGUI_BACKEND_DIR ${CMAKE_CURRENT_SOURCE_DIR}/_deps/imgui-src/backends)
 
 target_link_libraries(imgui
+    Vulkan::Vulkan
     SDL3::SDL3
 )
+
+add_subdirectory("firemountain")
+add_subdirectory("shaders")
+add_subdirectory("platform")
+
 target_include_directories(imgui
   PUBLIC
     ${IMGUI_INCLUDE_DIR}
