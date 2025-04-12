@@ -185,7 +185,7 @@ int RunApp()
         }
     }
 
-    int tick = 0;
+    float tick = 0;
     bool running = true;
     bool resize_requested = false;
     SDL_Event event = {};
@@ -199,11 +199,11 @@ int RunApp()
     SDL_SetWindowMouseGrab(display.window, capture_mouse);
 
     while(running) {
-        tick += 1;
+        tick += 1.0;
 
         // Mouse motion accumulators
-        int mouse_pitch_acc = 0.0f;
-        int mouse_yaw_acc = 0.0f;
+        float mouse_pitch_acc = 0.0f;
+        float mouse_yaw_acc = 0.0f;
 
         while(SDL_PollEvent(&event)) {
             switch (event.type)
@@ -296,16 +296,15 @@ int RunApp()
         // Rotate and bob the froge
         game_scene["froge"].transform.position.y += 0.0025f * sin(0.02f * tick);
         game_scene["froge"].transform.rotation = glm::angleAxis(
-            glm::radians(0.5f * tick),  // Rotation speed
-            glm::vec3(0, 1, 0)          // Rotate along Y-axis
+            glm::radians(0.5f * tick),              // Rotation speed
+            glm::normalize(glm::vec3(0, 1, 0))     // Rotate along Y-axis
         );
         game_scene["froge"].dirty = true;
 
         // Rotate cube
-        // TODO: Hmm this skews the cube for some reason?
         game_scene["cube"].transform.rotation = glm::angleAxis(
             glm::radians(0.4f * tick),
-            glm::vec3(1, 1, 0)
+            glm::normalize(glm::vec3(-0.8, 0.1, -0.4)) 
         );
         game_scene["cube"].dirty = true;
 
