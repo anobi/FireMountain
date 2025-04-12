@@ -29,14 +29,14 @@ struct Transform {
 };
 
 struct GameSceneObject {
-    std::string mesh_file;
+    const char* mesh_file;
     MeshID mesh_id;
     Transform transform;
 
     bool is_light = false;
 
-    LightID light_id;
-    LightType light_type;
+    LightID light_id = {};
+    LightType light_type = {};
     float light_intensity = 0.0f;
     float light_range = 0.0f;
     glm::vec3 light_direction;
@@ -181,7 +181,7 @@ int RunApp()
         if (obj.light_type != LightType::None) {
             obj.light_id = firemountain.AddLight(key);
         } else {
-            obj.mesh_id = firemountain.AddMesh(key, obj.mesh_file.c_str());
+            obj.mesh_id = firemountain.AddMesh(key, obj.mesh_file);
         }
     }
 

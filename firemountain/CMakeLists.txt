@@ -9,7 +9,7 @@ add_library(${PROJECT_NAME} STATIC)
 # External dependencies
 # ---------------------------------------------------------------
 find_package(Vulkan REQUIRED)
-find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3)
+#find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3)
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC GLM_FORCE_DEPTH_ZERO_TO_ONE)
 
@@ -26,6 +26,7 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 include_directories(
+  ${Vulkan_INCLUDE_DIRS}
   ${IMGUI_INCLUDE_DIR}
 )
 

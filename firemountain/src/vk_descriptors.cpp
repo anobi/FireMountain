@@ -121,8 +121,8 @@ VkDescriptorPool DescriptorAllocatorGrowable::get_pool(VkDevice device)
     else {
         new_pool = create_pool(device, this->sets_per_pool, this->ratios);
         this->sets_per_pool = this->sets_per_pool * 1.5;
-        if (this->sets_per_pool > 4092) {
-            this->sets_per_pool = 4092;
+        if (this->sets_per_pool > MAX_SETS_PER_POOL) {
+            this->sets_per_pool = MAX_SETS_PER_POOL;
         }
     }
 
