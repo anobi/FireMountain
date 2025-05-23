@@ -7,7 +7,7 @@
 #include "vk_mem_alloc.h"
 
 #include "vk_types.hpp"
-
+#include "vk_image.hpp"
 #include "vk_mesh.hpp"
 #include "vk_pipeline.hpp"
 #include "vk_swapchain.hpp"
@@ -64,16 +64,16 @@ namespace fmvk {
 
         // TODO: These need to be cleaned on exit
         struct MaterialResources {
-            AllocatedImage color_image;
+            fmvk::Image::AllocatedImage color_image;
             VkSampler color_sampler;    
 
-            AllocatedImage metal_roughness_image;
+            fmvk::Image::AllocatedImage metal_roughness_image;
             VkSampler metal_roughness_sampler;
 
-            AllocatedImage normal_image;
+            fmvk::Image::AllocatedImage normal_image;
             VkSampler normal_sampler;
 
-            AllocatedImage emissive_image;
+            fmvk::Image::AllocatedImage emissive_image;
             VkSampler emissive_sampler;
 
             VkBuffer data_buffer;
@@ -141,10 +141,10 @@ namespace fmvk {
         VkDescriptorSetLayout _gpu_scene_data_descriptor_layout{};
 
         MaterialInstance default_data{};
-        AllocatedImage _texture_missing_error_image{};
-        AllocatedImage _default_texture_white{};
-        AllocatedImage _default_texture_black{};
-        AllocatedImage _default_texture_grey{};
+        fmvk::Image::AllocatedImage _texture_missing_error_image{};
+        fmvk::Image::AllocatedImage _default_texture_white{};
+        fmvk::Image::AllocatedImage _default_texture_black{};
+        fmvk::Image::AllocatedImage _default_texture_grey{};
 
         VkSampler _default_sampler_linear{};
         VkSampler _default_sampler_nearest{};
@@ -153,16 +153,13 @@ namespace fmvk {
 
         // New stuff, where these go?
         // fmvk::Image::AllocatedImage create_image(void *data, VkDevice device, VmaAllocator allocator, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
-        AllocatedImage create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false) const;
-        AllocatedImage create_image(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
-        void destroy_image(const AllocatedImage& image) const;
-
+        fmvk::Image::AllocatedImage create_image(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
 
         EngineStats stats {};
 
         // These should be private, but the current gltf pipeline build prevents it
-        AllocatedImage _draw_image {};
-        AllocatedImage _depth_image {};
+        fmvk::Image::AllocatedImage _draw_image {};
+        fmvk::Image::AllocatedImage _depth_image {};
         void init_render_targets();
 
     private:

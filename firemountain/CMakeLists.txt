@@ -41,7 +41,7 @@ target_sources(${PROJECT_NAME}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/fm_mesh_loader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_buffer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_images.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_image.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_image.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_init.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_renderer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_swapchain.cpp

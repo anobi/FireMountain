@@ -17,13 +17,13 @@
 		}                                                                   \
 	} while (0)
 
-struct AllocatedImage {
+/*struct AllocatedImage {
     VkImage image;
     VkImageView view;
     VmaAllocation allocation;
     VkExtent3D extent;
     VkFormat format;
-};
+};*/
 
 struct ComputePushConstants {
     glm::vec4 data_1;
@@ -43,6 +43,20 @@ enum LightType {
     Point,
     Spot,
     Area
+};
+
+// Indices for bindless drawing
+struct GPUDrawData {
+    uint material_index;
+    uint transform_offset;
+    uint vertex_buffer_offset;
+    uint padding0;
+};
+
+struct GPUMaterialData {
+    uint albedo_texture_idx;
+    uint normal_texture_idx;
+    uint roughness_texture_idx;
 };
 
 struct GPULightData {
@@ -101,6 +115,7 @@ struct fmCamera {
     glm::mat4 view;
     glm::mat4 projection;
 };
+
 
 struct RenderSceneObj {
     MeshID mesh_id;

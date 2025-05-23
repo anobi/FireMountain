@@ -102,8 +102,8 @@ void fmvk::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
         this->_swapchain.Create(this->_window_extent, this->_surface);
 
         // Re-create draw and depth targets with new extent
-        destroy_image(this->_draw_image);
-        destroy_image(this->_depth_image);
+        destroy_image(this->_draw_image, this->_device, this->_allocator);
+        destroy_image(this->_depth_image, this->_device, this->_allocator);
         init_render_targets();
 
         // Update draw image descriptors
@@ -222,8 +222,8 @@ void fmvk::Vulkan::Destroy() {
 
         this->_deletion_queue.flush();
 
-        destroy_image(this->_draw_image);
-        destroy_image(this->_depth_image);
+        destroy_image(this->_draw_image, this->_device, this->_allocator);
+        destroy_image(this->_depth_image, this->_device, this->_allocator);
         this->_swapchain.Destroy(this->_device);
         vkDestroySurfaceKHR(this->_instance, this->_surface, nullptr);
         vmaDestroyAllocator(this->_allocator);
@@ -730,6 +730,8 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
     * Scene Data buffer
     */
 
+    // TODO: Bindless -
+
     // Allocate uniform buffer for the scene data
     fmvk::Buffer::AllocatedBuffer gpu_scene_data_buffer = fmvk::Buffer::create_buffer(sizeof(GPUSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, this->_allocator);
     get_current_frame()._deletion_queue.push_function([=, this]() {
@@ -749,7 +751,6 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
     writer.write_buffer(0, gpu_scene_data_buffer.buffer, sizeof(GPUSceneData), 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
     writer.update_set(this->_device, global_descriptor);
 
-
      /*
      * Light data buffer
      */
@@ -759,6 +760,7 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
     // get_current_frame()._deletion_queue.push_function([=, this]() {
     //     fmvk::Buffer::destroy_buffer(gpu_scene_data_buffer, this->_allocator);
     // });
+
 
 
 
@@ -772,6 +774,7 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
             if (object.material->pipeline != last_pipeline) {
                 last_pipeline = object.material->pipeline;
 
+                // TODO: Bindless materials
                 vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->pipeline);
                 vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->layout, 0, 1, &global_descriptor, 0, nullptr);
                 
@@ -794,6 +797,8 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
                 };
                 vkCmdSetScissor(cmd, 0, 1, &scissor);
             }
+
+            // TODO: Bindless textures
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->layout, 1, 1, &object.material->material_set, 0, nullptr);
         }
 
@@ -884,40 +889,21 @@ void fmvk::Vulkan::init_descriptors() {
     }
 }
 
-AllocatedImage fmvk::Vulkan::create_image(const VkExtent3D size, const VkFormat format, const VkImageUsageFlags usage, const bool mipmapped) const {
-    AllocatedImage new_image = {
-        .extent = size,
-        .format = format
-    };
-    VkImageCreateInfo image_info = VKInit::image_create_info(format, usage, size);
-    if (mipmapped) {
-        image_info.mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(size.width, size.height)))) + 1;
-    }
-    VmaAllocationCreateInfo alloc_info = {
-        .usage = VMA_MEMORY_USAGE_GPU_ONLY,
-        .requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-    };
-    VK_CHECK(vmaCreateImage(this->_allocator, &image_info, &alloc_info, &new_image.image, &new_image.allocation, nullptr));
-
-    VkImageAspectFlags aspect_flag = VK_IMAGE_ASPECT_COLOR_BIT;
-    if (format == VK_FORMAT_D32_SFLOAT) {
-        aspect_flag = VK_IMAGE_ASPECT_DEPTH_BIT;
-    }
-    VkImageViewCreateInfo view_info = VKInit::imageview_create_info(format, new_image.image, aspect_flag);
-    view_info.subresourceRange.levelCount = image_info.mipLevels;
-    VK_CHECK(vkCreateImageView(this->_device, &view_info, nullptr, &new_image.view));
-
-    return new_image;
-}
-
-AllocatedImage fmvk::Vulkan::create_image(void *data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped)
+fmvk::Image::AllocatedImage fmvk::Vulkan::create_image(void *data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped)
 {
     size_t data_size = size.depth * size.width * size.height * 4;
     fmvk::Buffer::AllocatedBuffer upload_buffer = fmvk::Buffer::create_buffer(
         data_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, this->_allocator);
     memcpy(upload_buffer.info.pMappedData, data, data_size);
 
-    AllocatedImage new_image = create_image(size, format, usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, mipmapped);
+    fmvk::Image::AllocatedImage new_image = fmvk::Image::create_image(
+        this->_device,
+        this->_allocator,
+        size,
+        format,
+        usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+        mipmapped
+    );
 
     immediate_submit([&](VkCommandBuffer cmd) {
         VKUtil::transition_image(cmd, new_image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -935,11 +921,11 @@ AllocatedImage fmvk::Vulkan::create_image(void *data, VkExtent3D size, VkFormat 
         };
 
         vkCmdCopyBufferToImage(
-            cmd, 
-            upload_buffer.buffer, 
-            new_image.image, 
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
-            1, 
+            cmd,
+            upload_buffer.buffer,
+            new_image.image,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            1,
             &copy_region
         );
 
@@ -947,21 +933,16 @@ AllocatedImage fmvk::Vulkan::create_image(void *data, VkExtent3D size, VkFormat 
             auto mip_extent = VkExtent2D { new_image.extent.width, new_image.extent.height};
             VKUtil::generate_mipmaps(cmd, new_image.image, mip_extent);
         } else {
-            VKUtil::transition_image(cmd, new_image.image, 
+            VKUtil::transition_image(cmd, new_image.image,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
             );
         }
     });
-
     fmvk::Buffer::destroy_buffer(upload_buffer, this->_allocator);
     return new_image;
 }
 
-void fmvk::Vulkan::destroy_image(const AllocatedImage &image) const {
-    vkDestroyImageView(this->_device, image.view, nullptr);
-    vmaDestroyImage(this->_allocator, image.image, image.allocation);
-}
 
 void fmvk::Vulkan::init_default_textures()
 {
@@ -1018,10 +999,10 @@ void fmvk::Vulkan::init_default_textures()
     vkCreateSampler(this->_device, &linear_sampler_info, nullptr, &this->_default_sampler_linear);
 
     this->_deletion_queue.push_function([=, this]() {
-        destroy_image(this->_default_texture_white);
-        destroy_image(this->_default_texture_grey);
-        destroy_image(this->_default_texture_black);
-        destroy_image(this->_texture_missing_error_image);
+        destroy_image(this->_default_texture_white, this->_device, this->_allocator);
+        destroy_image(this->_default_texture_grey, this->_device, this->_allocator);
+        destroy_image(this->_default_texture_black, this->_device, this->_allocator);
+        destroy_image(this->_texture_missing_error_image, this->_device, this->_allocator);
         vkDestroySampler(this->_device, this->_default_sampler_nearest, nullptr);
         vkDestroySampler(this->_device, this->_default_sampler_linear, nullptr);
     });

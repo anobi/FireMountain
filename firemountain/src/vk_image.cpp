@@ -1,13 +1,22 @@
 #include "vk_image.hpp"
 #include "vk_init.hpp"
 #include "vk_buffer.hpp"
+#include "vk_images.hpp"
 
 
-fmvk::Image::AllocatedImage fmvk::Image::create_image(VkDevice device, VmaAllocator allocator, VkExtent3D size, VkFormat format, VkImageUsageFlags usage_flags, bool mipmapped) {
-    fmvk::Image::AllocatedImage new_image;
-
+fmvk::Image::AllocatedImage fmvk::Image::create_image(
+    const VkDevice device,
+    const VmaAllocator allocator,
+    const VkExtent3D size,
+    const VkFormat format,
+    const VkImageUsageFlags usage_flags,
+    const bool mipmapped)
+{
+    fmvk::Image::AllocatedImage new_image {};
+    new_image.extent = size;
     new_image.format = format;
-    VkImageCreateInfo image_info = VKInit::image_create_info(new_image.format, usage_flags, size);
+
+    VkImageCreateInfo image_info = VKInit::image_create_info(format, usage_flags, size);
     if (mipmapped) {
         image_info.mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(size.width, size.height)))) + 1;
     }
@@ -28,7 +37,11 @@ fmvk::Image::AllocatedImage fmvk::Image::create_image(VkDevice device, VmaAlloca
     return new_image;
 }
 
-void fmvk::Image::destroy_image(fmvk::Image::AllocatedImage image, VkDevice device, VmaAllocator allocator)
+
+
+
+
+void fmvk::Image::destroy_image(fmvk::Image::AllocatedImage &image, const VkDevice device, VmaAllocator const allocator)
 {
     vkDestroyImageView(device, image.view, nullptr);
     vmaDestroyImage(allocator, image.image, image.allocation);

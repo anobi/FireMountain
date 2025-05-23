@@ -51,8 +51,8 @@ VkSamplerMipmapMode extract_mipmap_mode(fastgltf::Filter filter) {
 }
 
 
-std::optional<AllocatedImage> load_image(fmvk::Vulkan* engine, fastgltf::Asset& asset, fastgltf::Image& image, std::filesystem::path working_dir) {
-    AllocatedImage new_image {};
+std::optional<fmvk::Image::AllocatedImage> load_image(fmvk::Vulkan* engine, fastgltf::Asset& asset, fastgltf::Image& image, std::filesystem::path working_dir) {
+    fmvk::Image::AllocatedImage new_image {};
     int width, height, nr_channels;
 
     std::visit(fastgltf::visitor {
@@ -119,7 +119,7 @@ std::optional<AllocatedImage> load_image(fmvk::Vulkan* engine, fastgltf::Asset& 
     }, image.data);
 
     if (new_image.image == VK_NULL_HANDLE) {
-        engine->destroy_image(new_image);  // This should be done right?
+        destroy_image(new_image, engine->_device, engine->_allocator);
         return {};
     } else {
         return new_image;
@@ -250,13 +250,13 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
     // Temporary containers to load everything into
     std::vector<std::shared_ptr<MeshAsset>> meshes;
     std::vector<std::shared_ptr<Node>> nodes;
-    std::vector<AllocatedImage> images;
+    std::vector<fmvk::Image::AllocatedImage> images;
     std::vector<std::shared_ptr<GLTFMaterial>> materials;
 
     // Load textures
     int image_idx = 0;
     for (fastgltf::Image& image : gltf.images) {
-        std::optional<AllocatedImage> img = load_image(engine, gltf, image, working_dir);
+        std::optional<fmvk::Image::AllocatedImage> img = load_image(engine, gltf, image, working_dir);
         if (img.has_value()) {
             // Generate a name if image doesn't have one to avoid overwrites and assure proper unloading
             // since the images are stored in a map
@@ -548,7 +548,7 @@ void LoadedGLTF::clear_all()
         if (v.image == this->creator->_texture_missing_error_image.image) {
             continue;
         }
-        creator->destroy_image(v);
+        destroy_image(v, device, this->creator->_allocator);
     }
 
     for (auto& sampler : this->samplers) {
