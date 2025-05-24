@@ -173,8 +173,7 @@ void fmvk::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
 
     auto cmd_info = VKInit::command_buffer_submit_info(cmd);
     auto wait_info = VKInit::semaphore_submit_info(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR, get_current_frame()._swapchain_semaphore);
-    auto signal_info = VKInit::semaphore_submit_info(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT, get_current_frame()._render_semaphores.at(swapchain_image_index));
-
+    auto signal_info = VKInit::semaphore_submit_info(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT, this->_swapchain.image_semaphores.at(swapchain_image_index));
     VkSubmitInfo2 submit_info = VKInit::submit_info(&cmd_info, &signal_info, &wait_info);
 
     VK_CHECK(vkQueueSubmit2(this->_graphics_queue, 1, &submit_info, get_current_frame()._render_fence));
@@ -185,7 +184,7 @@ void fmvk::Vulkan::Draw(RenderObject* render_objects, int render_object_count) {
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
         .pNext = nullptr,
         .waitSemaphoreCount = 1,
-        .pWaitSemaphores = &get_current_frame()._render_semaphores.at(swapchain_image_index),
+        .pWaitSemaphores = &this->_swapchain.image_semaphores.at(swapchain_image_index),
         .swapchainCount = 1,
         .pSwapchains = &this->_swapchain.swapchain,
         .pImageIndices = &swapchain_image_index
@@ -543,22 +542,32 @@ void fmvk::Vulkan::init_sync_structures() {
         .flags = 0
     };
 
-    const auto swapchain_image_count = this->_swapchain.images.size();
+    // Create swapchain fence & semaphore
     for (auto & _frame : this->_frames) {
         VK_CHECK(vkCreateFence(this->_device, &fence_create_info, nullptr, &_frame._render_fence));
         VK_CHECK(vkCreateSemaphore(this->_device, &semaphore_create_info, nullptr, &_frame._swapchain_semaphore));
-        _frame._render_semaphores.resize(swapchain_image_count);
-        for (size_t i = 0; i < swapchain_image_count; i++) {
-            VK_CHECK(vkCreateSemaphore(this->_device, &semaphore_create_info, nullptr, &_frame._render_semaphores[i]));
-        }
     }
 
+    // Create swapchain image semaphores
+    const auto swapchain_image_count = this->_swapchain.images.size();
+    this->_swapchain.image_semaphores.resize(swapchain_image_count);
+    for (size_t i = 0; i < swapchain_image_count; i++) {
+        VK_CHECK(vkCreateSemaphore(this->_device, &semaphore_create_info, nullptr, &this->_swapchain.image_semaphores[i]));
+    }
+
+    // ---------------
     // Deletion queues
+    // ---------------
+    // Deletion queue for swapchain image semaphores
+    for (size_t i = 0; i < swapchain_image_count; i++) {
+        this->_deletion_queue.push_function([=, this]() {
+            vkDestroySemaphore(this->_device, this->_swapchain.image_semaphores[i], nullptr);
+        });
+    }
+
+    // Deletion queue for frame fence & semaphore
     for (const auto & _frame : this->_frames) {
         this->_deletion_queue.push_function([=, this]() {
-            for (size_t i = 0; i < swapchain_image_count; i++) {
-                vkDestroySemaphore(this->_device, _frame._render_semaphores[i], nullptr);
-            }
             vkDestroySemaphore(this->_device, _frame._swapchain_semaphore, nullptr);
             vkDestroyFence(this->_device, _frame._render_fence, nullptr);
         });

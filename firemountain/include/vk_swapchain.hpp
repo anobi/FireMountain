@@ -13,6 +13,7 @@ namespace fmvk {
 
         std::vector<VkImage> images;
         std::vector<VkImageView> image_views;
+        std::vector<VkSemaphore> image_semaphores;
 
         void Create(VkExtent2D window_extent, VkSurfaceKHR surface);
         void Destroy(VkDevice device);

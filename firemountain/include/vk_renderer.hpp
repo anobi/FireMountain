@@ -97,7 +97,6 @@ namespace fmvk {
         VkCommandPool _command_pool;
         VkCommandBuffer _main_command_buffer;
 
-        std::vector<VkSemaphore> _render_semaphores;  // One per swapchain image
         VkSemaphore _swapchain_semaphore;
         VkFence _render_fence;
 
