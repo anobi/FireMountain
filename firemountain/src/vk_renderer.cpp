@@ -625,6 +625,16 @@ void fmvk::Vulkan::update_scene(const fmCamera* camera, std::vector<RenderSceneO
 
     this->_main_draw_context.opaque_surfaces.clear();
 
+    if (!this->ghost_mode && camera->debug_pov_lock) {
+        this->ghost_mode = true;
+        this->ghost_view = this->scene_data.view;
+        this->ghost_projection = this->scene_data.projection;
+        this->ghost_camera_position = camera->position;
+    }
+    else if (this->ghost_mode && !camera->debug_pov_lock) {
+        this->ghost_mode = false;
+    }
+
     this->scene_data.camera_position = camera->position;
     this->scene_data.view = camera->view;
     this->scene_data.projection = camera->projection;
@@ -718,7 +728,16 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
     opaque_draws.reserve(this->_main_draw_context.opaque_surfaces.size());
 
     // TODO do culling in a compute shader
-    glm::mat4 view_projection = scene_data.projection * scene_data.view;
+
+    glm::mat4 view_projection {};
+
+    if (this->ghost_mode) {
+        view_projection = this->ghost_projection * this->ghost_view;
+    }
+    else {
+        view_projection = scene_data.projection * scene_data.view;
+    }
+
     for (uint32_t i = 0; i < this->_main_draw_context.opaque_surfaces.size(); i++) {
         if (is_visible(this->_main_draw_context.opaque_surfaces[i], view_projection)) {
             opaque_draws.push_back(i);
@@ -849,7 +868,6 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
     auto end = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     stats.mesh_draw_time = elapsed.count() / 1000.0f;
-
 }
 
 // =================

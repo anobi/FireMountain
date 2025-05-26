@@ -193,6 +193,7 @@ int RunApp()
     camera.position = glm::vec3(3.0f, 1.0f, 0.0f);
     camera.yaw = -1.5f;
 
+    auto camera_pov_lock = false;
     auto capture_mouse = false;
     auto mouse_captured_x = 0.0f;
     auto mouse_captured_y = 0.0f;
@@ -246,6 +247,7 @@ int RunApp()
                         SDL_GetMouseState(&mouse_captured_x, &mouse_captured_y);
                     }
                 }
+                if (event.key.key == SDLK_L) { camera_pov_lock = !camera_pov_lock; }
                 break;
 
             case SDL_EVENT_MOUSE_BUTTON_DOWN:
@@ -349,7 +351,8 @@ int RunApp()
                 static_cast<float>(WIDTH),
                 static_cast<float>(HEIGHT),
                 camera_projection
-            )
+            ),
+            .debug_pov_lock = camera_pov_lock
         };
         firemountain.Frame(&render_camera, render_scene);
     }

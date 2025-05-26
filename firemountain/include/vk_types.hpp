@@ -114,6 +114,7 @@ struct fmCamera {
     glm::vec3 position;
     glm::mat4 view;
     glm::mat4 projection;
+    bool debug_pov_lock = false;
 };
 
 

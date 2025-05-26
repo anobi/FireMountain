@@ -235,6 +235,12 @@ namespace fmvk {
 
         GPUSceneData scene_data;
 
+        // Lock the previous camera in place to be able to fly around without updating frustum etc
+        bool ghost_mode = false;
+        glm::mat4 ghost_view = glm::mat4 { 0.0f };
+        glm::mat4 ghost_projection = glm::mat4 { 0.0f };
+        glm::vec3 ghost_camera_position = glm::vec3 { 0.0f };
+
         // Images & Textures
 
         void init_default_textures();
