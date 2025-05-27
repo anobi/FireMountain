@@ -45,20 +45,6 @@ enum LightType {
     Area
 };
 
-// Indices for bindless drawing
-struct GPUDrawData {
-    uint material_index;
-    uint transform_offset;
-    uint vertex_buffer_offset;
-    uint padding0;
-};
-
-struct GPUMaterialData {
-    uint albedo_texture_idx;
-    uint normal_texture_idx;
-    uint roughness_texture_idx;
-};
-
 struct GPULightData {
     // Position with light type as .w
     glm::vec4 positionType = glm::vec4 {0.0f};      

@@ -18,7 +18,7 @@ void DescriptorLayoutBuilder::clear()
     this->bindings.clear();
 }
 
-VkDescriptorSetLayout DescriptorLayoutBuilder::build(VkDevice device, VkShaderStageFlags shader_stages)
+VkDescriptorSetLayout DescriptorLayoutBuilder::build(VkDevice device, VkShaderStageFlags shader_stages, void* pNext, VkDescriptorSetLayoutCreateFlags flags)
 {
     for (auto &b : this->bindings) {
         b.stageFlags |= shader_stages;
@@ -26,8 +26,8 @@ VkDescriptorSetLayout DescriptorLayoutBuilder::build(VkDevice device, VkShaderSt
 
     VkDescriptorSetLayoutCreateInfo info = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = 0,
+        .pNext = pNext,
+        .flags = flags,
         .bindingCount = static_cast<uint32_t>(this->bindings.size()),
         .pBindings = this->bindings.data()
     };
@@ -61,24 +61,22 @@ void DescriptorAllocatorGrowable::clear_pools(VkDevice device)
     this->full_pools.clear();
 }
 
-VkDescriptorSet DescriptorAllocatorGrowable::allocate(VkDevice device, VkDescriptorSetLayout layout)
+VkDescriptorSet DescriptorAllocatorGrowable::allocate(VkDevice device, VkDescriptorSetLayout layout, void* pNext)
 {
     VkDescriptorPool pool = get_pool(device);
     VkDescriptorSetAllocateInfo alloc_info = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-        .pNext = nullptr,
+        .pNext = pNext,
         .descriptorPool = pool,
         .descriptorSetCount = 1,
         .pSetLayouts = &layout
     };
-
     VkDescriptorSet ds;
     VkResult result = vkAllocateDescriptorSets(device, &alloc_info, &ds);
 
     // Try again if allocation failed, and explode if it still fails
     if (result == VK_ERROR_OUT_OF_POOL_MEMORY || result == VK_ERROR_FRAGMENTED_POOL) {
         this->full_pools.push_back(pool);
-
         pool = get_pool(device);
         alloc_info.descriptorPool = pool;
         VK_CHECK(vkAllocateDescriptorSets(device, &alloc_info, &ds));

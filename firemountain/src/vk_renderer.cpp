@@ -327,16 +327,17 @@ void fmvk::Vulkan::init_vulkan(SDL_Window *window) {
     };
 
     // Vulkan 1.3 features
-    VkPhysicalDeviceVulkan13Features features_13 {
-        .synchronization2 = true,
-        .dynamicRendering = true
-    };
+    VkPhysicalDeviceVulkan13Features features_13 {};
+    features_13.synchronization2 = true;
+    features_13.dynamicRendering = true;
 
     // Vulkan 1.2 features
-    VkPhysicalDeviceVulkan12Features features_12 = {
-        .descriptorIndexing = true,
-        .bufferDeviceAddress = true
-    };
+    VkPhysicalDeviceVulkan12Features features_12 {};
+    features_12.descriptorIndexing = true;
+    features_12.bufferDeviceAddress = true;
+    features_12.descriptorBindingPartiallyBound = true;
+    features_12.descriptorBindingVariableDescriptorCount = true;
+    features_12.runtimeDescriptorArray = true;
 
     // Initialize device and physical device
     vkb::PhysicalDeviceSelector selector { vkb_instance };
@@ -730,7 +731,6 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
     // TODO do culling in a compute shader
 
     glm::mat4 view_projection {};
-
     if (this->ghost_mode) {
         view_projection = this->ghost_projection * this->ghost_view;
     }
@@ -744,7 +744,7 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
         }
     }
 
-    std::sort(opaque_draws.begin(), opaque_draws.end(), 
+    std::sort(opaque_draws.begin(), opaque_draws.end(),
         [&](const auto& iA, const auto& iB) {
             const RenderObject& A = this->_main_draw_context.opaque_surfaces[iA];
             const RenderObject& B = this->_main_draw_context.opaque_surfaces[iB];
@@ -765,8 +765,6 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
     * Scene Data buffer
     */
 
-    // TODO: Bindless -
-
     // Allocate uniform buffer for the scene data
     fmvk::Buffer::AllocatedBuffer gpu_scene_data_buffer = fmvk::Buffer::create_buffer(sizeof(GPUSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, this->_allocator);
     get_current_frame()._deletion_queue.push_function([=, this]() {
@@ -777,26 +775,36 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
     auto scene_uniform_data = (GPUSceneData*) gpu_scene_data_buffer.allocation->GetMappedData();
     *scene_uniform_data = this->scene_data;
 
+
+    // Bindless things
+    VkDescriptorSetVariableDescriptorCountAllocateInfo alloc_array_info = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO,
+        .pNext = nullptr
+    };
+    uint32_t descriptor_counts = this->texture_cache.cache.size();
+    alloc_array_info.pDescriptorCounts = &descriptor_counts;
+    alloc_array_info.descriptorSetCount = 1;
+
+
     // Create a descriptor set that binds the buffer and update it
     VkDescriptorSet global_descriptor = get_current_frame()._frame_descriptors.allocate(
-        this->_device, 
-        this->_gpu_scene_data_descriptor_layout
+        this->_device,
+        _gpu_scene_data_descriptor_layout,
+        &alloc_array_info
     );
     DescriptorWriter writer;
     writer.write_buffer(0, gpu_scene_data_buffer.buffer, sizeof(GPUSceneData), 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+
+    if (texture_cache.cache.size() > 0) {
+        VkWriteDescriptorSet array_set { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+        array_set.descriptorCount = texture_cache.cache.size();
+        array_set.dstArrayElement = 0;
+        array_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        array_set.dstBinding = 1;
+        array_set.pImageInfo = texture_cache.cache.data();
+        writer.writes.push_back(array_set);
+    }
     writer.update_set(this->_device, global_descriptor);
-
-     /*
-     * Light data buffer
-     */
-
-    // // Allocate uniform buffer for the light data
-    // fmvk::Buffer::AllocatedBuffer gpu_scene_data_buffer = fmvk::Buffer::create_buffer(sizeof(GPUSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, this->_allocator);
-    // get_current_frame()._deletion_queue.push_function([=, this]() {
-    //     fmvk::Buffer::destroy_buffer(gpu_scene_data_buffer, this->_allocator);
-    // });
-
-
 
 
     MaterialPipeline* last_pipeline = nullptr;
@@ -808,8 +816,6 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
 
             if (object.material->pipeline != last_pipeline) {
                 last_pipeline = object.material->pipeline;
-
-                // TODO: Bindless materials
                 vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->pipeline);
                 vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->layout, 0, 1, &global_descriptor, 0, nullptr);
                 
@@ -833,7 +839,6 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
                 vkCmdSetScissor(cmd, 0, 1, &scissor);
             }
 
-            // TODO: Bindless textures
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->layout, 1, 1, &object.material->material_set, 0, nullptr);
         }
 
@@ -876,9 +881,9 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
 
 void fmvk::Vulkan::init_descriptors() {
     std::vector<DescriptorAllocatorGrowable::PoolSizeRatio> sizes = {
-        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 },
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
-        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1}
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 3 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3 },
+        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3}
     };
     this->global_descriptor_allocator.init(this->_device, 10, sizes);
     this->_deletion_queue.push_function([&]() {
@@ -893,7 +898,17 @@ void fmvk::Vulkan::init_descriptors() {
     {
         DescriptorLayoutBuilder builder;
         builder.add_binding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-        this->_gpu_scene_data_descriptor_layout = builder.build(this->_device, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
+        builder.add_binding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+
+        VkDescriptorSetLayoutBindingFlagsCreateInfo bind_flags = {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
+            .pNext = nullptr
+        };
+        std::array<VkDescriptorBindingFlags, 2> flags = { 0, VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT };
+        builder.bindings[1].descriptorCount = 4080;
+        bind_flags.bindingCount = 2;
+        bind_flags.pBindingFlags = flags.data();
+        this->_gpu_scene_data_descriptor_layout = builder.build(this->_device, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, &bind_flags);
     }
 
     _deletion_queue.push_function([&]() {

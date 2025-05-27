@@ -15,6 +15,7 @@
 
 #include "fm_utils.hpp"
 #include "fm_renderable.hpp"
+#include "vk_texture_cache.hpp"
 
 struct SDL_Window;
 union SDL_Event;
@@ -57,8 +58,12 @@ namespace fmvk {
             float use_alpha_blending;
             float has_emissive_map;
             float has_normal_map;
+            float color_tex_id;
+            float metal_roughness_tex_id;
+            float normal_tex_id;
+            float emissive_tex_id;
             float padding_1;
-            glm::vec4 extra[12];  // Padding for uniform buffers
+            glm::vec4 extra[11];  // Padding for uniform buffers
         };
         static_assert(sizeof(MaterialConstants) == 256);  // Make sure the size is right
 
@@ -242,7 +247,9 @@ namespace fmvk {
         glm::vec3 ghost_camera_position = glm::vec3 { 0.0f };
 
         // Images & Textures
-
+    public:
+        fmvk::TextureCache texture_cache;
+    private:
         void init_default_textures();
         void init_default_data();
     };

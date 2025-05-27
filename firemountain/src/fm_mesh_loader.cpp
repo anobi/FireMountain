@@ -305,7 +305,6 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
                 mat.emissiveStrength
             }
         };
-        scene_material_constants[data_index] = constants;
 
         MaterialPass pass_type = MaterialPass::FM_MATERIAL_PASS_OPAQUE;
         if (mat.alphaMode == fastgltf::AlphaMode::Blend) {
@@ -331,32 +330,37 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
             size_t sampler = gltf.textures[mat.pbrData.baseColorTexture.value().textureIndex].samplerIndex.value();
             material_resources.color_image = images[img];
             material_resources.color_sampler = file.samplers[sampler];
-            scene_material_constants[data_index].has_color_map = 1.0;
+            constants.has_color_map = 1.0;
         }
+        constants.color_tex_id = engine->texture_cache.add_texture(material_resources.color_image.view, material_resources.color_sampler).index;
 
         if (mat.pbrData.metallicRoughnessTexture.has_value()) {
             size_t img = gltf.textures[mat.pbrData.metallicRoughnessTexture.value().textureIndex].imageIndex.value();
             size_t sampler = gltf.textures[mat.pbrData.metallicRoughnessTexture.value().textureIndex].samplerIndex.value();
             material_resources.metal_roughness_image = images[img];
             material_resources.metal_roughness_sampler = file.samplers[sampler];
-            scene_material_constants[data_index].has_metal_roughness_map = 1.0;
+            constants.has_metal_roughness_map = 1.0;
         }
+        constants.metal_roughness_tex_id = engine->texture_cache.add_texture(material_resources.metal_roughness_image.view, material_resources.metal_roughness_sampler).index;
 
         if (mat.normalTexture.has_value()) {
             size_t img = gltf.textures[mat.normalTexture.value().textureIndex].imageIndex.value();
             size_t sampler = gltf.textures[mat.normalTexture.value().textureIndex].samplerIndex.value();
             material_resources.normal_image = images[img];
             material_resources.normal_sampler = file.samplers[sampler];
-            scene_material_constants[data_index].has_normal_map = 1.0;
+            constants.has_normal_map = 1.0;
         }
+        constants.normal_tex_id = engine->texture_cache.add_texture(material_resources.normal_image.view, material_resources.normal_sampler).index;
 
         if (mat.emissiveTexture.has_value()) {
             size_t img = gltf.textures[mat.emissiveTexture.value().textureIndex].imageIndex.value();
             size_t sampler = gltf.textures[mat.emissiveTexture.value().textureIndex].samplerIndex.value();
             material_resources.emissive_image = images[img];
             material_resources.emissive_sampler = file.samplers[sampler];
-            scene_material_constants[data_index].has_emissive_map = 1.0;
+            constants.has_emissive_map = 1.0;
         }
+        constants.emissive_tex_id = engine->texture_cache.add_texture(material_resources.emissive_image.view, material_resources.emissive_sampler).index;
+        scene_material_constants[data_index] = constants;
 
         new_material->data = engine->metal_roughness_material.write_material(engine->_device, pass_type, material_resources, file.descriptor_pool);
         data_index++;
