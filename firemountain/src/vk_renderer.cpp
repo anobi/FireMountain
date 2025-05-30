@@ -806,7 +806,6 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
     }
     writer.update_set(this->_device, global_descriptor);
 
-
     MaterialPipeline* last_pipeline = nullptr;
     MaterialInstance* last_material = nullptr;
     VkBuffer last_index_buffer = VK_NULL_HANDLE;
@@ -1155,10 +1154,12 @@ void fmvk::GLTFMetallic_Roughness::build_pipelines(const fmvk::Vulkan* renderer)
 
     DescriptorLayoutBuilder layout_builder;
     layout_builder.add_binding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+
     layout_builder.add_binding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     layout_builder.add_binding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     layout_builder.add_binding(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     layout_builder.add_binding(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+
     this->material_layout = layout_builder.build(
         renderer->_device,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
@@ -1169,18 +1170,18 @@ void fmvk::GLTFMetallic_Roughness::build_pipelines(const fmvk::Vulkan* renderer)
         this->material_layout
     };
 
-    VkPipelineLayoutCreateInfo pipeline_layout_info = VKInit::pipeline_layout_create_info();
-    pipeline_layout_info.pPushConstantRanges = &push_constant_range;
-    pipeline_layout_info.pushConstantRangeCount = 1;
-    pipeline_layout_info.pSetLayouts = layouts;
-    pipeline_layout_info.setLayoutCount = 2;
+    VkPipelineLayoutCreateInfo mesh_layout_info = VKInit::pipeline_layout_create_info();
+    mesh_layout_info.pPushConstantRanges = &push_constant_range;
+    mesh_layout_info.pushConstantRangeCount = 1;
+    mesh_layout_info.pSetLayouts = layouts;
+    mesh_layout_info.setLayoutCount = 2;
 
     VkPipelineLayout opaque_layout;
-    VK_CHECK(vkCreatePipelineLayout(renderer->_device, &pipeline_layout_info,nullptr, &opaque_layout));
+    VK_CHECK(vkCreatePipelineLayout(renderer->_device, &mesh_layout_info,nullptr, &opaque_layout));
     this->opaque_pipeline.layout = opaque_layout;
 
     VkPipelineLayout transparent_layout;
-    VK_CHECK(vkCreatePipelineLayout(renderer->_device, &pipeline_layout_info,nullptr, &transparent_layout));
+    VK_CHECK(vkCreatePipelineLayout(renderer->_device, &mesh_layout_info,nullptr, &transparent_layout));
     this->transparent_pipeline.layout = transparent_layout;
 
     // Pipeline builder
@@ -1268,6 +1269,9 @@ MaterialInstance fmvk::GLTFMetallic_Roughness::write_material(VkDevice device, M
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
     );
+
+
+
     this->writer.update_set(device, data.material_set);
 
     return data;

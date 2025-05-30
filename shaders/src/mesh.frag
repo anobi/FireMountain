@@ -1,6 +1,9 @@
 #version 450
 
 #extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_nonuniform_qualifier : require
+
+#define USE_BINDLESS
 #include "input_structures.glsl"
 
 // Input
@@ -120,7 +123,7 @@ vec3 normal() {
     mat3 TBN    = mat3(T, B, N);
 
     if (materialData.hasNormalMap == 1.0) {
-        vec4 normalMap = texture(normalTex, inUV);
+        vec4 normalMap = texture(textures[materialData.normalTexID], inUV);
         return normalize(TBN * (2.0 * normalMap.rgb - 1.0));
     }
     return normalize(TBN[2].xyz);
@@ -129,13 +132,11 @@ vec3 normal() {
 float addEmissive(inout vec4 color) {
     vec4 emissive = vec4(0.0);
     if (materialData.hasEmissiveMap == 1.0) {
-        emissive = texture(emissiveTex, inUV) * materialData.emissiveFactor;
+        emissive = texture(textures[materialData.emissiveTexID], inUV) * materialData.emissiveFactor;
     }
     else {
         emissive = materialData.emissiveFactor;
     }
-
-
 
     float is_emissive = length(emissive) > 1.0 ? 1.0 : 0.0;
     if (is_emissive == 1.0) {
@@ -154,7 +155,7 @@ float addEmissive(inout vec4 color) {
 void main() {
     vec4 baseColor = vec4(1.0, 0.0, 0.0, 1.0);
     if (materialData.hasColorMap == 1.0) {
-        baseColor = texture(colorTex, inUV) * materialData.colorFactors;
+        baseColor = texture(textures[materialData.colorTexID], inUV) * materialData.colorFactors;
         // Convert to linear color space if in srgb
         baseColor = pow(baseColor, vec4(GAMMA));
     }
@@ -171,7 +172,7 @@ void main() {
     float metallic = 0.04;
     float roughness = 0.8;
     if (materialData.hasMetalRoughnessMap == 1.0) {
-        vec4 metalRough = texture(metalRoughTex, inUV);
+        vec4 metalRough = texture(textures[materialData.metalRoughTexID], inUV);
         metallic = clamp(metalRough.r, 0.0, 1.0);
         roughness = clamp(metalRough.g, 0.0, 1.0);
     }

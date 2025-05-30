@@ -12,6 +12,15 @@ layout(set = 0, binding = 0) uniform SceneData {
 
 } sceneData;
 
+#ifdef USE_BINDLESS
+layout(set = 0, binding = 1) uniform sampler2D textures[];
+#else
+layout(set = 1, binding = 1) uniform sampler2D colorTex;
+layout(set = 1, binding = 2) uniform sampler2D metalRoughTex;
+layout(set = 1, binding = 3) uniform sampler2D normalTex;
+layout(set = 1, binding = 4) uniform sampler2D emissiveTex;
+#endif
+
 layout(set = 1, binding = 0) uniform GLTFMaterialData {
     vec4 colorFactors;
     vec2 metalRoughFactors;
@@ -23,9 +32,8 @@ layout(set = 1, binding = 0) uniform GLTFMaterialData {
     float hasEmissiveMap;
     float hasNormalMap;
 
+    int colorTexID;
+    int metalRoughTexID;
+    int normalTexID;
+    int emissiveTexID;
 } materialData;
-
-layout(set = 1, binding = 1) uniform sampler2D colorTex;
-layout(set = 1, binding = 2) uniform sampler2D metalRoughTex;
-layout(set = 1, binding = 3) uniform sampler2D normalTex;
-layout(set = 1, binding = 4) uniform sampler2D emissiveTex;
