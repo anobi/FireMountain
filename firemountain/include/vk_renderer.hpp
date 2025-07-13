@@ -133,10 +133,12 @@ namespace fmvk {
         std::unordered_map<std::string, fmvk::Pipeline> pipelines;
         std::unordered_map<std::string, fmvk::ComputePipeline> compute_pipelines;
 
+        // TODO: Move into object renderer or something
         unsigned int next_id = 0;
         MeshID AddMesh(const std::string& name, const std::shared_ptr<LoadedGLTF>& mesh);
         std::unordered_map<unsigned int, std::shared_ptr<LoadedGLTF>> loaded_meshes;
 
+        // TODO: Move into FM Scene I think
         LightID AddLight(const std::string& name);
         std::vector<unsigned int> lights;
         
@@ -229,7 +231,6 @@ namespace fmvk {
         void draw_imgui(VkCommandBuffer cmd, VkImageView image_view) const;
         void draw_background(VkCommandBuffer cmd);
         void draw_geometry(VkCommandBuffer cmd, RenderObject* render_objects, uint32_t render_object_count);
-
 
 
         // Descriptor sets

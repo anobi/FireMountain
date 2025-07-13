@@ -1,6 +1,5 @@
 #pragma once
 
-#include <vector>
 #include "vk_types.hpp"
 #include "vk_image.hpp"
 

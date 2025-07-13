@@ -22,7 +22,7 @@ target_link_libraries(${PROJECT_NAME}
   glm
   fmt
   SDL3::SDL3
-  imgui
+  imgui_lib
 )
 
 include_directories(

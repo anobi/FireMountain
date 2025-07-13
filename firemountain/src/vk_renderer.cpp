@@ -310,6 +310,7 @@ void fmvk::Vulkan::init_vulkan(SDL_Window *window) {
     vkb::InstanceBuilder builder;
     auto build = builder.set_app_name("FireMountain")
         .request_validation_layers(true)
+        .enable_extension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME)
         .use_default_debug_messenger()
         .require_api_version(1, 3, 0)
         .build();
@@ -364,10 +365,7 @@ void fmvk::Vulkan::init_vulkan(SDL_Window *window) {
         .instance = this->_instance
     };
     vmaCreateAllocator(&allocator_info, &this->_allocator);
-
-
 }
-
 
 void fmvk::Vulkan::init_imgui() {
     // 1: Create descriptor pool
@@ -640,6 +638,7 @@ void fmvk::Vulkan::update_scene(const fmCamera* camera, std::vector<RenderSceneO
     this->scene_data.view = camera->view;
     this->scene_data.projection = camera->projection;
 
+    // TODO: Light culling
     size_t scene_light_idx = 0;
     for (auto o : scene) {
         if (o.light_id) {
@@ -728,8 +727,6 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
     std::vector<uint32_t> opaque_draws;
     opaque_draws.reserve(this->_main_draw_context.opaque_surfaces.size());
 
-    // TODO do culling in a compute shader
-
     glm::mat4 view_projection {};
     if (this->ghost_mode) {
         view_projection = this->ghost_projection * this->ghost_view;
@@ -755,15 +752,15 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
             }
     });
 
+    // TODO: give the function a render target to support multiple passes?
     VkRenderingAttachmentInfo color_attachment = VKInit::attachment_info(this->_draw_image.view, nullptr, VK_IMAGE_LAYOUT_GENERAL);
     VkRenderingAttachmentInfo depth_attachment = VKInit::depth_attachment_info(this->_depth_image.view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
     VkRenderingInfo render_info = VKInit::rendering_info(this->_draw_extent, &color_attachment, &depth_attachment);
     vkCmdBeginRendering(cmd, &render_info);
 
 
-    /*
-    * Scene Data buffer
-    */
+    // Scene Data buffer
+    //===========================================
 
     // Allocate uniform buffer for the scene data
     fmvk::Buffer::AllocatedBuffer gpu_scene_data_buffer = fmvk::Buffer::create_buffer(sizeof(GPUSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, this->_allocator);
@@ -880,9 +877,9 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
 
 void fmvk::Vulkan::init_descriptors() {
     std::vector<DescriptorAllocatorGrowable::PoolSizeRatio> sizes = {
-        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 3 },
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3 },
-        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3}
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
+        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1}
     };
     this->global_descriptor_allocator.init(this->_device, 10, sizes);
     this->_deletion_queue.push_function([&]() {
@@ -1154,7 +1151,6 @@ void fmvk::GLTFMetallic_Roughness::build_pipelines(const fmvk::Vulkan* renderer)
 
     DescriptorLayoutBuilder layout_builder;
     layout_builder.add_binding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-
     layout_builder.add_binding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     layout_builder.add_binding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     layout_builder.add_binding(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);

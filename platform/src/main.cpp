@@ -35,12 +35,12 @@ struct GameSceneObject {
 
     bool is_light = false;
 
-    LightID light_id = {};
-    LightType light_type = {};
+    LightID light_id {0};
+    LightType light_type = LightType::None;
     float light_intensity = 0.0f;
     float light_range = 0.0f;
-    glm::vec3 light_direction;
-    glm::vec3 light_color;
+    glm::vec3 light_direction {};
+    glm::vec3 light_color {};
 
     bool dirty = true;
 };

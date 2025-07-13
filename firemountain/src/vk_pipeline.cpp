@@ -5,6 +5,8 @@
 #include <VkBootstrap.h>
 
 #include "vk_pipeline.hpp"
+
+#include "vk_descriptors.hpp"
 #include "vk_init.hpp"
 #include "vk_mesh.hpp"
 #include "vk_pipeline_builder.hpp"
@@ -41,7 +43,6 @@ bool fmvk::load_shader_module(const char *file_path, const VkDevice device, VkSh
     *out = shader_module;
     return true;
 }
-
 
 int fmvk::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, const char* shader_name, VkDescriptorSetLayout descriptor_layout, fmvk::Image::AllocatedImage alloc_image)
 {

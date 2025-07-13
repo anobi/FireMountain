@@ -13,17 +13,14 @@ class Scene {
 public:
     void Init();
     void Destroy();
-    //void AddMesh(const std::string& name, LoaderMesh mesh);
+    void Update(const fmCamera* camera);
+
+    LightID AddLight(const std::string& name);
+
 
 private:
-    // Material* create_material(VkPipeline pipeline, VkPipelineLayout layout, const std::string& name);
-    // Material* get_material(const std::string& name);
+    unsigned int next_id = 0;
+    std::vector<unsigned int> lights;
 
-    // LoaderMesh* get_mesh(const std::string& name);
-
-    // void draw_objects(VkCommandBuffer cmd, RenderObject* first, int count);
-
-    // std::vector<RenderObject> _renderables;
-    // std::unordered_map<std::string, Material> _materials;
-    // std::unordered_map<std::string, LoaderMesh> _meshes;
+    std::vector<RenderObject> _render_objects;
 };
