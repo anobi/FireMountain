@@ -49,12 +49,6 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
     GIT_TAG        v1.91.8
 )
-set(SLANG_OVERRIDE_IMGUI_PATH ${CMAKE_CURRENT_SOURCE_DIR}/_deps/imgui-src)
-FetchContent_Declare(
-        slang
-        GIT_REPOSITORY https://github.com/shader-slang/slang.git
-        GIT_TAG        v2025.11
-)
 FetchContent_MakeAvailable(
     SDL3
     vk-bootstrap
@@ -64,7 +58,6 @@ FetchContent_MakeAvailable(
     glm
     fmt
     imgui
-    slang
 )
 
 find_package(Vulkan REQUIRED)
