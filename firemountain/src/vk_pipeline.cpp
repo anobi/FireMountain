@@ -141,7 +141,7 @@ int fmvk::ComputePipeline::Init(const VkDevice device, const char *shader_name, 
     VK_CHECK(vkCreatePipelineLayout(device, &compute_layout, nullptr, &this->layout));
 
     VkShaderModule compute_shader;
-    if (!load_shader_module("shaders/bg_gradient.comp.spv", device, &compute_shader)) {
+    if (!load_shader_module("shaders/bg_gradient.spv", device, &compute_shader)) {
         fmt::println("Error building compute shader module");
     }
     else {

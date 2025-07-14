@@ -709,7 +709,8 @@ void fmvk::Vulkan::draw_background(VkCommandBuffer cmd)
     auto bg_pipeline = this->compute_pipelines["background"];
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, bg_pipeline.pipeline);
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, bg_pipeline.layout, 0, 1, &this->_draw_image_descriptors, 0, nullptr);
-    
+
+    // Background color gradient
     ComputePushConstants pc = {
         .data_1 = glm::fvec4(0.10f, 0.10f, 0.10f, 1.0f),
         .data_2 = glm::fvec4(0.16f, 0.18f, 0.20f, 1.0f)
