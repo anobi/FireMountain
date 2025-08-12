@@ -59,7 +59,7 @@ MaterialInstance* Firemountain::get_material(const std::string& name) {
 }
 
 void Firemountain::CompileShaders() {
-    fmt::println("Compiling shaders...");
+    fmt::println("Reloading shaders...");
 
     // Clean and re-init pipelines
     this->vulkan.init_pipelines();

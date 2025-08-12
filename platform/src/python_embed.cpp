@@ -10,7 +10,13 @@ namespace {
     // RAII to initialize Python once, without touching your main()
     struct PythonRuntime {
         PythonRuntime() {
-            Py_Initialize();
+            PyConfig config;
+            PyConfig_InitPythonConfig(&config);
+            config.isolated = 0;
+            config.use_environment = 1;  // allow env
+
+            Py_InitializeFromConfig(&config);
+            PyConfig_Clear(&config);
             // If you’ll call from multiple C++ threads, the GIL API below is enough on 3.8+.
             // (PyEval_InitThreads is deprecated/removed on modern Python.)
         }

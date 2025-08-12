@@ -299,12 +299,7 @@ int RunApp()
         }
 
         if (shader_reload_requested) {
-            auto shader_build_results = py_build_shaders("shaders", "shaders/bin");
-            for (auto& [file, stages] : shader_build_results) {
-                fmt::print("{}", file);
-                for (auto& s : stages) fmt::println("* {}", s);
-                fmt::println("");
-            }
+            py_build_shaders("shaders", "shaders/bin");
             firemountain.CompileShaders();
             shader_reload_requested = false;
         }

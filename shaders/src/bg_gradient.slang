@@ -36,7 +36,7 @@ void csMain(uint3 threadId : SV_DispatchThreadID)
 
         // Add some noise to create texture
         // This looks terrible, why?
-        out_color += 0.015 * fract(sin(dot(texel_coord, float2(12.9898, 78.233))) * 43758.5453);
+        // out_color += 0.015 * fract(sin(dot(texel_coord, float2(12.9898, 78.233))) * 43758.5453);
 
         // Tonemapping and debanding
         out_color = 1.0f - exp(-out_color);
