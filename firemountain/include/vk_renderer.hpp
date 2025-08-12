@@ -210,8 +210,11 @@ namespace fmvk {
         void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function) const;
 
         // Pipelines
+    public:
+        void clean_pipelines();
         void init_pipelines();
 
+    private:
         // Draw resources
         // AllocatedImage _draw_image;
         // AllocatedImage _depth_image;

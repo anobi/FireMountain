@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.5)
 project(FireMountain)
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_CXX_STANDARD 23)
@@ -25,11 +25,6 @@ FetchContent_Declare(
     GIT_TAG        release-3.2.8
 )
 FetchContent_Declare(
-    tinyobjloader
-    GIT_REPOSITORY https://github.com/tinyobjloader/tinyobjloader.git
-    GIT_TAG        f48bd0bfb9b00ed1f5b13dbcdbd7909ca8bd49b5  # v2.0.0rc10
-)
-FetchContent_Declare(
     fastgltf
     GIT_REPOSITORY https://github.com/spnda/fastgltf.git
     GIT_TAG        v0.8.0
@@ -53,7 +48,6 @@ FetchContent_MakeAvailable(
     SDL3
     vk-bootstrap
     VulkanMemoryAllocator
-    tinyobjloader
     fastgltf
     glm
     fmt

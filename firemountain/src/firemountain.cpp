@@ -14,9 +14,9 @@ int Firemountain::Init(const int width, const int height, SDL_Window* window) {
     return 0;
 }
 
-void Firemountain::Frame(const fmCamera* camera, std::vector<RenderSceneObj> scene)
+void Firemountain::Frame(const fmCamera* camera, std::vector<RenderSceneObj> render_scene)
 {
-    this->vulkan.update_scene(camera, scene);
+    this->vulkan.update_scene(camera, render_scene);
     this->vulkan.Draw(this->_renderables.data(), this->_renderables.size());
 }
 
@@ -56,4 +56,11 @@ MaterialInstance* Firemountain::get_material(const std::string& name) {
     } else {
         return &(*i).second;
     }
+}
+
+void Firemountain::CompileShaders() {
+    fmt::println("Compiling shaders...");
+
+    // Clean and re-init pipelines
+    this->vulkan.init_pipelines();
 }
