@@ -75,7 +75,6 @@ VertexStageOutput vsMain(uint vertexID : SV_VertexID)
     float4x4 v = scene_data.view_matrix;
     float4x4 p = scene_data.projection_matrix;
     float4x4 vp = mul(p, v);
-    float4x4 mvp = mul(vp, m);
 
     // TODO: Calculate TBN here too
 
@@ -85,7 +84,7 @@ VertexStageOutput vsMain(uint vertexID : SV_VertexID)
 
     output.position = frag_pos;
     output.world_position = worldPos.xyz;
-    output.normal = mul(m, float4(vert.normal, 0.0f)).xyz;
+    output.normal = mul((float3x3) m, vert.normal);
     output.color = vert.color.xyz * material_data.color_factors.xyz;
     output.uv.x = vert.uv_x;
     output.uv.y = vert.uv_y;
@@ -201,7 +200,7 @@ float3 normal(VertexStageOutput input) {
     if (length(input.tangent) == 0.0) {
         T = (st2.y * posDx - st1.y * posDy) / (st1.x * st2.y - st2.x * st1.y);
         float uv2xArea = st1.x * st2.y - st1.y * st2.x;
-        flip = uv2xArea > 0 ? 1 : -1;
+        flip = uv2xArea > 0.0 ? 1.0 : -1.0;
     }
 
     float3 N        = normalize(input.normal);
@@ -210,9 +209,9 @@ float3 normal(VertexStageOutput input) {
     float3x3 TBN    = float3x3(T, B, N);
 
     if (material_data.has_normal_map) {
-       // float4 normalMap = textures[material_data.normal_texture_id].Sample(input.uv);
-        float4 normalMap = float4(1.0, 1.0, 1.0, 1.0);
-        return normalize(mul(TBN, (2.0 * normalMap.xyz - 1.0)));
+        float4 normalMap = textures[material_data.normal_texture_id].Sample(input.uv);
+        // Note to self: Vector-matrix multiplication is flipped in slang: v * m becomes mul(m, v)
+        return normalize(mul((2.0 * normalMap.xyz - 1.0), TBN));
     }
     return normalize(TBN[2].xyz);
 }
@@ -220,8 +219,7 @@ float3 normal(VertexStageOutput input) {
 float addEmissive(inout float4 color, float2 uv) {
     float4 emissive = float4(0.0);
     if (material_data.has_emissive_map) {
-        // emissive = textures[material_data.emissive_texture_id].Sample(uv) * material_data.emissive_factor;
-        emissive = float4(1.0, 1.0, 1.0, 1.0);
+        emissive = textures[material_data.emissive_texture_id].Sample(uv) * material_data.emissive_factor;
     }
     else {
         emissive = material_data.emissive_factor;
@@ -246,6 +244,8 @@ float4 psMain(VertexStageOutput input) : SV_Target
 {
     float4 base_color = float4(1.0, 0.0, 0.0, 1.0);
 
+    // return float4(normalize(normal(input)) * 0.5 + 0.5, 1.0);
+
     if (material_data.has_color_map) {
         float4 tex_color = textures[material_data.color_texture_id].Sample(input.uv);
         base_color = tex_color * material_data.color_factors;
@@ -261,12 +261,11 @@ float4 psMain(VertexStageOutput input) : SV_Target
     }
 
     // Do we need to properly alpha blend things or not?
-    float alpha = (material_data.use_alpha_blending) ? base_color.w : 1.0;
+    float alpha = material_data.use_alpha_blending ? base_color.w : 1.0;
     float metallic = 0.04;
     float roughness = 0.8;
     if (material_data.has_metal_roughness_map) {
-        // float4 metalRough = textures[material_data.metal_roughness_texture_id].Sample(input.uv);
-        float4 metalRough = float4(metallic, roughness, 0.0, 1.0);
+        float4 metalRough = textures[material_data.metal_roughness_texture_id].Sample(input.uv);
         metallic = clamp(metalRough.x, 0.0, 1.0);
         roughness = clamp(metalRough.y, 0.0, 1.0);
     }
@@ -281,7 +280,6 @@ float4 psMain(VertexStageOutput input) : SV_Target
     float3 v = normalize(scene_data.camera_position.xyz - input.world_position);  // View unit vector
     float3 f0 = 0.16 * roughness * roughness * (1.0 - metallic) + base_color.xyz * metallic;
     float f90 = clamp(dot(f0, float3(50.0 * 0.33)), 0.0, 1.0);
-
 
     float4 lightValue = float4(float3(0.0), base_color.w);
     float3 diffuseColor = (1.0 - metallic) * base_color.xyz;
@@ -306,12 +304,12 @@ float4 psMain(VertexStageOutput input) : SV_Target
         float3 shading = Fd + Fr;
 
         // Apply point lights
-        if (scene_data.lights[i].position_type.x == 1.0) {
-            lightValue.xyz.add(pointLight(i, n, input.world_position) * shading);
+        if (scene_data.lights[i].position_type.w == 1.0) {
+            lightValue.xyz += pointLight(i, n, input.world_position) * shading;
         }
         // Apply directional lighting
         else {
-            lightValue.xyz.add(directionalLight(i, n) * shading);
+            lightValue.xyz += directionalLight(i, n) * shading;
         }
     }
 
@@ -319,7 +317,7 @@ float4 psMain(VertexStageOutput input) : SV_Target
     float3 irradiance = float3(0.1);
     float3 iblDiffuse = irradiance * base_color.xyz;
     float3 ambient = iblDiffuse;
-    float3 color = float3(ambient + lightValue.xyz);
+    float3 color = ambient + lightValue.xyz;
 
     // Apply gamma correction
     if (is_emissive == 0.0) {
