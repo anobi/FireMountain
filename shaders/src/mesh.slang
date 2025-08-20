@@ -27,7 +27,7 @@ struct SceneData
     Light lights[32];
 };
 layout(set = 0, binding = 0) ConstantBuffer<SceneData> scene_data;
-layout(set = 0, binding = 1) ConstantBuffer<Sampler2D> textures[];
+layout(set = 0, binding = 1) Sampler2D textures[];
 
 struct GLTFmaterial_data
 {
@@ -74,8 +74,8 @@ VertexStageOutput vsMain(uint vertexID : SV_VertexID)
     float4x4 m = push_constants.model_matrix;
     float4x4 v = scene_data.view_matrix;
     float4x4 p = scene_data.projection_matrix;
-    float4x4 vp = p * v;
-    float4x4 mvp = vp * m;
+    float4x4 vp = mul(p, v);
+    float4x4 mvp = mul(vp, m);
 
     // TODO: Calculate TBN here too
 
@@ -86,7 +86,7 @@ VertexStageOutput vsMain(uint vertexID : SV_VertexID)
     output.position = frag_pos;
     output.world_position = worldPos.xyz;
     output.normal = mul(m, float4(vert.normal, 0.0f)).xyz;
-    output.color = mul(vert.color.xyz, material_data.color_factors.xyz);
+    output.color = vert.color.xyz * material_data.color_factors.xyz;
     output.uv.x = vert.uv_x;
     output.uv.y = vert.uv_y;
     output.tangent = vert.tangent;
@@ -204,9 +204,9 @@ float3 normal(VertexStageOutput input) {
         flip = uv2xArea > 0 ? 1 : -1;
     }
 
-    float3 N      = normalize(input.normal);
-    T           = normalize(T - N * dot(N, T));
-    float3 B      = normalize(cross(N, T) * flip);
+    float3 N        = normalize(input.normal);
+    T               = normalize(T - N * dot(N, T));
+    float3 B        = normalize(cross(N, T) * flip);
     float3x3 TBN    = float3x3(T, B, N);
 
     if (material_data.has_normal_map) {
@@ -246,12 +246,9 @@ float4 psMain(VertexStageOutput input) : SV_Target
 {
     float4 base_color = float4(1.0, 0.0, 0.0, 1.0);
 
-    return float4(1, 1, 1, 1);
-
     if (material_data.has_color_map) {
-        // float4 tex_color = textures[material_data.color_texture_id].Sample(input.uv);
-        float4 tex_color = float4(1.0, 0.0, 0.0, 1.0);
-        base_color = mul(tex_color, material_data.color_factors);
+        float4 tex_color = textures[material_data.color_texture_id].Sample(input.uv);
+        base_color = tex_color * material_data.color_factors;
         // Convert to linear color space if in srgb
         base_color = pow(base_color, float4(GAMMA));
     }
@@ -260,7 +257,7 @@ float4 psMain(VertexStageOutput input) : SV_Target
     }
 
     if (base_color.w == 0.0) {
-        // discard;
+        discard;
     }
 
     // Do we need to properly alpha blend things or not?
@@ -331,5 +328,4 @@ float4 psMain(VertexStageOutput input) : SV_Target
     }
 
     return float4(color, alpha);
-    //return float4(1, 1, 1, 1);
 }

@@ -47,7 +47,6 @@ def build_shaders():
                 str(slangc), str(shader),
                 "-entry", shader_entry_points[stage],
                 "-stage", stage,
-                "-target", "spirv",
                 "-o", str(shader_build_path)], check=True)
             built_stages.append(stage)
         out_msg[shader_name] = sorted(set(built_stages))

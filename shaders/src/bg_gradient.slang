@@ -18,7 +18,6 @@ float4 debanding(float4 col, int2 uv)
 }
 
 [shader("compute")]
-[require(spirv_1_4)]
 [numthreads(16,16,1)]
 void csMain(uint3 threadId : SV_DispatchThreadID)
 {
