@@ -5,6 +5,7 @@
 #include "python_embed.h"
 #include <stdexcept>
 #include <utility>
+#include <fmt/core.h>
 
 namespace {
     // RAII to initialize Python once, without touching your main()
@@ -49,15 +50,20 @@ py_build_shaders(const std::string& shader_folder,
 {
     (void)runtime();     // ensure interpreter is up
     GilGuard gil;        // hold GIL during the call
+    std::unordered_map<std::string, std::vector<std::string>> out;
 
     // Make sure we can import from module_dir
     PyObject* sys_path = PySys_GetObject("path"); // borrowed ref
     PyObject* pDir = PyUnicode_DecodeFSDefault(module_dir.c_str());
-    if (!pDir) { throw std::runtime_error("Failed to create module_dir unicode"); }
+    if (!pDir) {
+        fmt::println("Failed to create module_dir unicode");
+        return out;
+    }
     if (PyList_Insert(sys_path, 0, pDir) != 0) {
         Py_DECREF(pDir);
         PyErr_Print();
-        throw std::runtime_error("Failed to insert module_dir into sys.path");
+        fmt::println("Failed to insert module_dir into sys.path");
+        return out;
     }
     Py_DECREF(pDir);
 
@@ -67,7 +73,8 @@ py_build_shaders(const std::string& shader_folder,
     Py_DECREF(pName);
     if (!pModule) {
         PyErr_Print();
-        throw std::runtime_error("Import failed for module: " + module_name);
+        fmt::println("Import failed for module: {}", module_name);
+        return out;
     }
 
     // Get function
@@ -76,7 +83,8 @@ py_build_shaders(const std::string& shader_folder,
         Py_XDECREF(pFunc);
         Py_DECREF(pModule);
         PyErr_Print();
-        throw std::runtime_error("Function not found/callable: " + func_name);
+        fmt::println("Function not found/callable: {}", func_name);
+        return out;
     }
 
     // Call func(folder)
@@ -89,15 +97,17 @@ py_build_shaders(const std::string& shader_folder,
 
     if (!pRet) {
         PyErr_Print();
-        throw std::runtime_error("Python call failed");
+        fmt::println("Python call failed");
+        return out;
     }
 
     // Convert dict[str, list[str]] -> unordered_map<string, vector<string>>
-    std::unordered_map<std::string, std::vector<std::string>> out;
+
 
     if (!PyDict_Check(pRet)) {
         Py_DECREF(pRet);
-        throw std::runtime_error("Unexpected return type (expected dict)");
+        fmt::println("Unexpected return type (expected dict)");
+        return out;
     }
 
     PyObject *key, *val;
