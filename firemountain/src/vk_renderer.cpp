@@ -214,6 +214,7 @@ void fmvk::Vulkan::Destroy() {
     if(this->_is_initialized) {
         vkDeviceWaitIdle(this->_device);
         this->loaded_meshes.clear();
+        this->clean_pipelines();
 
         for (auto& frame : this->_frames) {
             frame._deletion_queue.flush();
@@ -310,6 +311,7 @@ void fmvk::Vulkan::init_vulkan(SDL_Window *window) {
     vkb::InstanceBuilder builder;
     auto build = builder.set_app_name("FireMountain")
         .request_validation_layers(true)
+        .enable_extension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME)
         .use_default_debug_messenger()
         .require_api_version(1, 3, 0)
         .build();
@@ -339,6 +341,11 @@ void fmvk::Vulkan::init_vulkan(SDL_Window *window) {
     features_12.descriptorBindingVariableDescriptorCount = true;
     features_12.runtimeDescriptorArray = true;
 
+    VkPhysicalDeviceVulkan11Features features_11 {};
+    features_11.shaderDrawParameters = true;
+    //features_11.variablePointers = true;
+    //features_11.variablePointersStorageBuffer = true;
+
     // Initialize device and physical device
     vkb::PhysicalDeviceSelector selector { vkb_instance };
     vkb::PhysicalDevice device = selector
@@ -346,6 +353,7 @@ void fmvk::Vulkan::init_vulkan(SDL_Window *window) {
         .set_required_features(device_features)
         .set_required_features_13(features_13)
         .set_required_features_12(features_12)
+        .set_required_features_11(features_11)
         .set_surface(this->_surface)
         .select()
         .value();
@@ -364,10 +372,7 @@ void fmvk::Vulkan::init_vulkan(SDL_Window *window) {
         .instance = this->_instance
     };
     vmaCreateAllocator(&allocator_info, &this->_allocator);
-
-
 }
-
 
 void fmvk::Vulkan::init_imgui() {
     // 1: Create descriptor pool
@@ -600,23 +605,22 @@ void fmvk::Vulkan::immediate_submit(std::function<void(VkCommandBuffer cmd)> &&f
     VK_CHECK(vkWaitForFences(this->_device, 1, &this->_immediate_fence, true, 9999999999));
 }
 
+void fmvk::Vulkan::clean_pipelines() {
+    for (auto &p : this->pipelines) {
+        p.second.Cleanup(this->_device);
+    }
+
+    for (auto &p : this->compute_pipelines) {
+        p.second.Cleanup(this->_device);
+    }
+    this->metal_roughness_material.clear_resources(this->_device);
+}
+
 void fmvk::Vulkan::init_pipelines() {
     fmvk::ComputePipeline background_pipeline = {};
     background_pipeline.Init(this->_device, "bg_gradient", this->_draw_image_descriptor_layout);
     this->compute_pipelines["background"] = background_pipeline;
-
     this->metal_roughness_material.build_pipelines(this);
-
-    this->_deletion_queue.push_function([=, this]() {
-        for (auto &p : this->pipelines) {
-            p.second.Cleanup(this->_device);
-        }
-
-        for (auto &p : this->compute_pipelines) {
-            p.second.Cleanup(this->_device);
-        }
-        this->metal_roughness_material.clear_resources(this->_device);
-    });
 }
 
 // TODO: Move to Firemountain actual
@@ -640,6 +644,7 @@ void fmvk::Vulkan::update_scene(const fmCamera* camera, std::vector<RenderSceneO
     this->scene_data.view = camera->view;
     this->scene_data.projection = camera->projection;
 
+    // TODO: Light culling
     size_t scene_light_idx = 0;
     for (auto o : scene) {
         if (o.light_id) {
@@ -710,7 +715,8 @@ void fmvk::Vulkan::draw_background(VkCommandBuffer cmd)
     auto bg_pipeline = this->compute_pipelines["background"];
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, bg_pipeline.pipeline);
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, bg_pipeline.layout, 0, 1, &this->_draw_image_descriptors, 0, nullptr);
-    
+
+    // Background color gradient
     ComputePushConstants pc = {
         .data_1 = glm::fvec4(0.10f, 0.10f, 0.10f, 1.0f),
         .data_2 = glm::fvec4(0.16f, 0.18f, 0.20f, 1.0f)
@@ -727,8 +733,6 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
 
     std::vector<uint32_t> opaque_draws;
     opaque_draws.reserve(this->_main_draw_context.opaque_surfaces.size());
-
-    // TODO do culling in a compute shader
 
     glm::mat4 view_projection {};
     if (this->ghost_mode) {
@@ -755,15 +759,15 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
             }
     });
 
+    // TODO: give the function a render target to support multiple passes?
     VkRenderingAttachmentInfo color_attachment = VKInit::attachment_info(this->_draw_image.view, nullptr, VK_IMAGE_LAYOUT_GENERAL);
     VkRenderingAttachmentInfo depth_attachment = VKInit::depth_attachment_info(this->_depth_image.view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
     VkRenderingInfo render_info = VKInit::rendering_info(this->_draw_extent, &color_attachment, &depth_attachment);
     vkCmdBeginRendering(cmd, &render_info);
 
 
-    /*
-    * Scene Data buffer
-    */
+    // Scene Data buffer
+    //===========================================
 
     // Allocate uniform buffer for the scene data
     fmvk::Buffer::AllocatedBuffer gpu_scene_data_buffer = fmvk::Buffer::create_buffer(sizeof(GPUSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, this->_allocator);
@@ -880,20 +884,23 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
 
 void fmvk::Vulkan::init_descriptors() {
     std::vector<DescriptorAllocatorGrowable::PoolSizeRatio> sizes = {
-        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 3 },
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3 },
-        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3}
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
+        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1}
     };
     this->global_descriptor_allocator.init(this->_device, 10, sizes);
     this->_deletion_queue.push_function([&]() {
         this->global_descriptor_allocator.destroy_pools(this->_device);
     });
 
+    // Background compute shader descriptor
     {
         DescriptorLayoutBuilder builder;
         builder.add_binding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-        this->_draw_image_descriptor_layout  = builder.build(this->_device, VK_SHADER_STAGE_COMPUTE_BIT);
+        this->_draw_image_descriptor_layout = builder.build(this->_device, VK_SHADER_STAGE_COMPUTE_BIT);
     }
+
+    // Mesh shader descriptor
     {
         DescriptorLayoutBuilder builder;
         builder.add_binding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
@@ -1127,16 +1134,16 @@ void fmvk::GLTFMetallic_Roughness::build_pipelines(const fmvk::Vulkan* renderer)
     // Shaders
     // -------------------------------------------------------------------------
     // TODO: Get shader paths from pipeline name. Use fmt::format
-    VkShaderModule fragment_shader;
-    if (!fmvk::load_shader_module("shaders/mesh.frag.spv", renderer->_device, &fragment_shader)) {
-        fmt::println("Error building fragment shader module");
+    VkShaderModule pixel_shader;
+    if (!fmvk::load_shader_module("shaders/mesh_pixel.spv", renderer->_device, &pixel_shader)) {
+        fmt::println("Error building pixel shader module");
     }
     else {
         fmt::println("Fragment shader module loaded.");
     }
 
     VkShaderModule vertex_shader;
-    if (!fmvk::load_shader_module("shaders/mesh.vert.spv", renderer->_device, &vertex_shader)) {
+    if (!fmvk::load_shader_module("shaders/mesh_vertex.spv", renderer->_device, &vertex_shader)) {
         fmt::println("Error building vertex shader module");
     } 
     else {
@@ -1154,7 +1161,6 @@ void fmvk::GLTFMetallic_Roughness::build_pipelines(const fmvk::Vulkan* renderer)
 
     DescriptorLayoutBuilder layout_builder;
     layout_builder.add_binding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-
     layout_builder.add_binding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     layout_builder.add_binding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     layout_builder.add_binding(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
@@ -1187,7 +1193,7 @@ void fmvk::GLTFMetallic_Roughness::build_pipelines(const fmvk::Vulkan* renderer)
     // Pipeline builder
     // -------------------------------------------------------------------------
     fmvk::PipelineBuilder pipeline_builder;
-    pipeline_builder.set_shaders(vertex_shader, fragment_shader);
+    pipeline_builder.set_shaders(vertex_shader, pixel_shader);
     pipeline_builder.set_input_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
     pipeline_builder.set_polygon_mode(VK_POLYGON_MODE_FILL);
     pipeline_builder.set_cull_mode(VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
@@ -1209,7 +1215,7 @@ void fmvk::GLTFMetallic_Roughness::build_pipelines(const fmvk::Vulkan* renderer)
     pipeline_builder._pipeline_layout = transparent_layout;
     this->transparent_pipeline.pipeline = pipeline_builder.build_pipeline(renderer->_device);
 
-    vkDestroyShaderModule(renderer->_device, fragment_shader, nullptr);
+    vkDestroyShaderModule(renderer->_device, pixel_shader, nullptr);
     vkDestroyShaderModule(renderer->_device, vertex_shader, nullptr);
 }
 
@@ -1270,10 +1276,7 @@ MaterialInstance fmvk::GLTFMetallic_Roughness::write_material(VkDevice device, M
         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
     );
 
-
-
     this->writer.update_set(device, data.material_set);
-
     return data;
 }
 

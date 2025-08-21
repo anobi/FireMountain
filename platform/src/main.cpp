@@ -9,6 +9,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+#include "python_embed.h"
 #include "firemountain.hpp"
 #include "display.hpp"
 #include "camera.hpp"
@@ -35,12 +36,12 @@ struct GameSceneObject {
 
     bool is_light = false;
 
-    LightID light_id = {};
-    LightType light_type = {};
+    LightID light_id {0};
+    LightType light_type = LightType::None;
     float light_intensity = 0.0f;
     float light_range = 0.0f;
-    glm::vec3 light_direction;
-    glm::vec3 light_color;
+    glm::vec3 light_direction {};
+    glm::vec3 light_color {};
 
     bool dirty = true;
 };
@@ -188,6 +189,7 @@ int RunApp()
     float tick = 0;
     bool running = true;
     bool resize_requested = false;
+    bool shader_reload_requested = false;
     SDL_Event event = {};
 
     camera.position = glm::vec3(3.0f, 1.0f, 0.0f);
@@ -218,6 +220,7 @@ int RunApp()
                     running = false;
                     break;
                 }
+                if (event.key.key == SDLK_F5) { shader_reload_requested = true; }
 
                 if (event.key.key == SDLK_W) { camera.velocity.z = -1; }
                 if (event.key.key == SDLK_S) { camera.velocity.z =  1; }
@@ -293,6 +296,12 @@ int RunApp()
             assert(WIDTH > 0 && HEIGHT > 0);
             firemountain.Resize(static_cast<uint32_t>(WIDTH), static_cast<uint32_t>(HEIGHT));
             resize_requested = false;
+        }
+
+        if (shader_reload_requested) {
+            py_build_shaders("shaders", "shaders/bin");
+            firemountain.CompileShaders();
+            shader_reload_requested = false;
         }
 
         // Rotate and bob the froge

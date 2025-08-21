@@ -24,6 +24,8 @@ public:
 
     void ProcessImGuiEvent(SDL_Event* e);
 
+    void CompileShaders();
+
     MeshID AddMesh(const std::string& name, const char* path);
     LightID AddLight(const std::string& name);
 

@@ -5,6 +5,8 @@
 #include <VkBootstrap.h>
 
 #include "vk_pipeline.hpp"
+
+#include "vk_descriptors.hpp"
 #include "vk_init.hpp"
 #include "vk_mesh.hpp"
 #include "vk_pipeline_builder.hpp"
@@ -42,21 +44,20 @@ bool fmvk::load_shader_module(const char *file_path, const VkDevice device, VkSh
     return true;
 }
 
-
 int fmvk::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, const char* shader_name, VkDescriptorSetLayout descriptor_layout, fmvk::Image::AllocatedImage alloc_image)
 {
 
     // Shaders
     // -------------------------------------------------------------------------
     // TODO: Get shader paths from pipeline name. Use fmt::format
-    if (!load_shader_module("shaders/mesh.frag.spv", device, &this->fragment_shader)) {
+    if (!load_shader_module("shaders/mesh_fragment.spv", device, &this->fragment_shader)) {
         fmt::println("Error building fragment shader module");
     }
     else {
         fmt::println("Fragment shader module loaded.");
     }
 
-    if (!load_shader_module("shaders/mesh.vert.spv", device, &this->vertex_shader)) {
+    if (!load_shader_module("shaders/mesh_vertex.spv", device, &this->vertex_shader)) {
         fmt::println("Error building vertex shader module");
     } 
     else {
@@ -140,7 +141,7 @@ int fmvk::ComputePipeline::Init(const VkDevice device, const char *shader_name, 
     VK_CHECK(vkCreatePipelineLayout(device, &compute_layout, nullptr, &this->layout));
 
     VkShaderModule compute_shader;
-    if (!load_shader_module("shaders/bg_gradient.comp.spv", device, &compute_shader)) {
+    if (!load_shader_module("shaders/bg_gradient_compute.spv", device, &compute_shader)) {
         fmt::println("Error building compute shader module");
     }
     else {

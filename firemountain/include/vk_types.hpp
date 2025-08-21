@@ -103,7 +103,6 @@ struct fmCamera {
     bool debug_pov_lock = false;
 };
 
-
 struct RenderSceneObj {
     MeshID mesh_id;
     glm::mat4 transform;
