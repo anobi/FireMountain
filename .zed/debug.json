@@ -1,0 +1,14 @@
+[
+  {
+    "label": "Debug FireMountain",
+    "build": {
+      "command": "cmake",
+      "args": ["--build", "."],
+      "cwd": "$ZED_WORKTREE_ROOT"
+    },
+    "program": "$ZED_WORKTREE_ROOT/build/FirePlateau",
+    "request": "launch",
+    "adapter": "CodeLLDB",
+    "cwd": "$ZED_WORKTREE_ROOT/build"
+  }
+]
