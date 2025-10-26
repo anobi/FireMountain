@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 project(FirePlateau)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror")
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Python3 COMPONENTS Development REQUIRED)
 add_library(pyembed STATIC src/python_embed.cpp)
