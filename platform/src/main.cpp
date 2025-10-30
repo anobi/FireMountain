@@ -28,90 +28,90 @@ CameraProjectionType camera_projection = CameraProjectionType::PERSPECTIVE;
 // Database and scene
 sqlite3* DB;
 
-GameScene game_scene = {
-    .name = "Sponza",
-    .objects = {
-        {"sponza", (GameSceneObject) {
-            .mesh_file = "assets/Sponza/glTF/Sponza.gltf",
-            .name = "Sponza"
-        }},
-        // {"structure", {
-        //     .mesh_file = "assets/structure.glb"
-        // }},
-        {"froge", (GameSceneObject) {
-            .mesh_file = "assets/good_froge.glb",
-            .name = "Good Froge",
-            .transform = (Transform) {
-                .position = {0.1f, 0.5f, -0.2f}
-            }
-        }},
-        {"cube", (GameSceneObject) {
-            .mesh_file = "assets/cube_1m.glb",
-            .name = "Cube",
-            .transform = (Transform) {
-                .position = {0.0f, 5.0f, -0.2f}
-            }
-        }},
-        {"sun", (GameSceneObject) {
-            .name = "Sun",
-            .light_type = LightType::Area,
-            .light_intensity = 1.8f,
-            .light_range = 100.0f,
-            .light_direction = { 0.0f, -1.0f, -0.5f },
-            .light_color = { 0.8f, 0.4f, 0.2f }
-        }},
-        {"mid_point_light", (GameSceneObject) {
-            .name = "Light Mid",
-            .transform = (Transform) {
-                .position = { 0.0f, 3.0f, 0.0f }
-            },
-            .light_type = LightType::Point,
-            .light_intensity = 8.0f,
-            .light_range = 100.0f,
-            .light_color = { 0.8f, 0.4f, 0.2f }
-        }},
-        {"corner_torch_blue", (GameSceneObject) {
-            .name = "Torch (blue)",
-            .transform = (Transform) {
-                .position = { 8.8f, 1.5f, 3.2f }
-            },
-            .light_type = LightType::Point,
-            .light_intensity = 8.0f,
-            .light_range = 100.0f,
-            .light_color = { 0.2f, 0.4f, 0.8f }
-        }},
-        {"corner_torch_green", (GameSceneObject) {
-            .name = "Torch (green)",
-            .transform = (Transform) {
-                .position = { 9.0f, 1.5f, -3.6f }
-            },
-            .light_type = LightType::Point,
-            .light_intensity = 8.0f,
-            .light_range = 100.0f,
-            .light_color = { 0.2f, 0.8f, 0.4f }
-        }},
-        {"corner_torch_red", (GameSceneObject) {
-            .name = "Torch (red)",
-            .transform = (Transform) {
-                .position = { -9.5f, 1.5f, -3.65f }
-            },
-            .light_type = LightType::Point,
-            .light_intensity = 8.0f,
-            .light_range = 100.0f,
-            .light_color = { 0.8f, 0.2f, 0.1f }
-        }},
-        {"corner_torch_purple", (GameSceneObject) {
-            .name = "Torch (purple)",
-            .transform = (Transform) {
-                .position = { -9.5f, 1.5f, 3.2f }
-            },
-            .light_type = LightType::Point,
-            .light_intensity = 8.0f,
-            .light_range = 100.0f,
-            .light_color = { 0.8f, 0.2f, 0.8f }
-        }}
-    }
-};
+// GameScene game_scene = {
+//     .name = "Sponza",
+//     .objects = {
+//         {"sponza", (GameSceneObject) {
+//             .mesh_file = "assets/Sponza/glTF/Sponza.gltf",
+//             .name = "Sponza"
+//         }},
+//         // {"structure", {
+//         //     .mesh_file = "assets/structure.glb"
+//         // }},
+//         {"froge", (GameSceneObject) {
+//             .mesh_file = "assets/good_froge.glb",
+//             .name = "Good Froge",
+//             .transform = (Transform) {
+//                 .position = {0.1f, 0.5f, -0.2f}
+//             }
+//         }},
+//         {"cube", (GameSceneObject) {
+//             .mesh_file = "assets/cube_1m.glb",
+//             .name = "Cube",
+//             .transform = (Transform) {
+//                 .position = {0.0f, 5.0f, -0.2f}
+//             }
+//         }},
+//         {"sun", (GameSceneObject) {
+//             .name = "Sun",
+//             .light_type = LightType::Area,
+//             .light_intensity = 1.8f,
+//             .light_range = 100.0f,
+//             .light_direction = { 0.0f, -1.0f, -0.5f },
+//             .light_color = { 0.8f, 0.4f, 0.2f }
+//         }},
+//         {"mid_point_light", (GameSceneObject) {
+//             .name = "Light Mid",
+//             .transform = (Transform) {
+//                 .position = { 0.0f, 3.0f, 0.0f }
+//             },
+//             .light_type = LightType::Point,
+//             .light_intensity = 8.0f,
+//             .light_range = 100.0f,
+//             .light_color = { 0.8f, 0.4f, 0.2f }
+//         }},
+//         {"corner_torch_blue", (GameSceneObject) {
+//             .name = "Torch (blue)",
+//             .transform = (Transform) {
+//                 .position = { 8.8f, 1.5f, 3.2f }
+//             },
+//             .light_type = LightType::Point,
+//             .light_intensity = 8.0f,
+//             .light_range = 100.0f,
+//             .light_color = { 0.2f, 0.4f, 0.8f }
+//         }},
+//         {"corner_torch_green", (GameSceneObject) {
+//             .name = "Torch (green)",
+//             .transform = (Transform) {
+//                 .position = { 9.0f, 1.5f, -3.6f }
+//             },
+//             .light_type = LightType::Point,
+//             .light_intensity = 8.0f,
+//             .light_range = 100.0f,
+//             .light_color = { 0.2f, 0.8f, 0.4f }
+//         }},
+//         {"corner_torch_red", (GameSceneObject) {
+//             .name = "Torch (red)",
+//             .transform = (Transform) {
+//                 .position = { -9.5f, 1.5f, -3.65f }
+//             },
+//             .light_type = LightType::Point,
+//             .light_intensity = 8.0f,
+//             .light_range = 100.0f,
+//             .light_color = { 0.8f, 0.2f, 0.1f }
+//         }},
+//         {"corner_torch_purple", (GameSceneObject) {
+//             .name = "Torch (purple)",
+//             .transform = (Transform) {
+//                 .position = { -9.5f, 1.5f, 3.2f }
+//             },
+//             .light_type = LightType::Point,
+//             .light_intensity = 8.0f,
+//             .light_range = 100.0f,
+//             .light_color = { 0.8f, 0.2f, 0.8f }
+//         }}
+//     }
+// };
 
 
 // Spooky halloween scene
@@ -177,16 +177,17 @@ int RunApp()
     }
 
     // TODO:
-    // game_scene.load("Sponza", DB);
+    GameScene game_scene;
+    game_scene.load("Sponza", DB);
     for (auto& [key, obj] : game_scene.objects) {
         if (obj.light_type != LightType::None) {
             obj.light_id = firemountain.AddLight(key);
         } else {
-            obj.mesh_id = firemountain.AddMesh(key, obj.mesh_file);
+            obj.mesh_id = firemountain.AddMesh(key, obj.mesh_file.c_str());
         }
     }
 
-    // game_scene.save(DB);
+    // game_scene.save(DB);4
 
     float tick = 0;
     bool running = true;
@@ -307,19 +308,19 @@ int RunApp()
         }
 
         // Rotate and bob the froge
-        game_scene.objects["froge"].transform.position.y += 0.0025f * sin(0.02f * tick);
-        game_scene.objects["froge"].transform.rotation = glm::angleAxis(
+        game_scene.objects["Good Froge"].transform.position.y += 0.0025f * sin(0.02f * tick);
+        game_scene.objects["Good Froge"].transform.rotation = glm::angleAxis(
             glm::radians(0.5f * tick),              // Rotation speed
             glm::normalize(glm::vec3(0, 1, 0))     // Rotate along Y-axis
         );
-        game_scene.objects["froge"].dirty = true;
+        game_scene.objects["Good Froge"].dirty = true;
 
         // Rotate cube
-        game_scene.objects["cube"].transform.rotation = glm::angleAxis(
+        game_scene.objects["Cube"].transform.rotation = glm::angleAxis(
             glm::radians(0.4f * tick),
             glm::normalize(glm::vec3(-0.8, 0.1, -0.4))
         );
-        game_scene.objects["cube"].dirty = true;
+        game_scene.objects["Cube"].dirty = true;
 
         std::vector<RenderSceneObj> render_scene;
 

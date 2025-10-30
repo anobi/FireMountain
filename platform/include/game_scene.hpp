@@ -16,9 +16,9 @@ struct Transform {
 };
 
 struct GameSceneObject {
-    const char* mesh_file;
-    const char* name;
-    MeshID mesh_id;
+    std::string mesh_file;
+    std::string name;
+    MeshID mesh_id {0};
     Transform transform;
 
     bool is_light = false;
@@ -27,8 +27,8 @@ struct GameSceneObject {
     LightType light_type = LightType::None;
     float light_intensity = 0.0f;
     float light_range = 0.0f;
-    glm::vec3 light_direction {};
-    glm::vec3 light_color {};
+    glm::vec3 light_direction {0.0f, 0.0f, 0.0f};
+    glm::vec3 light_color {0.0f, 0.0f, 0.0f};
 
     bool dirty = true;
 };
@@ -39,6 +39,6 @@ struct GameScene {
     std::string name;
     std::unordered_map<std::string, GameSceneObject> objects;
 
-    void load(std::string id, sqlite3* db);
+    void load(const char* name, sqlite3* db);
     void save(sqlite3* db);
 };
