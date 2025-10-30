@@ -39,15 +39,15 @@ struct LightID {
 };
 
 enum LightType {
-    None,
-    Point,
-    Spot,
-    Area
+    None = 0,
+    Point = 1,
+    Spot = 2,
+    Area = 3
 };
 
 struct GPULightData {
     // Position with light type as .w
-    glm::vec4 positionType = glm::vec4 {0.0f};      
+    glm::vec4 positionType = glm::vec4 {0.0f};
 
     // Color with light intensity as .w
     glm::vec4 colorIntensity = glm::vec4 {0.0f};

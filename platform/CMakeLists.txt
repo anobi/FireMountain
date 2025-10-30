@@ -21,6 +21,7 @@ endif()
 
 target_sources(${PROJECT_NAME}
   PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/game_scene.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/display.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/camera.cpp
 )
@@ -35,6 +36,7 @@ target_link_libraries(${PROJECT_NAME}
     glm
     LibFireMountain
     pyembed
+    sqlite3
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

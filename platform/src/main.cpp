@@ -1,16 +1,19 @@
+#include <cstdlib>
 #include <string>
-#include <unordered_map>
 #include <fmt/core.h>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_mouse.h>
+#include <sqlite3.h>
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+#include "fmt/base.h"
 #include "python_embed.h"
 #include "firemountain.hpp"
+#include "game_scene.hpp"
 #include "display.hpp"
 #include "camera.hpp"
 
@@ -22,102 +25,92 @@ float CAMERA_H_SPEED = 1;
 Camera camera;
 CameraProjectionType camera_projection = CameraProjectionType::PERSPECTIVE;
 
+// Database and scene
+sqlite3* DB;
 
-struct Transform {
-    glm::vec3 position = { 0.0f, 0.0f, 0.0f};
-    glm::quat rotation = { 1.0f, 0.0f, 0.0f, 0.0f};
-    glm::vec3 scale = { 1.0f, 1.0f, 1.0f};
-};
-
-struct GameSceneObject {
-    const char* mesh_file;
-    MeshID mesh_id;
-    Transform transform;
-
-    bool is_light = false;
-
-    LightID light_id {0};
-    LightType light_type = LightType::None;
-    float light_intensity = 0.0f;
-    float light_range = 0.0f;
-    glm::vec3 light_direction {};
-    glm::vec3 light_color {};
-
-    bool dirty = true;
-};
-
-
-std::unordered_map<std::string, GameSceneObject> game_scene = {
-    {"sponza", (GameSceneObject) {
-        .mesh_file = "assets/Sponza/glTF/Sponza.gltf"
-    }},
-    // {"structure", {
-    //     .mesh_file = "assets/structure.glb"
-    // }},
-    {"froge", (GameSceneObject) {
-        .mesh_file = "assets/good_froge.glb",
-        .transform = (Transform) {
-            .position = {0.1f, 0.5f, -0.2f}
-        }
-    }},
-    {"cube", (GameSceneObject) {
-        .mesh_file = "assets/cube_1m.glb",
-        .transform = (Transform) {
-            .position = {0.0f, 5.0f, -0.2f}
-        }
-    }},
-    {"sun", (GameSceneObject) {
-        .light_type = LightType::Area,
-        .light_intensity = 1.8f,
-        .light_range = 100.0f,
-        .light_direction = { 0.0f, -1.0f, -0.5f },
-        .light_color = { 0.8f, 0.4f, 0.2f }
-    }},
-    {"mid_point_light", (GameSceneObject) {
-        .transform = (Transform) {
-            .position = { 0.0f, 3.0f, 0.0f }
-        },
-        .light_type = LightType::Point,
-        .light_intensity = 8.0f,
-        .light_range = 100.0f,
-        .light_color = { 0.8f, 0.4f, 0.2f }
-    }},
-    {"corner_torch_blue", (GameSceneObject) {
-        .transform = (Transform) {
-            .position = { 8.8f, 1.5f, 3.2f }
-        },
-        .light_type = LightType::Point,
-        .light_intensity = 8.0f,
-        .light_range = 100.0f,
-        .light_color = { 0.2f, 0.4f, 0.8f }
-    }},
-    {"corner_torch_green", (GameSceneObject) {
-        .transform = (Transform) {
-            .position = { 9.0f, 1.5f, -3.6f }
-        },
-        .light_type = LightType::Point,
-        .light_intensity = 8.0f,
-        .light_range = 100.0f,
-        .light_color = { 0.2f, 0.8f, 0.4f }
-    }},
-    {"corner_torch_red", (GameSceneObject) {
-        .transform = (Transform) {
-            .position = { -9.5f, 1.5f, -3.65f }
-        },
-        .light_type = LightType::Point,
-        .light_intensity = 8.0f,
-        .light_range = 100.0f,
-        .light_color = { 0.8f, 0.2f, 0.1f }
-    }},
-    {"corner_torch_purple", (GameSceneObject) {
-        .transform = (Transform) {
-            .position = { -9.5f, 1.5f, 3.2f }
-        },
-        .light_type = LightType::Point,
-        .light_intensity = 8.0f,
-        .light_range = 100.0f,
-        .light_color = { 0.8f, 0.2f, 0.8f }
-    }}
+GameScene game_scene = {
+    .name = "Sponza",
+    .objects = {
+        {"sponza", (GameSceneObject) {
+            .mesh_file = "assets/Sponza/glTF/Sponza.gltf",
+            .name = "Sponza"
+        }},
+        // {"structure", {
+        //     .mesh_file = "assets/structure.glb"
+        // }},
+        {"froge", (GameSceneObject) {
+            .mesh_file = "assets/good_froge.glb",
+            .name = "Good Froge",
+            .transform = (Transform) {
+                .position = {0.1f, 0.5f, -0.2f}
+            }
+        }},
+        {"cube", (GameSceneObject) {
+            .mesh_file = "assets/cube_1m.glb",
+            .name = "Cube",
+            .transform = (Transform) {
+                .position = {0.0f, 5.0f, -0.2f}
+            }
+        }},
+        {"sun", (GameSceneObject) {
+            .name = "Sun",
+            .light_type = LightType::Area,
+            .light_intensity = 1.8f,
+            .light_range = 100.0f,
+            .light_direction = { 0.0f, -1.0f, -0.5f },
+            .light_color = { 0.8f, 0.4f, 0.2f }
+        }},
+        {"mid_point_light", (GameSceneObject) {
+            .name = "Light Mid",
+            .transform = (Transform) {
+                .position = { 0.0f, 3.0f, 0.0f }
+            },
+            .light_type = LightType::Point,
+            .light_intensity = 8.0f,
+            .light_range = 100.0f,
+            .light_color = { 0.8f, 0.4f, 0.2f }
+        }},
+        {"corner_torch_blue", (GameSceneObject) {
+            .name = "Torch (blue)",
+            .transform = (Transform) {
+                .position = { 8.8f, 1.5f, 3.2f }
+            },
+            .light_type = LightType::Point,
+            .light_intensity = 8.0f,
+            .light_range = 100.0f,
+            .light_color = { 0.2f, 0.4f, 0.8f }
+        }},
+        {"corner_torch_green", (GameSceneObject) {
+            .name = "Torch (green)",
+            .transform = (Transform) {
+                .position = { 9.0f, 1.5f, -3.6f }
+            },
+            .light_type = LightType::Point,
+            .light_intensity = 8.0f,
+            .light_range = 100.0f,
+            .light_color = { 0.2f, 0.8f, 0.4f }
+        }},
+        {"corner_torch_red", (GameSceneObject) {
+            .name = "Torch (red)",
+            .transform = (Transform) {
+                .position = { -9.5f, 1.5f, -3.65f }
+            },
+            .light_type = LightType::Point,
+            .light_intensity = 8.0f,
+            .light_range = 100.0f,
+            .light_color = { 0.8f, 0.2f, 0.1f }
+        }},
+        {"corner_torch_purple", (GameSceneObject) {
+            .name = "Torch (purple)",
+            .transform = (Transform) {
+                .position = { -9.5f, 1.5f, 3.2f }
+            },
+            .light_type = LightType::Point,
+            .light_intensity = 8.0f,
+            .light_range = 100.0f,
+            .light_color = { 0.8f, 0.2f, 0.8f }
+        }}
+    }
 };
 
 
@@ -178,13 +171,22 @@ int RunApp()
     display.Init(WIDTH, HEIGHT);
     firemountain.Init(WIDTH, HEIGHT, display.window);
 
-    for (auto& [key, obj] : game_scene) {
+    if (sqlite3_open("gamedata.db", &DB)) {
+        fmt::println("* DB: {}", sqlite3_errmsg(DB));
+        exit(-1);
+    }
+
+    // TODO:
+    // game_scene.load("Sponza", DB);
+    for (auto& [key, obj] : game_scene.objects) {
         if (obj.light_type != LightType::None) {
             obj.light_id = firemountain.AddLight(key);
         } else {
             obj.mesh_id = firemountain.AddMesh(key, obj.mesh_file);
         }
     }
+
+    // game_scene.save(DB);
 
     float tick = 0;
     bool running = true;
@@ -244,7 +246,7 @@ int RunApp()
                         // Return mouse to where it was before grabbing
                         SDL_WarpMouseInWindow(display.window, mouse_captured_x, mouse_captured_y);
                     }
-                    else { 
+                    else {
                         capture_mouse = true;
                         // Save the mouse location so we can return it later
                         SDL_GetMouseState(&mouse_captured_x, &mouse_captured_y);
@@ -254,8 +256,8 @@ int RunApp()
                 break;
 
             case SDL_EVENT_MOUSE_BUTTON_DOWN:
-                if (event.button.button == 3) { 
-                    capture_mouse = true; 
+                if (event.button.button == 3) {
+                    capture_mouse = true;
                     // Save the mouse location so we can return it later
                     mouse_captured_x = event.button.x;
                     mouse_captured_y = event.button.y;
@@ -263,7 +265,7 @@ int RunApp()
                 break;
             case SDL_EVENT_MOUSE_BUTTON_UP:
                 if (event.button.button == 3) {
-                    capture_mouse = false; 
+                    capture_mouse = false;
                     // Return mouse to where it was before grabbing
                     SDL_WarpMouseInWindow(display.window, mouse_captured_x, mouse_captured_y);
                 }
@@ -305,24 +307,24 @@ int RunApp()
         }
 
         // Rotate and bob the froge
-        game_scene["froge"].transform.position.y += 0.0025f * sin(0.02f * tick);
-        game_scene["froge"].transform.rotation = glm::angleAxis(
+        game_scene.objects["froge"].transform.position.y += 0.0025f * sin(0.02f * tick);
+        game_scene.objects["froge"].transform.rotation = glm::angleAxis(
             glm::radians(0.5f * tick),              // Rotation speed
             glm::normalize(glm::vec3(0, 1, 0))     // Rotate along Y-axis
         );
-        game_scene["froge"].dirty = true;
+        game_scene.objects["froge"].dirty = true;
 
         // Rotate cube
-        game_scene["cube"].transform.rotation = glm::angleAxis(
+        game_scene.objects["cube"].transform.rotation = glm::angleAxis(
             glm::radians(0.4f * tick),
-            glm::normalize(glm::vec3(-0.8, 0.1, -0.4)) 
+            glm::normalize(glm::vec3(-0.8, 0.1, -0.4))
         );
-        game_scene["cube"].dirty = true;
+        game_scene.objects["cube"].dirty = true;
 
         std::vector<RenderSceneObj> render_scene;
 
         // Send updated transforms to renderer
-        for (auto& [key, obj] : game_scene) {
+        for (auto& [key, obj] : game_scene.objects) {
             // Push meshes
 
             // This should probably just be done in shaders or a comp shader while rendering.
@@ -332,8 +334,8 @@ int RunApp()
                     * glm::mat4_cast(obj.transform.rotation)
                     * glm::scale(glm::identity<glm::mat4>(), obj.transform.scale);
                 render_scene.push_back({
-                    .mesh_id = obj.mesh_id, 
-                    .transform = m 
+                    .mesh_id = obj.mesh_id,
+                    .transform = m
                 });
             }
 
@@ -367,10 +369,12 @@ int RunApp()
     }
 
     SDL_SetWindowMouseGrab(display.window, false);  // Release mouse before the exit
-    
+
     firemountain.Destroy();
     display.Destroy();
     SDL_Quit();
+
+    sqlite3_close(DB);
 
     return 0;
 }
