@@ -173,6 +173,7 @@ float3 directionalLight(uint index, float3 normal) {
     return NdotL
         * scene_data.lights[index].color_intensity.w
         * scene_data.lights[index].color_intensity.xyz;
+
 }
 
 float3 getLightDirection(uint index, float3 world_position) {

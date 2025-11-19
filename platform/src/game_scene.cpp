@@ -113,7 +113,8 @@ void GameScene::load(const char* scene_name, sqlite3* db) {
         obj.transform.scale.z = atof(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 13)));
 
         if (mesh_id) {
-            obj.mesh_file = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 14)));
+            auto mesh = sqlite3_column_text(stmt, 14);
+            obj.mesh_file = std::string(reinterpret_cast<const char*>(mesh));
         }
 
         if(light_id) {
@@ -139,6 +140,76 @@ void GameScene::load(const char* scene_name, sqlite3* db) {
         this->objects[obj.name] = obj;
     }
     sqlite3_finalize(stmt);
+}
+
+int GameSceneObject::get_id(const char* name, const int scene_id, sqlite3* db) {
+    sqlite3_stmt* stmt;
+    auto exists_q = fmt::format(
+        "SELECT id FROM scene_objects WHERE name=? AND scene_id=?",
+        this->name, scene_id);
+    int rc = sqlite3_prepare_v2(db, exists_q.c_str(), -1, &stmt, 0);
+    if (rc != SQLITE_OK) {
+        fmt::println("SQL Error: {}", sqlite3_errmsg(db));
+        sqlite3_finalize(stmt);
+        return 0;
+    }
+
+    // Bind the name to ? in the query
+    rc = sqlite3_bind_text(stmt, 1, this->name.c_str(), strlen(this->name.c_str()), SQLITE_STATIC);
+    if (rc != SQLITE_OK) {
+        fmt::println("SQL Error: {}", sqlite3_errmsg(db));
+        sqlite3_finalize(stmt);
+        return 0;
+    }
+
+    // Bind the scene_id to second ? in the query
+    rc = sqlite3_bind_int(stmt, 2, scene_id);
+    if (rc != SQLITE_OK) {
+        fmt::println("SQL Error: {}", sqlite3_errmsg(db));
+        sqlite3_finalize(stmt);
+        return 0;
+    }
+
+    rc = sqlite3_step(stmt);
+    if (rc != SQLITE_ROW && rc != SQLITE_DONE) {
+        fmt::println("SQL Error: {}", sqlite3_errmsg(db));
+        sqlite3_finalize(stmt);
+        return 0;
+    }
+
+    if (rc == SQLITE_DONE) {
+        fmt::println("SQL: scene_object not found ({})", name);
+        sqlite3_finalize(stmt);
+        return 0;
+    }
+
+
+    int scene_object_id = sqlite3_column_int(stmt, 0);
+    sqlite3_finalize(stmt);
+
+    return scene_object_id;
+}
+
+int GameSceneObject::save(const int scene_id, sqlite3* db) {
+    char* errmsg = 0;
+    auto t = this->transform;
+    auto oq = fmt::format(
+        "INSERT INTO scene_objects " \
+        "(name, scene_id, pos_x, pos_y, pos_z, rot_x, rot_y, rot_z, rot_w, scale_x, scale_y, scale_z) " \
+        "VALUES ('{}', {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});"
+        , this->name, scene_id, t.position.x, t.position.y, t.position.z
+        , t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w
+        , t.scale.x, t.scale.y, t.scale.z);
+
+    int rc = sqlite3_exec(db, oq.c_str(), callback, 0, &errmsg);
+    if (rc != SQLITE_OK) {
+        fmt::println("SQL Error (scene_objects): {}", errmsg);
+        fmt::println("{}", oq);
+        sqlite3_free(errmsg);
+    }
+
+    auto new_id = sqlite3_last_insert_rowid(db);
+    return new_id;
 }
 
 void GameScene::save(sqlite3* db) {

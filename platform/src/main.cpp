@@ -10,12 +10,17 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+#include "SDL3/SDL_keycode.h"
 #include "fmt/base.h"
 #include "python_embed.h"
 #include "firemountain.hpp"
 #include "game_scene.hpp"
 #include "display.hpp"
 #include "camera.hpp"
+
+#include "scenes/basic_sponza_scene.hpp"
+#include "scenes/scene_wrapper.hpp"
+#include "scenes/spooky_sponza_scene.hpp"
 
 int WIDTH = 1920;
 int HEIGHT = 1080;
@@ -25,141 +30,9 @@ float CAMERA_H_SPEED = 1;
 Camera camera;
 CameraProjectionType camera_projection = CameraProjectionType::PERSPECTIVE;
 
+
 // Database and scene
 sqlite3* DB;
-
-// GameScene game_scene = {
-//     .name = "Sponza",
-//     .objects = {
-//         {"sponza", (GameSceneObject) {
-//             .mesh_file = "assets/Sponza/glTF/Sponza.gltf",
-//             .name = "Sponza"
-//         }},
-//         // {"structure", {
-//         //     .mesh_file = "assets/structure.glb"
-//         // }},
-//         {"froge", (GameSceneObject) {
-//             .mesh_file = "assets/good_froge.glb",
-//             .name = "Good Froge",
-//             .transform = (Transform) {
-//                 .position = {0.1f, 0.5f, -0.2f}
-//             }
-//         }},
-//         {"cube", (GameSceneObject) {
-//             .mesh_file = "assets/cube_1m.glb",
-//             .name = "Cube",
-//             .transform = (Transform) {
-//                 .position = {0.0f, 5.0f, -0.2f}
-//             }
-//         }},
-//         {"sun", (GameSceneObject) {
-//             .name = "Sun",
-//             .light_type = LightType::Area,
-//             .light_intensity = 1.8f,
-//             .light_range = 100.0f,
-//             .light_direction = { 0.0f, -1.0f, -0.5f },
-//             .light_color = { 0.8f, 0.4f, 0.2f }
-//         }},
-//         {"mid_point_light", (GameSceneObject) {
-//             .name = "Light Mid",
-//             .transform = (Transform) {
-//                 .position = { 0.0f, 3.0f, 0.0f }
-//             },
-//             .light_type = LightType::Point,
-//             .light_intensity = 8.0f,
-//             .light_range = 100.0f,
-//             .light_color = { 0.8f, 0.4f, 0.2f }
-//         }},
-//         {"corner_torch_blue", (GameSceneObject) {
-//             .name = "Torch (blue)",
-//             .transform = (Transform) {
-//                 .position = { 8.8f, 1.5f, 3.2f }
-//             },
-//             .light_type = LightType::Point,
-//             .light_intensity = 8.0f,
-//             .light_range = 100.0f,
-//             .light_color = { 0.2f, 0.4f, 0.8f }
-//         }},
-//         {"corner_torch_green", (GameSceneObject) {
-//             .name = "Torch (green)",
-//             .transform = (Transform) {
-//                 .position = { 9.0f, 1.5f, -3.6f }
-//             },
-//             .light_type = LightType::Point,
-//             .light_intensity = 8.0f,
-//             .light_range = 100.0f,
-//             .light_color = { 0.2f, 0.8f, 0.4f }
-//         }},
-//         {"corner_torch_red", (GameSceneObject) {
-//             .name = "Torch (red)",
-//             .transform = (Transform) {
-//                 .position = { -9.5f, 1.5f, -3.65f }
-//             },
-//             .light_type = LightType::Point,
-//             .light_intensity = 8.0f,
-//             .light_range = 100.0f,
-//             .light_color = { 0.8f, 0.2f, 0.1f }
-//         }},
-//         {"corner_torch_purple", (GameSceneObject) {
-//             .name = "Torch (purple)",
-//             .transform = (Transform) {
-//                 .position = { -9.5f, 1.5f, 3.2f }
-//             },
-//             .light_type = LightType::Point,
-//             .light_intensity = 8.0f,
-//             .light_range = 100.0f,
-//             .light_color = { 0.8f, 0.2f, 0.8f }
-//         }}
-//     }
-// };
-
-
-// Spooky halloween scene
-/*std::unordered_map<std::string, GameSceneObject> game_scene = {
-    {"sponza", (GameSceneObject) {
-        .mesh_file = "assets/Sponza/glTF/Sponza.gltf"
-    }},
-    {"froge", (GameSceneObject) {
-        .mesh_file = "assets/evil_froge.glb",
-        .transform = (Transform) {
-            .position = {0.1f, 0.5f, 0.1f}
-        }
-    }},
-    {"sun", (GameSceneObject) {
-        .light_type = LightType::Area,
-        .light_intensity = 0.8f,
-        .light_range = 100.0f,
-        .light_direction = { 0.0f, -1.0f, -0.5f },
-        .light_color = { 0.8f, 0.15f, 0.1f }
-    }},
-    {"mid_point_light", (GameSceneObject) {
-        .transform = (Transform) {
-            .position = { -3.0f, 3.0f, 0.0f }
-        },
-        .light_type = LightType::Point,
-        .light_intensity = 0.02f,
-        .light_range = 100.0f,
-        .light_color = { 0.9f, 0.2f, 0.1f }
-    }},
-    {"corner_torch_red", (GameSceneObject) {
-        .transform = (Transform) {
-            .position = { -9.5f, 1.5f, -3.65f }
-        },
-        .light_type = LightType::Point,
-        .light_intensity = 12.0f,
-        .light_range = 100.0f,
-        .light_color = { 0.8f, 0.2f, 0.1f }
-    }},
-    {"corner_torch_purple", (GameSceneObject) {
-        .transform = (Transform) {
-            .position = { -9.5f, 1.5f, 3.2f }
-        },
-        .light_type = LightType::Point,
-        .light_intensity = 12.0f,
-        .light_range = 100.0f,
-        .light_color = { 0.8f, 0.2f, 0.8f }
-    }}
-};*/
 
 
 int RunApp()
@@ -176,18 +49,30 @@ int RunApp()
         exit(-1);
     }
 
-    // TODO:
-    GameScene game_scene;
-    game_scene.load("Sponza", DB);
-    for (auto& [key, obj] : game_scene.objects) {
-        if (obj.light_type != LightType::None) {
-            obj.light_id = firemountain.AddLight(key);
-        } else {
-            obj.mesh_id = firemountain.AddMesh(key, obj.mesh_file.c_str());
+    auto scenes = std::vector<ISceneWrapper*>();
+
+    BasicSponzaScene sponza = BasicSponzaScene();
+    sponza.Init();
+    scenes.push_back(&sponza);
+
+    SpookySponzaScene spooky_sponza = SpookySponzaScene();
+    spooky_sponza.Init();
+    scenes.push_back(&spooky_sponza);
+
+    auto scene_idx = 0;
+    auto active_scene = scenes[scene_idx];
+
+    // game_scene.load("Sponza", DB);
+    for (auto scene : scenes) {
+        for (auto& [key, obj] : scene->scene.objects) {
+            if (obj.light_type != LightType::None) {
+                obj.light_id = firemountain.AddLight(key);
+            } else {
+                obj.mesh_id = firemountain.AddMesh(key, obj.mesh_file.c_str());
+            }
         }
     }
-
-    // game_scene.save(DB);4
+    // game_scene.save(DB);
 
     float tick = 0;
     bool running = true;
@@ -254,6 +139,12 @@ int RunApp()
                     }
                 }
                 if (event.key.key == SDLK_L) { camera_pov_lock = !camera_pov_lock; }
+                if (event.key.key == SDLK_F9) {
+                    if (scene_idx == 0) scene_idx = 1;
+                    else scene_idx = 0;
+
+                    active_scene = scenes[scene_idx];
+                }
                 break;
 
             case SDL_EVENT_MOUSE_BUTTON_DOWN:
@@ -307,50 +198,8 @@ int RunApp()
             shader_reload_requested = false;
         }
 
-        // Rotate and bob the froge
-        game_scene.objects["Good Froge"].transform.position.y += 0.0025f * sin(0.02f * tick);
-        game_scene.objects["Good Froge"].transform.rotation = glm::angleAxis(
-            glm::radians(0.5f * tick),              // Rotation speed
-            glm::normalize(glm::vec3(0, 1, 0))     // Rotate along Y-axis
-        );
-        game_scene.objects["Good Froge"].dirty = true;
-
-        // Rotate cube
-        game_scene.objects["Cube"].transform.rotation = glm::angleAxis(
-            glm::radians(0.4f * tick),
-            glm::normalize(glm::vec3(-0.8, 0.1, -0.4))
-        );
-        game_scene.objects["Cube"].dirty = true;
-
-        std::vector<RenderSceneObj> render_scene;
-
-        // Send updated transforms to renderer
-        for (auto& [key, obj] : game_scene.objects) {
-            // Push meshes
-
-            // This should probably just be done in shaders or a comp shader while rendering.
-            // Just send the transform stuff to renderer.
-            if (obj.mesh_id) {
-                const auto m = glm::translate(glm::identity<glm::mat4>(), obj.transform.position)
-                    * glm::mat4_cast(obj.transform.rotation)
-                    * glm::scale(glm::identity<glm::mat4>(), obj.transform.scale);
-                render_scene.push_back({
-                    .mesh_id = obj.mesh_id,
-                    .transform = m
-                });
-            }
-
-            // Push lights
-            if (obj.light_id)  {
-                render_scene.push_back({
-                    .light_id = obj.light_id,
-                    .light_position_type = { obj.transform.position, obj.light_type },
-                    .light_color_intensity = { obj.light_color, obj.light_intensity },
-                    .light_direction_range = { obj.light_direction, obj.light_range}
-                });
-            }
-            obj.dirty = false;
-        }
+        active_scene->Update(tick);
+        auto render_scene = active_scene->GetRenderScene();
 
         camera.yaw += static_cast<float>(mouse_yaw_acc) * CAMERA_H_SPEED / 100.0f;
         camera.pitch -= static_cast<float>(mouse_pitch_acc) * CAMERA_V_SPEED / 100.0f;

@@ -31,7 +31,6 @@ VkFilter extract_filter(fastgltf::Filter filter) {
         case fastgltf::Filter::LinearMipMapNearest:
         default:
             return VK_FILTER_LINEAR;
-        
     }
 }
 
@@ -134,8 +133,8 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
 
     fastgltf::Parser parser {};
 
-    constexpr auto gltf_options = 
-        fastgltf::Options::DontRequireValidAssetMember 
+    constexpr auto gltf_options =
+        fastgltf::Options::DontRequireValidAssetMember
         | fastgltf::Options::AllowDouble
         | fastgltf::Options::LoadExternalBuffers;
 
@@ -179,7 +178,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
         {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1}
     };
     file.descriptor_pool.init(engine->_device, gltf.materials.size(), sizes);
-    
+
     for (fastgltf::Sampler& sampler : gltf.samplers) {
         VkSamplerCreateInfo sampler_info = {
             .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -333,7 +332,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
             new_surface.start_index = (uint32_t) indices.size();
             new_surface.count = (uint32_t) gltf.accessors[p.indicesAccessor.value()].count;
             size_t initial_vertex = vertices.size();
-            
+
             {   // Load indices
                 fastgltf::Accessor& index_accessor = gltf.accessors[p.indicesAccessor.value()];
                 indices.reserve(indices.size() + index_accessor.count);
