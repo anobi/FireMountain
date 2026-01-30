@@ -1,10 +1,8 @@
 #pragma once
 
 #include <SDL3/SDL_events.h>
-#include <filesystem>
 
 #include "fm_utils.hpp"
-#include "fm_scene.hpp"
 #include "vk_mesh.hpp"
 #include "vk_types.hpp"
 #include "vk_renderer.hpp"
@@ -18,7 +16,7 @@ public:
     ~Firemountain() {};
 
     int Init(int width, int height, SDL_Window* window);
-    void Frame(const fmCamera* camera, std::vector<RenderSceneObj> scene);
+    void Frame(const fmCamera* camera, eastl::vector<RenderSceneObj> scene);
     void Resize(uint32_t width, uint32_t height);
     void Destroy();
 
@@ -26,28 +24,27 @@ public:
 
     void CompileShaders();
 
-    MeshID AddMesh(const std::string& name, const char* path);
-    LightID AddLight(const std::string& name);
+    MeshID AddMesh(const eastl::string& name, const char* path);
+    LightID AddLight(const eastl::string& name);
 
     fmvk::Vulkan vulkan;
-    Scene scene;
-    
+
 
     // TODO: There shouldn't be almost anything private here.
     //       Only stuff like renderer and so on. This is the main interface class.
 private:
     DeletionQueue _deletion_queue;
 
-    std::vector<RenderObject> _renderables;
-    // std::vector<IRenderable> _renderables;
-    std::unordered_map<std::string, MaterialInstance> _materials;
-    //std::unordered_map<std::string, GPUMeshBuffers> _meshes;
+    eastl::vector<RenderObject> _renderables;
+    // eastl::vector<IRenderable> _renderables;
+    eastl::unordered_map<eastl::string, MaterialInstance> _materials;
+    //ankerl::unordered_dense::map<eastl::string, GPUMeshBuffers> _meshes;
 
-    std::unordered_map<std::string, std::vector<std::shared_ptr<MeshAsset>>> _meshes;
-    std::unordered_map<std::string, std::shared_ptr<Node>> loadedNodes;
-    std::unordered_map<std::string, std::shared_ptr<LoadedGLTF>> loaded_Scenes;
+    ankerl::unordered_dense::map<eastl::string, eastl::vector<std::shared_ptr<MeshAsset>>> _meshes;
+    ankerl::unordered_dense::map<eastl::string, std::shared_ptr<Node>> loadedNodes;
+    ankerl::unordered_dense::map<eastl::string, std::shared_ptr<LoadedGLTF>> loaded_Scenes;
 
-    MaterialInstance* create_material(const std::string& name);
-    MaterialInstance* get_material(const std::string& name);
-    std::vector<std::shared_ptr<MeshAsset>> get_mesh(const std::string& name);
+    MaterialInstance* create_material(const eastl::string& name);
+    MaterialInstance* get_material(const eastl::string& name);
+    eastl::vector<std::shared_ptr<MeshAsset>> get_mesh(const eastl::string& name);
 };

@@ -1,5 +1,7 @@
 #include <cstdlib>
-#include <string>
+#include <EASTL/string.h>
+#include <EASTL/vector.h>
+
 #include <fmt/core.h>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
@@ -49,16 +51,13 @@ int RunApp()
         exit(-1);
     }
 
-    auto scenes = std::vector<ISceneWrapper*>();
-
+    auto scenes = eastl::vector<ISceneWrapper*>();
     BasicSponzaScene sponza = BasicSponzaScene();
     sponza.Init();
     scenes.push_back(&sponza);
-
     SpookySponzaScene spooky_sponza = SpookySponzaScene();
     spooky_sponza.Init();
     scenes.push_back(&spooky_sponza);
-
     auto scene_idx = 0;
     auto active_scene = scenes[scene_idx];
 
@@ -245,10 +244,10 @@ int CALLBACK WinMain(
 }
 #else
 
-std::string GetWorkingDirectory(char* executable_path)
+eastl::string GetWorkingDirectory(char* executable_path)
 {
-    std::string::size_type pos = std::string(executable_path).find_last_of("\\/");
-    return std::string(executable_path).substr(0, pos);
+    eastl::string::size_type pos = eastl::string(executable_path).find_last_of("\\/");
+    return eastl::string(executable_path).substr(0, pos);
 }
 
 int main(int argc, char* argv[])

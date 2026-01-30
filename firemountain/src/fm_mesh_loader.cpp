@@ -59,7 +59,7 @@ std::optional<fmvk::Image::AllocatedImage> load_image(fmvk::Vulkan* engine, fast
             assert(file_path.fileByteOffset == 0);
             assert(file_path.uri.isLocalPath());
 
-            const std::string path(file_path.uri.path().begin(), file_path.uri.path().end());
+            const eastl::string path(file_path.uri.path().begin(), file_path.uri.path().end());
             auto full_path = working_dir / file_path.uri.fspath();
             // fmt::println("* Loading image: {}", full_path.string());
             unsigned char* data = stbi_load(full_path.c_str(), &width, &height, &nr_channels, 4);
@@ -124,7 +124,7 @@ std::optional<fmvk::Image::AllocatedImage> load_image(fmvk::Vulkan* engine, fast
     }
 }
 
-std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* engine, std::string_view file_path) {
+std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* engine, eastl::string_view file_path) {
     fmt::println("Loading GLTF: {}", file_path);
 
     std::shared_ptr<LoadedGLTF> scene = std::make_shared<LoadedGLTF>();
@@ -138,7 +138,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
         | fastgltf::Options::AllowDouble
         | fastgltf::Options::LoadExternalBuffers;
 
-    auto data = fastgltf::GltfDataBuffer::FromPath(file_path);
+    auto data = fastgltf::GltfDataBuffer::FromPath(eastl::string(file_path).c_str());
     if (data.error() != fastgltf::Error::None) {
         // The file couldn't be loaded, or the buffer could not be allocated.
         fmt::println("Error loading GLTF data from file: {}", getErrorMessage(data.error()));
@@ -146,7 +146,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
     }
 
     fastgltf::Asset gltf;
-    std::filesystem::path path = file_path;
+    std::filesystem::path path = eastl::string(file_path).c_str();
     auto working_dir = path.parent_path();
 
     auto type = fastgltf::determineGltfFileType(data.get());
@@ -172,7 +172,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
         return {};
     }
 
-    std::vector<DescriptorAllocatorGrowable::PoolSizeRatio> sizes = {
+    eastl::vector<DescriptorAllocatorGrowable::PoolSizeRatio> sizes = {
         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4},
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3},
         {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1}
@@ -199,10 +199,10 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
     }
 
     // Temporary containers to load everything into
-    std::vector<std::shared_ptr<MeshAsset>> meshes;
-    std::vector<std::shared_ptr<Node>> nodes;
-    std::vector<fmvk::Image::AllocatedImage> images;
-    std::vector<std::shared_ptr<GLTFMaterial>> materials;
+    eastl::vector<std::shared_ptr<MeshAsset>> meshes;
+    eastl::vector<std::shared_ptr<Node>> nodes;
+    eastl::vector<fmvk::Image::AllocatedImage> images;
+    eastl::vector<std::shared_ptr<GLTFMaterial>> materials;
 
     // Load textures
     int image_idx = 0;
@@ -317,13 +317,13 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
         data_index++;
     }
 
-    std::vector<uint32_t> indices;
-    std::vector<Vertex> vertices;
+    eastl::vector<uint32_t> indices;
+    eastl::vector<Vertex> vertices;
     for (fastgltf::Mesh& mesh : gltf.meshes) {
         std::shared_ptr<MeshAsset> new_mesh = std::make_shared<MeshAsset>();
         meshes.push_back(new_mesh);
         file.meshes[mesh.name.c_str()] = new_mesh;
-        new_mesh->name = mesh.name;
+        new_mesh->name = eastl::string(mesh.name.c_str());
 
         indices.clear();
         vertices.clear();

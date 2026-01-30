@@ -1,16 +1,26 @@
 #pragma once
 
-#include <string>
-#include <vector>
-#include <filesystem>
-#include <unordered_map>
-#include "vk_mem_alloc.h"
+#include <ankerl/unordered_dense.h>
+#include <EASTL/unordered_map.h>
+#include <EASTL/string.h>
+#include <EASTL/vector.h>
+#include <EASTL/array.h>
 
+#include <vulkan/vulkan_core.h>
+
+// Make eastl::string work with ankerl::unordered_dense
+template<>
+struct std::hash<eastl::string> {
+    size_t operator()(const eastl::string& s) const noexcept {
+        return eastl::hash<eastl::string>{}(s);
+    }
+};
+
+#include "vk_mem_alloc.h"
 #include "vk_types.hpp"
 #include "vk_image.hpp"
 #include "vk_mesh.hpp"
 #include "vk_pipeline.hpp"
-#include "vk_swapchain.hpp"
 #include "vk_descriptors.hpp"
 
 #include "fm_utils.hpp"
@@ -25,7 +35,7 @@ struct LoadedGLTF;
 
 struct MeshNode : public Node {
     std::shared_ptr<MeshAsset> mesh;
-    
+
     void Draw(const glm::mat4& top_matrix, DrawContext& ctx) override;
 };
 
@@ -70,7 +80,7 @@ namespace fmvk {
         // TODO: These need to be cleaned on exit
         struct MaterialResources {
             fmvk::Image::AllocatedImage color_image;
-            VkSampler color_sampler;    
+            VkSampler color_sampler;
 
             fmvk::Image::AllocatedImage metal_roughness_image;
             VkSampler metal_roughness_sampler;
@@ -88,11 +98,11 @@ namespace fmvk {
         DescriptorWriter writer;
 
         void build_pipelines(const fmvk::Vulkan* renderer);
-        void clear_resources(VkDevice device);
+        void clear_resources(VkDevice device, const fmvk::Vulkan* renderer);
 
         MaterialInstance write_material(
-            VkDevice device, 
-            MaterialPass pass, 
+            VkDevice device,
+            MaterialPass pass,
             const MaterialResources& resources,
             DescriptorAllocatorGrowable& descriptor_allocator
         );
@@ -103,6 +113,7 @@ namespace fmvk {
         VkCommandBuffer _main_command_buffer;
 
         VkSemaphore _swapchain_semaphore;
+        VkSemaphore _render_semaphore;
         VkFence _render_fence;
 
         DescriptorAllocatorGrowable _frame_descriptors;
@@ -110,6 +121,7 @@ namespace fmvk {
     };
 
     constexpr int FRAME_OVERLAP = 2;
+    constexpr int MAX_BINDLESS_RESOURCES = 16536;
 
     class Vulkan {
     public:
@@ -121,30 +133,35 @@ namespace fmvk {
         void Resize(uint32_t width, uint32_t height);
         void Destroy();
         void ProcessImGuiEvent(const SDL_Event* e);
-        
-        GPUMeshBuffers UploadMesh(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
+
+        GPUMeshBuffers UploadMesh(const eastl::vector<Vertex> &vertices, const eastl::vector<uint32_t> &indices);
 
         void CreateMaterial();
         void CreatePipeline(const char* shader_name);
-        
+
+        ankerl::unordered_dense::map<eastl::string, fmvk::Pipeline> pipelines;
+        ankerl::unordered_dense::map<eastl::string, fmvk::ComputePipeline> compute_pipelines;
         VkPipeline GetPipeline(const char* name) { return this->pipelines[name].pipeline; }
         VkPipelineLayout GetPipelineLayout(const char* name) { return this->pipelines[name].layout; }
 
-        std::unordered_map<std::string, fmvk::Pipeline> pipelines;
-        std::unordered_map<std::string, fmvk::ComputePipeline> compute_pipelines;
 
         // TODO: Move into object renderer or something
         unsigned int next_id = 0;
-        MeshID AddMesh(const std::string& name, const std::shared_ptr<LoadedGLTF>& mesh);
-        std::unordered_map<unsigned int, std::shared_ptr<LoadedGLTF>> loaded_meshes;
+        MeshID AddMesh(const eastl::string& name, const std::shared_ptr<LoadedGLTF>& mesh);
+        ankerl::unordered_dense::map<unsigned int, std::shared_ptr<LoadedGLTF>> loaded_meshes;
 
         // TODO: Move into FM Scene I think
-        LightID AddLight(const std::string& name);
-        std::vector<unsigned int> lights;
-        
+        LightID AddLight(const eastl::string& name);
+        eastl::vector<unsigned int> lights;
+
         VkDevice _device{};
         VmaAllocator _allocator{};
+        VkAllocationCallbacks vk_allocator;
+
+
+
         VkDescriptorSetLayout _gpu_scene_data_descriptor_layout{};
+
 
         MaterialInstance default_data{};
         fmvk::Image::AllocatedImage _texture_missing_error_image{};
@@ -180,7 +197,7 @@ namespace fmvk {
         VkExtent2D _window_extent {};
         VkExtent2D _requested_extent {};
         VkInstance _instance {};
-        VkPhysicalDevice _gpu {};
+        VkPhysicalDevice _physical_device {};
         // VkDevice _device;
 
         VkSurfaceKHR _surface {};
@@ -188,9 +205,20 @@ namespace fmvk {
         DeletionQueue _deletion_queue;
 
         void init_vulkan(SDL_Window *window);
+        void init_vulkan_allocation_callbacks();
 
-        fmvk::Swapchain _swapchain;
+        // Swapchain
+        VkSwapchainKHR swapchain;
+
+        VkExtent2D _swapchain_extent;
+        VkFormat _swapchain_image_format;
+        eastl::vector<VkImage> _swapchain_images;
+        eastl::vector<VkImageView> _swapchain_image_views;
         void init_swapchain();
+        void create_swapchain(VkExtent2D window_extent, VkSurfaceKHR surface);
+        void destroy_swapchain(VkDevice device);
+        void set_swapchain_context(VkInstance instance, VkDevice device, VkPhysicalDevice gpu);
+
 
         VkQueue _graphics_queue {};
         uint32_t _graphics_queue_family {};
@@ -199,9 +227,20 @@ namespace fmvk {
         VkCommandBuffer _command_buffer {};
         void init_commands();
 
+
+
+
         FrameData _frames[FRAME_OVERLAP];
+
+
+
+
         FrameData& get_current_frame() { return this->_frames[this->_frame_number % FRAME_OVERLAP]; }
         void init_sync_structures();
+
+
+
+
 
         // Immediate submit structures
         VkFence _immediate_fence {};
@@ -225,11 +264,11 @@ namespace fmvk {
         // ----------------------
     public:
         DrawContext _main_draw_context;
-        void update_scene(const fmCamera* camera, std::vector<RenderSceneObj> scene);
+        void update_scene(const fmCamera* camera, eastl::vector<RenderSceneObj> scene);
     private:
         // ----------------------
         // End of TODO
- 
+
         void init_imgui();
         void draw_imgui(VkCommandBuffer cmd, VkImageView image_view) const;
         void draw_background(VkCommandBuffer cmd);
@@ -238,6 +277,11 @@ namespace fmvk {
 
         // Descriptor sets
         DescriptorAllocatorGrowable global_descriptor_allocator;
+        DescriptorAllocatorGrowable bindless_descriptor_allocator;
+
+        VkDescriptorSet bindless_descriptor_set {};
+        VkDescriptorSetLayout bindless_descriptor_set_layout {};
+
         VkDescriptorSet _draw_image_descriptors{};
         VkDescriptorSetLayout _draw_image_descriptor_layout{};
         void init_descriptors();
@@ -253,10 +297,10 @@ namespace fmvk {
         // Images & Textures
     public:
         fmvk::TextureCache texture_cache;
+        uint32_t register_bindless_texture(VkImageView view, VkSampler sampler);
     private:
+        uint32_t _next_bindless_index;
         void init_default_textures();
         void init_default_data();
     };
 }
-
-

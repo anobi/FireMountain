@@ -7,7 +7,7 @@ void Scene::Init() {
 }
 
 void Scene::Destroy() {
-    
+
 }
 
 void Scene::Update(const fmCamera* camera) {
@@ -53,7 +53,7 @@ void Scene::Update(const fmCamera* camera) {
     stats.scene_update_time = elapsed.count() / 1000.f;
 }
 
-LightID Scene::AddLight(const std::string &name)
+LightID Scene::AddLight(const eastl::string &name)
 {
     auto id = ++this->next_id;
     this->lights.push_back(id);

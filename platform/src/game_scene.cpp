@@ -95,7 +95,7 @@ void GameScene::load(const char* scene_name, sqlite3* db) {
         GameSceneObject obj;
         // int obj_id = sqlite3_column_int(stmt, 0);
         auto asd = sqlite3_column_text(stmt, 1);
-        obj.name = std::string(reinterpret_cast<const char*>(asd));
+        obj.name = eastl::string(reinterpret_cast<const char*>(asd));
         int mesh_id = sqlite3_column_int(stmt, 2);
         int light_id = sqlite3_column_int(stmt, 3);
 
@@ -114,12 +114,12 @@ void GameScene::load(const char* scene_name, sqlite3* db) {
 
         if (mesh_id) {
             auto mesh = sqlite3_column_text(stmt, 14);
-            obj.mesh_file = std::string(reinterpret_cast<const char*>(mesh));
+            obj.mesh_file = eastl::string(reinterpret_cast<const char*>(mesh));
         }
 
         if(light_id) {
             // This could be a int cast to enum, but meh
-            auto light_type = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 15)));
+            auto light_type = eastl::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 15)));
             if (light_type ==  "area") obj.light_type = LightType::Area;
             else if (light_type == "point") obj.light_type = LightType::Point;
             else if (light_type == "spot") obj.light_type = LightType::Spot;
@@ -265,7 +265,7 @@ void GameScene::save(sqlite3* db) {
 
         // Save and connect light stuffs if the object is a light
         if (o.light_type) {
-            std::string light_type_s;
+            eastl::string light_type_s;
             switch (o.light_type) {
                 case LightType::Area: light_type_s = "area";
                 case LightType::Point: light_type_s = "point";

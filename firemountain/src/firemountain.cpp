@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include <SDL2/SDL.h>
 
 #define GLM_ENABLE_EXPERIMENTAL
@@ -14,7 +12,7 @@ int Firemountain::Init(const int width, const int height, SDL_Window* window) {
     return 0;
 }
 
-void Firemountain::Frame(const fmCamera* camera, std::vector<RenderSceneObj> render_scene)
+void Firemountain::Frame(const fmCamera* camera, eastl::vector<RenderSceneObj> render_scene)
 {
     this->vulkan.update_scene(camera, render_scene);
     this->vulkan.Draw(this->_renderables.data(), this->_renderables.size());
@@ -35,7 +33,7 @@ void Firemountain::ProcessImGuiEvent(SDL_Event* e)
     this->vulkan.ProcessImGuiEvent(e);
 }
 
-MeshID Firemountain::AddMesh(const std::string& name, const char* path) {
+MeshID Firemountain::AddMesh(const eastl::string& name, const char* path) {
     // Should I move this to renderer?
     auto mesh_file = MeshLoader::load_GLTF(&this->vulkan, path);
     assert(mesh_file.has_value());
@@ -43,13 +41,13 @@ MeshID Firemountain::AddMesh(const std::string& name, const char* path) {
     return id;
 }
 
-LightID Firemountain::AddLight(const std::string &name)
+LightID Firemountain::AddLight(const eastl::string &name)
 {
     auto id = this->vulkan.AddLight(name);
     return id;
 }
 
-MaterialInstance* Firemountain::get_material(const std::string& name) {
+MaterialInstance* Firemountain::get_material(const eastl::string& name) {
     auto i = this->_materials.find(name);
     if (i == this->_materials.end()) {
         return nullptr;
