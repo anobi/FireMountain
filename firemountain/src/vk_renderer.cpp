@@ -479,8 +479,10 @@ void fmvk::Vulkan::create_swapchain(VkExtent2D window_extent, VkSurfaceKHR surfa
 	assert(this->_instance);
 
     vkb::SwapchainBuilder swapchain_builder{ this->_physical_device, this->_device, surface };
+
     this->_swapchain_image_format = VK_FORMAT_B8G8R8A8_UNORM;
-    auto result = swapchain_builder
+
+    vkb::Swapchain vkb_swapchain = swapchain_builder
         .set_desired_format(VkSurfaceFormatKHR {
             .format = this->_swapchain_image_format,
             .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
@@ -488,10 +490,11 @@ void fmvk::Vulkan::create_swapchain(VkExtent2D window_extent, VkSurfaceKHR surfa
         // .set_old_swapchain(this->swapchain)  // Old swapchain must be destroyed if one exists
         .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
         .set_desired_extent(window_extent.width, window_extent.height)
+        .set_desired_min_image_count(FRAME_OVERLAP)
         .add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT)
         .set_allocation_callbacks(nullptr)
-        .build();
-    vkb::Swapchain vkb_swapchain = result.value();
+        .build()
+        .value();
     this->swapchain = vkb_swapchain.swapchain;
     this->_swapchain_extent = vkb_swapchain.extent;
 
@@ -760,7 +763,7 @@ void fmvk::Vulkan::draw_imgui(VkCommandBuffer cmd, const VkImageView image_view)
     ImGui::End();
     ImGui::Render();
 
-    VkRenderingAttachmentInfo color_attachment = VKInit::attachment_info(image_view, nullptr, VK_IMAGE_LAYOUT_GENERAL);
+    VkRenderingAttachmentInfo color_attachment = VKInit::attachment_info(image_view, nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     VkRenderingInfo render_info = VKInit::rendering_info(this->_swapchain_extent, &color_attachment, nullptr);
     vkCmdBeginRendering(cmd, &render_info);
 
@@ -820,7 +823,7 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
     });
 
     // TODO: give the function a render target to support multiple passes?
-    VkRenderingAttachmentInfo color_attachment = VKInit::attachment_info(this->_draw_image.view, nullptr, VK_IMAGE_LAYOUT_GENERAL);
+    VkRenderingAttachmentInfo color_attachment = VKInit::attachment_info(this->_draw_image.view, nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     VkRenderingAttachmentInfo depth_attachment = VKInit::depth_attachment_info(this->_depth_image.view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
     VkRenderingInfo render_info = VKInit::rendering_info(this->_draw_extent, &color_attachment, &depth_attachment);
     vkCmdBeginRendering(cmd, &render_info);
