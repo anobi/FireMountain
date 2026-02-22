@@ -842,8 +842,27 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
     auto scene_uniform_data = (GPUSceneData*) gpu_scene_data_buffer.allocation->GetMappedData();
     *scene_uniform_data = this->scene_data;
 
+    // Create a descriptor set that binds the scene data buffer and update it
+    VkDescriptorSet scene_descriptor = get_current_frame()._frame_descriptors.allocate(
+        this->_device,
+        _gpu_scene_data_descriptor_layout,
+        0  // Pool flags
+    );
 
-    // Bindless things
+    // Write the scene data buffer to scene descriptor
+    DescriptorWriter scene_data_writer;
+    scene_data_writer.write_buffer(0, gpu_scene_data_buffer.buffer, sizeof(GPUSceneData), 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+    scene_data_writer.update_set(this->_device, scene_descriptor);
+
+
+    // Bindless
+    //
+
+    fmvk::Buffer::AllocatedBuffer bindless_data_buffer = fmvk::Buffer::create_buffer(sizeof(GPUSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, this->_allocator);
+    get_current_frame()._deletion_queue.push_function([=, this]() {
+        fmvk::Buffer::destroy_buffer(bindless_data_buffer, this->_allocator);
+    });
+
     VkDescriptorSetVariableDescriptorCountAllocateInfo alloc_array_info = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO,
         .pNext = nullptr
@@ -852,27 +871,27 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
     alloc_array_info.pDescriptorCounts = &descriptor_counts;
     alloc_array_info.descriptorSetCount = 1;
 
-    // Create a descriptor set that binds the buffer and update it
-    VkDescriptorSet scene_descriptor = get_current_frame()._frame_descriptors.allocate(
+    // Create a descriptor set that binds the bindless data buffer and update it
+    VkDescriptorSet bindless_descriptor = bindless_descriptor_allocator.allocate(
         this->_device,
-        _gpu_scene_data_descriptor_layout,
+        this->bindless_descriptor_layout,
+        VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT_EXT,  // Pool flags
         &alloc_array_info
     );
-    DescriptorWriter writer;
-    writer.write_buffer(0, gpu_scene_data_buffer.buffer, sizeof(GPUSceneData), 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 
-    // TODO: Don't do this every frame.
+    DescriptorWriter bindless_data_writer;
     if (texture_cache.cache.size() > 0) {
         VkWriteDescriptorSet array_set { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
         array_set.descriptorCount = texture_cache.cache.size();
         array_set.dstArrayElement = 0;
         array_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        array_set.dstBinding = 1;
+        array_set.dstBinding = 0;
         array_set.pImageInfo = texture_cache.cache.data();
-        writer.writes.push_back(array_set);
+        bindless_data_writer.writes.push_back(array_set);
     }
+    bindless_data_writer.update_set(this->_device, bindless_descriptor);
+    bindless_data_writer.write_buffer(0, bindless_data_buffer.buffer, this->texture_cache.cache.size(), 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
-    writer.update_set(this->_device, scene_descriptor);
 
     MaterialPipeline* last_pipeline = nullptr;
     MaterialInstance* last_material = nullptr;
@@ -884,6 +903,8 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
             if (object.material->pipeline != last_pipeline) {
                 last_pipeline = object.material->pipeline;
                 vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->pipeline);
+
+                // Binding the first descriptor set: the scene
                 vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->layout, 0, 1, &scene_descriptor, 0, nullptr);
 
                 VkViewport viewport = {
@@ -906,6 +927,10 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
                 vkCmdSetScissor(cmd, 0, 1, &scissor);
             }
 
+            // Bind the bindless descriptors
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->layout, 2, 1, &bindless_descriptor_set, 0, nullptr);
+
+            // Binding the second descriptor set: the materials
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->layout, 1, 1, &object.material->material_set, 0, nullptr);
         }
 
@@ -947,29 +972,30 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
 // =================
 
 void fmvk::Vulkan::init_descriptors() {
-    eastl::vector<DescriptorAllocatorGrowable::PoolSizeRatio> sizes = {
-        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 },
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
-        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 }
-    };
-    this->global_descriptor_allocator.init(this->_device, 10, sizes);
-    this->_deletion_queue.push_function([&]() {
-        this->global_descriptor_allocator.destroy_pools(this->_device);
-    });
 
-    /*
-
-    // Bindless texture array descriptor pool and layout
+    // Bindless descriptor pool and layout
     {
+
+        // Build the pool
+
         eastl::vector<DescriptorAllocatorGrowable::PoolSizeRatio> bindless_sizes = {
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_BINDLESS_RESOURCES }
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_BINDLESS_RESOURCES },
+            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, MAX_BINDLESS_RESOURCES }
         };
 
-        VkDescriptorPoolCreateFlags bindless_pool_flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
-        this->bindless_descriptor_allocator.init(this->_device, 1, bindless_sizes, bindless_pool_flags);
+        VkDescriptorPoolCreateFlags bindless_pool_flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT_EXT;
+        this->bindless_descriptor_allocator.init(
+            this->_device,
+            MAX_BINDLESS_RESOURCES * bindless_sizes.size(),
+            bindless_sizes,
+            bindless_pool_flags
+        );
         this->_deletion_queue.push_function([&]() {
             this->bindless_descriptor_allocator.destroy_pools(this->_device);
         });
+
+
+        // Build the layout
 
         DescriptorLayoutBuilder builder;
         builder.add_binding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
@@ -987,14 +1013,14 @@ void fmvk::Vulkan::init_descriptors() {
             .pBindingFlags = &bindless_flags
         };
 
-        this->bindless_descriptor_set_layout = builder.build(
+        this->bindless_descriptor_layout = builder.build(
             this->_device,
             VK_SHADER_STAGE_FRAGMENT_BIT,
             &bind_flags,
             VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT
         );
         this->_deletion_queue.push_function([&]() {
-            vkDestroyDescriptorSetLayout(this->_device, this->bindless_descriptor_set_layout, nullptr);
+            vkDestroyDescriptorSetLayout(this->_device, this->bindless_descriptor_layout, nullptr);
         });
 
         // Allocate the persistent bindless descriptor set
@@ -1007,49 +1033,62 @@ void fmvk::Vulkan::init_descriptors() {
         };
         this->bindless_descriptor_set = this->bindless_descriptor_allocator.allocate(
             this->_device,
-            this->bindless_descriptor_set_layout,
+            this->bindless_descriptor_layout,
+            bindless_pool_flags,
             &variable_count_info
         );
     }
 
-    */
 
+    // Draw image aka Background compute shader descriptor
+    //
 
-    // Background compute shader descriptor
+    eastl::vector<DescriptorAllocatorGrowable::PoolSizeRatio> sizes = {
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
+        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 }
+    };
+    this->global_descriptor_allocator.init(this->_device, 10, sizes, 0);
+    this->_deletion_queue.push_function([&]() {
+        this->global_descriptor_allocator.destroy_pools(this->_device);
+    });
+
     {
         DescriptorLayoutBuilder builder;
         builder.add_binding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
         this->_draw_image_descriptor_layout = builder.build(this->_device, VK_SHADER_STAGE_COMPUTE_BIT);
     }
 
-    // Scene data descriptor layout
-    {
-        DescriptorLayoutBuilder builder;
-        builder.add_binding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-        builder.add_binding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-
-        VkDescriptorSetLayoutBindingFlagsCreateInfo bind_flags = {
-            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
-            .pNext = nullptr
-        };
-        eastl::array<VkDescriptorBindingFlags, 2> flags = { 0, VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT };
-        builder.bindings[1].descriptorCount = 4080;
-        bind_flags.bindingCount = 2;
-        bind_flags.pBindingFlags = flags.data();
-        this->_gpu_scene_data_descriptor_layout = builder.build(this->_device, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, &bind_flags);
-    }
-
-    _deletion_queue.push_function([&]() {
-        vkDestroyDescriptorSetLayout(_device, this->_draw_image_descriptor_layout, nullptr);
-        vkDestroyDescriptorSetLayout(_device, this->_gpu_scene_data_descriptor_layout, nullptr);
-    });
-
-    this->_draw_image_descriptors = this->global_descriptor_allocator.allocate(this->_device, this->_draw_image_descriptor_layout);
+    this->_draw_image_descriptors = this->global_descriptor_allocator.allocate(this->_device, this->_draw_image_descriptor_layout, 0);
     {
         DescriptorWriter writer;
         writer.write_image(0, this->_draw_image.view, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_GENERAL, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
         writer.update_set(this->_device, this->_draw_image_descriptors);
     }
+
+    _deletion_queue.push_function([&]() {
+        vkDestroyDescriptorSetLayout(_device, this->_draw_image_descriptor_layout, nullptr);
+    });
+
+
+    // Scene data descriptor layout
+    //
+    {
+        DescriptorLayoutBuilder builder;
+        builder.add_binding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+
+        VkDescriptorSetLayoutBindingFlagsCreateInfo bind_flags = {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
+            .pNext = nullptr,
+            .pBindingFlags = 0
+        };
+        this->_gpu_scene_data_descriptor_layout = builder.build(this->_device, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, &bind_flags);
+    }
+
+    _deletion_queue.push_function([&]() {
+        vkDestroyDescriptorSetLayout(_device, this->_gpu_scene_data_descriptor_layout, nullptr);
+    });
+
 
     // Frame descriptors - for per-frame allocations like scene data uniform buffer
     for (int i = 0; i < FRAME_OVERLAP; i++) {
@@ -1061,7 +1100,7 @@ void fmvk::Vulkan::init_descriptors() {
         };
 
         this->_frames[i]._frame_descriptors = DescriptorAllocatorGrowable {};
-        this->_frames[i]._frame_descriptors.init(this->_device, 1024, frame_sizes);
+        this->_frames[i]._frame_descriptors.init(this->_device, 1024, frame_sizes, 0);
         this->_deletion_queue.push_function([&, i]() {
             this->_frames[i]._frame_descriptors.destroy_pools(this->_device);
         });
@@ -1188,20 +1227,9 @@ void fmvk::Vulkan::init_default_textures()
 }
 
 
-// This should also be in Firemountain
+// Cleaned up the old texture resources because we won't be using them with bindless
 void fmvk::Vulkan::init_default_data()
 {
-    GLTFMetallic_Roughness::MaterialResources material_resources = {
-        .color_image = this->_texture_missing_error_image,
-        .color_sampler = this->_default_sampler_linear,
-        .metal_roughness_image = this->_default_texture_white,
-        .metal_roughness_sampler = this->_default_sampler_linear,
-        .normal_image = this->_default_texture_black,
-        .normal_sampler = this->_default_sampler_linear,
-        .emissive_image = this->_default_texture_black,
-        .emissive_sampler = this->_default_sampler_linear
-    };
-
     fmvk::Buffer::AllocatedBuffer material_constants = fmvk::Buffer::create_buffer(
         sizeof(GLTFMetallic_Roughness::MaterialConstants),
         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -1213,20 +1241,9 @@ void fmvk::Vulkan::init_default_data()
     scene_uniform_data->color_factors = glm::vec4 { 1.0f, 1.0f, 1.0f, 1.0f};
     scene_uniform_data->metal_roughness_factors = glm::vec4 { 1.0f, 0.5f, 0.0f, 0.0f };
 
-    // TODO: This might cause problems
     this->_deletion_queue.push_function([=, this]() {
         fmvk::Buffer::destroy_buffer(material_constants, this->_allocator);
     });
-
-    material_resources.data_buffer = material_constants.buffer;
-    material_resources.data_buffer_offset = 0;
-
-    this->default_data = metal_roughness_material.write_material(
-        this->_device,
-        MaterialPass::FM_MATERIAL_PASS_OPAQUE,
-        material_resources,
-        this->global_descriptor_allocator
-    );
 }
 
 void MeshNode::Draw(const glm::mat4 &top_matrix, DrawContext &ctx)
@@ -1286,10 +1303,10 @@ void fmvk::GLTFMetallic_Roughness::build_pipelines(const fmvk::Vulkan* renderer)
 
     DescriptorLayoutBuilder layout_builder;
     layout_builder.add_binding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-    layout_builder.add_binding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-    layout_builder.add_binding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-    layout_builder.add_binding(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-    layout_builder.add_binding(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    //layout_builder.add_binding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    //layout_builder.add_binding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    //layout_builder.add_binding(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    //layout_builder.add_binding(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
     this->material_layout = layout_builder.build(
         renderer->_device,
@@ -1298,14 +1315,15 @@ void fmvk::GLTFMetallic_Roughness::build_pipelines(const fmvk::Vulkan* renderer)
 
     VkDescriptorSetLayout layouts[] = {
         renderer->_gpu_scene_data_descriptor_layout,
-        this->material_layout
+        this->material_layout,
+        renderer->bindless_descriptor_layout
     };
 
     VkPipelineLayoutCreateInfo mesh_layout_info = VKInit::pipeline_layout_create_info();
     mesh_layout_info.pPushConstantRanges = &push_constant_range;
     mesh_layout_info.pushConstantRangeCount = 1;
     mesh_layout_info.pSetLayouts = layouts;
-    mesh_layout_info.setLayoutCount = 2;
+    mesh_layout_info.setLayoutCount = 3;
 
     VkPipelineLayout opaque_layout;
     VK_CHECK(vkCreatePipelineLayout(renderer->_device, &mesh_layout_info,nullptr, &opaque_layout));
@@ -1362,7 +1380,7 @@ MaterialInstance fmvk::GLTFMetallic_Roughness::write_material(VkDevice device, M
     } else {
         data.pipeline = &this->opaque_pipeline;
     }
-    data.material_set = descriptor_allocators.allocate(device, this->material_layout);
+    data.material_set = descriptor_allocators.allocate(device, this->material_layout, 0);
 
     this->writer.clear();
     this->writer.write_buffer(
@@ -1372,34 +1390,37 @@ MaterialInstance fmvk::GLTFMetallic_Roughness::write_material(VkDevice device, M
         resources.data_buffer_offset,
         VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
     );
-    this->writer.write_image(
-        1,
-        resources.color_image.view,
-        resources.color_sampler,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
-    );
-    this->writer.write_image(
-        2,
-        resources.metal_roughness_image.view,
-        resources.metal_roughness_sampler,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
-    );
-    this->writer.write_image(
-        3,
-        resources.normal_image.view,
-        resources.normal_sampler,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
-    );
-    this->writer.write_image(
-        4,
-        resources.emissive_image.view,
-        resources.emissive_sampler,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
-    );
+
+    // This doesn't do anything right now because we aren't
+
+    // this->writer.write_image(
+    //     1,
+    //     resources.color_image.view,
+    //     resources.color_sampler,
+    //     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    //     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+    // );
+    // this->writer.write_image(
+    //     2,
+    //     resources.metal_roughness_image.view,
+    //     resources.metal_roughness_sampler,
+    //     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    //     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+    // );
+    // this->writer.write_image(
+    //     3,
+    //     resources.normal_image.view,
+    //     resources.normal_sampler,
+    //     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    //     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+    // );
+    // this->writer.write_image(
+    //     4,
+    //     resources.emissive_image.view,
+    //     resources.emissive_sampler,
+    //     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    //     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+    // );
 
     this->writer.update_set(device, data.material_set);
     return data;

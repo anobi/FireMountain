@@ -160,7 +160,7 @@ namespace fmvk {
 
 
 
-        VkDescriptorSetLayout _gpu_scene_data_descriptor_layout{};
+
 
 
         MaterialInstance default_data{};
@@ -185,7 +185,6 @@ namespace fmvk {
         fmvk::Image::AllocatedImage _depth_image {};
         void init_render_targets();
 
-    private:
         int _frame_number = 0;
         bool _is_initialized = false;
         bool _resize_requested = false;
@@ -249,11 +248,9 @@ namespace fmvk {
         void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function) const;
 
         // Pipelines
-    public:
         void clean_pipelines();
         void init_pipelines();
 
-    private:
         // Draw resources
         // AllocatedImage _draw_image;
         // AllocatedImage _depth_image;
@@ -262,10 +259,8 @@ namespace fmvk {
 
         // TODO: move these to FM
         // ----------------------
-    public:
         DrawContext _main_draw_context;
         void update_scene(const fmCamera* camera, eastl::vector<RenderSceneObj> scene);
-    private:
         // ----------------------
         // End of TODO
 
@@ -279,8 +274,10 @@ namespace fmvk {
         DescriptorAllocatorGrowable global_descriptor_allocator;
         DescriptorAllocatorGrowable bindless_descriptor_allocator;
 
+        VkDescriptorSetLayout _gpu_scene_data_descriptor_layout{};
+
         VkDescriptorSet bindless_descriptor_set {};
-        VkDescriptorSetLayout bindless_descriptor_set_layout {};
+        VkDescriptorSetLayout bindless_descriptor_layout {};
 
         VkDescriptorSet _draw_image_descriptors{};
         VkDescriptorSetLayout _draw_image_descriptor_layout{};
@@ -295,10 +292,9 @@ namespace fmvk {
         glm::vec3 ghost_camera_position = glm::vec3 { 0.0f };
 
         // Images & Textures
-    public:
         fmvk::TextureCache texture_cache;
         uint32_t register_bindless_texture(VkImageView view, VkSampler sampler);
-    private:
+
         uint32_t _next_bindless_index;
         void init_default_textures();
         void init_default_data();

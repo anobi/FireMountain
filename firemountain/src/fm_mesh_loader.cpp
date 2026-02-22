@@ -177,7 +177,7 @@ std::optional<std::shared_ptr<LoadedGLTF>> MeshLoader::load_GLTF(fmvk::Vulkan* e
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3},
         {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1}
     };
-    file.descriptor_pool.init(engine->_device, gltf.materials.size(), sizes);
+    file.descriptor_pool.init(engine->_device, gltf.materials.size(), sizes, 0);
 
     for (fastgltf::Sampler& sampler : gltf.samplers) {
         VkSamplerCreateInfo sampler_info = {

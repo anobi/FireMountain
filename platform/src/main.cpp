@@ -55,9 +55,9 @@ int RunApp()
     BasicSponzaScene sponza = BasicSponzaScene();
     sponza.Init();
     scenes.push_back(&sponza);
-    SpookySponzaScene spooky_sponza = SpookySponzaScene();
-    spooky_sponza.Init();
-    scenes.push_back(&spooky_sponza);
+    //SpookySponzaScene spooky_sponza = SpookySponzaScene();
+    //spooky_sponza.Init();
+    //scenes.push_back(&spooky_sponza);
     auto scene_idx = 0;
     auto active_scene = scenes[scene_idx];
 

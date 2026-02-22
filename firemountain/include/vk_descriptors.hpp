@@ -21,15 +21,15 @@ public:
         float ratio;
     };
 
-    void init(VkDevice device, uint32_t max_sets, std::span<PoolSizeRatio> pool_ratios, VkDescriptorPoolCreateFlags pool_flags = 0);
+    void init(VkDevice device, uint32_t max_sets, std::span<PoolSizeRatio> pool_ratios, VkDescriptorPoolCreateFlags pool_flags);
     void clear_pools(VkDevice device);
     void destroy_pools(VkDevice device);
 
-    VkDescriptorSet allocate(VkDevice device, VkDescriptorSetLayout layout, void* pNext = nullptr);
+    VkDescriptorSet allocate(VkDevice device, VkDescriptorSetLayout layout, VkDescriptorPoolCreateFlags pool_flags, void* pNext = nullptr);
 
 private:
-    VkDescriptorPool get_pool(VkDevice device);
-    VkDescriptorPool create_pool(VkDevice device, uint32_t set_count, std::span<PoolSizeRatio> pool_ratios, VkDescriptorPoolCreateFlags pool_flags = 0);
+    VkDescriptorPool get_pool(VkDevice device, VkDescriptorPoolCreateFlags pool_flags);
+    VkDescriptorPool create_pool(VkDevice device, uint32_t set_count, std::span<PoolSizeRatio> pool_ratios, VkDescriptorPoolCreateFlags pool_flags);
 
     eastl::vector<PoolSizeRatio> ratios;
     eastl::vector<VkDescriptorPool> full_pools;
