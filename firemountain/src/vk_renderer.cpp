@@ -855,43 +855,21 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
     scene_data_writer.update_set(this->_device, scene_descriptor);
 
 
-    // Bindless
+    // Update bindless descriptor set with new textures from the cache
     //
-
-    fmvk::Buffer::AllocatedBuffer bindless_data_buffer = fmvk::Buffer::create_buffer(sizeof(GPUSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, this->_allocator);
-    get_current_frame()._deletion_queue.push_function([=, this]() {
-        fmvk::Buffer::destroy_buffer(bindless_data_buffer, this->_allocator);
-    });
-
-    VkDescriptorSetVariableDescriptorCountAllocateInfo alloc_array_info = {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO,
-        .pNext = nullptr
-    };
-    uint32_t descriptor_counts = this->texture_cache.cache.size();
-    alloc_array_info.pDescriptorCounts = &descriptor_counts;
-    alloc_array_info.descriptorSetCount = 1;
-
-    // Create a descriptor set that binds the bindless data buffer and update it
-    VkDescriptorSet bindless_descriptor = bindless_descriptor_allocator.allocate(
-        this->_device,
-        this->bindless_descriptor_layout,
-        VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT_EXT,  // Pool flags
-        &alloc_array_info
-    );
-
-    DescriptorWriter bindless_data_writer;
-    if (texture_cache.cache.size() > 0) {
+    for (size_t i = 0; i < texture_cache.cache.size(); i++) {
         VkWriteDescriptorSet array_set { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-        array_set.descriptorCount = texture_cache.cache.size();
-        array_set.dstArrayElement = 0;
-        array_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        array_set.dstSet = bindless_descriptor_set;
         array_set.dstBinding = 0;
-        array_set.pImageInfo = texture_cache.cache.data();
-        bindless_data_writer.writes.push_back(array_set);
-    }
-    bindless_data_writer.update_set(this->_device, bindless_descriptor);
-    bindless_data_writer.write_buffer(0, bindless_data_buffer.buffer, this->texture_cache.cache.size(), 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+        array_set.dstArrayElement = i;
+        array_set.descriptorCount = 1;
+        array_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        array_set.pImageInfo = &texture_cache.cache[i];
 
+        vkUpdateDescriptorSets(_device, 1, &array_set, 0, nullptr);
+
+    }
+    texture_cache.cache.clear();
 
     MaterialPipeline* last_pipeline = nullptr;
     MaterialInstance* last_material = nullptr;
@@ -906,6 +884,9 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
 
                 // Binding the first descriptor set: the scene
                 vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->layout, 0, 1, &scene_descriptor, 0, nullptr);
+
+                // Bind the bindless descriptors
+                vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->layout, 2, 1, &bindless_descriptor_set, 0, nullptr);
 
                 VkViewport viewport = {
                     .x = 0,
@@ -926,9 +907,6 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
                 };
                 vkCmdSetScissor(cmd, 0, 1, &scissor);
             }
-
-            // Bind the bindless descriptors
-            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->layout, 2, 1, &bindless_descriptor_set, 0, nullptr);
 
             // Binding the second descriptor set: the materials
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->layout, 1, 1, &object.material->material_set, 0, nullptr);
@@ -976,17 +954,15 @@ void fmvk::Vulkan::init_descriptors() {
     // Bindless descriptor pool and layout
     {
 
-        // Build the pool
-
+        // Build the bindless descriptor pool
         eastl::vector<DescriptorAllocatorGrowable::PoolSizeRatio> bindless_sizes = {
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_BINDLESS_RESOURCES },
-            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, MAX_BINDLESS_RESOURCES }
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_BINDLESS_RESOURCES }
         };
 
-        VkDescriptorPoolCreateFlags bindless_pool_flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT_EXT;
+        VkDescriptorPoolCreateFlags bindless_pool_flags = 0; // VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT_EXT;
         this->bindless_descriptor_allocator.init(
             this->_device,
-            MAX_BINDLESS_RESOURCES * bindless_sizes.size(),
+            1,
             bindless_sizes,
             bindless_pool_flags
         );
@@ -995,18 +971,16 @@ void fmvk::Vulkan::init_descriptors() {
         });
 
 
-        // Build the layout
-
+        // Build the bindless descriptor layout
         DescriptorLayoutBuilder builder;
         builder.add_binding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
         builder.bindings[0].descriptorCount = MAX_BINDLESS_RESOURCES;
 
         VkDescriptorBindingFlags bindless_flags =
             VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT
-            | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT
             | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT;
 
-        VkDescriptorSetLayoutBindingFlagsCreateInfo bind_flags = {
+        VkDescriptorSetLayoutBindingFlagsCreateInfo binding_flags = {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
             .pNext = nullptr,
             .bindingCount = 1,
@@ -1016,8 +990,8 @@ void fmvk::Vulkan::init_descriptors() {
         this->bindless_descriptor_layout = builder.build(
             this->_device,
             VK_SHADER_STAGE_FRAGMENT_BIT,
-            &bind_flags,
-            VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT
+            &binding_flags,
+            0 //VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT
         );
         this->_deletion_queue.push_function([&]() {
             vkDestroyDescriptorSetLayout(this->_device, this->bindless_descriptor_layout, nullptr);

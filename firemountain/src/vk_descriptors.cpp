@@ -32,7 +32,7 @@ VkDescriptorSetLayout DescriptorLayoutBuilder::build(VkDevice device, VkShaderSt
         .pBindings = this->bindings.data()
     };
 
-    VkDescriptorSetLayout set;
+    VkDescriptorSetLayout set = 0;
     VK_CHECK(vkCreateDescriptorSetLayout(device, &info, nullptr, &set));
     return set;
 }

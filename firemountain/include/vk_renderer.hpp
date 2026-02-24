@@ -121,7 +121,7 @@ namespace fmvk {
     };
 
     constexpr int FRAME_OVERLAP = 2;
-    constexpr int MAX_BINDLESS_RESOURCES = 16536;
+    constexpr int MAX_BINDLESS_RESOURCES = 65536;
 
     class Vulkan {
     public:
