@@ -295,7 +295,7 @@ namespace fmvk {
         fmvk::TextureCache texture_cache;
         uint32_t register_bindless_texture(VkImageView view, VkSampler sampler);
 
-        uint32_t _next_bindless_index;
+        uint32_t _next_bindless_index = 0;
         void init_default_textures();
         void init_default_data();
     };

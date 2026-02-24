@@ -855,21 +855,35 @@ void fmvk::Vulkan::draw_geometry(VkCommandBuffer cmd, RenderObject* render_objec
     scene_data_writer.update_set(this->_device, scene_descriptor);
 
 
-    // Update bindless descriptor set with new textures from the cache
+    // Update the bindless descriptor set with new textures from the cache
     //
-    for (size_t i = 0; i < texture_cache.cache.size(); i++) {
+    DescriptorWriter bindless_data_writer;
+    if (texture_cache.cache.size() > 0) {
         VkWriteDescriptorSet array_set { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-        array_set.dstSet = bindless_descriptor_set;
-        array_set.dstBinding = 0;
-        array_set.dstArrayElement = i;
-        array_set.descriptorCount = 1;
+        array_set.descriptorCount = texture_cache.cache.size();
+        array_set.dstArrayElement = _next_bindless_index;  // Always zero for now
         array_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        array_set.pImageInfo = &texture_cache.cache[i];
-
-        vkUpdateDescriptorSets(_device, 1, &array_set, 0, nullptr);
-
+        array_set.dstBinding = 0;
+        array_set.pImageInfo = texture_cache.cache.data();
+        bindless_data_writer.writes.push_back(array_set);
     }
+    bindless_data_writer.update_set(this->_device, bindless_descriptor_set);
+    _next_bindless_index += texture_cache.cache.size();
+
+    // for (size_t i = 0; i < texture_cache.cache.size(); i++) {
+    //     VkWriteDescriptorSet array_set { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+    //     array_set.dstSet = bindless_descriptor_set;
+    //     array_set.dstBinding = 0;
+    //     array_set.dstArrayElement = _next_bindless_index;
+    //     array_set.descriptorCount = 1;
+    //     array_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    //     array_set.pImageInfo = &texture_cache.cache[i];
+
+    //     vkUpdateDescriptorSets(_device, 1, &array_set, 0, nullptr);
+    // }
+
     texture_cache.cache.clear();
+
 
     MaterialPipeline* last_pipeline = nullptr;
     MaterialInstance* last_material = nullptr;
