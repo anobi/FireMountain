@@ -1,9 +1,8 @@
 #pragma once
 
-#include <string>
+#include <EASTL/string.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
-#include <unordered_map>
 #include <sqlite3.h>
 
 #include "firemountain.hpp"
@@ -16,7 +15,7 @@ struct Transform {
 };
 
 struct Mesh {
-    std::string mesh_file;
+    eastl::string mesh_file;
     MeshID mesh_id {0};
 
     Mesh() {}
@@ -33,8 +32,8 @@ struct Light {
 };
 
 struct GameSceneObject {
-    std::string mesh_file;
-    std::string name;
+    eastl::string mesh_file;
+    eastl::string name;
     MeshID mesh_id {0};
     Transform transform;
 
@@ -59,9 +58,9 @@ struct GameSceneObject {
 
 
 struct GameScene {
-    std::string id;
-    std::string name;
-    std::unordered_map<std::string, GameSceneObject> objects;
+    eastl::string id;
+    eastl::string name;
+    ankerl::unordered_dense::map<eastl::string, GameSceneObject> objects;
 
     GameScene() {};
     GameScene(const char* id) { this->name = id; };

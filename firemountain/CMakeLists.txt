@@ -1,7 +1,7 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 4.0)
 project(LibFireMountain)
 set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -Wno-deprecated-literal-operator -Wno-tautological-compare")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_library(${PROJECT_NAME} STATIC)
@@ -23,6 +23,9 @@ target_link_libraries(${PROJECT_NAME}
   fmt
   SDL3::SDL3
   imgui_lib
+  snmalloc
+  EASTL
+  unordered_dense::unordered_dense
 )
 
 include_directories(
@@ -38,13 +41,13 @@ target_sources(${PROJECT_NAME}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/firemountain.cpp
   PRIVATE
     # ${CMAKE_CURRENT_SOURCE_DIR}/src/fm_scene.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/src/fm_malloc.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/fm_mesh_loader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_buffer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_images.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_image.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_init.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_renderer.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_swapchain.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_pipeline_builder.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_pipeline.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/vk_descriptors.cpp
@@ -58,7 +61,7 @@ target_include_directories(${PROJECT_NAME}
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party
 )
 
-set_target_properties(${PROJECT_NAME} 
+set_target_properties(${PROJECT_NAME}
   PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build/lib
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build/lib

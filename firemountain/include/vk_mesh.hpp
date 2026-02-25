@@ -1,16 +1,17 @@
 #pragma once
 
-#include <vector>
+#include <EASTL/vector.h>
+#include <EASTL/string.h>
+
 #include <memory>
-#include <span>
 #include <glm/vec3.hpp>
 #include "vk_types.hpp"
 #include "vk_buffer.hpp"
 
 
 struct VertexInputDescription {
-    std::vector<VkVertexInputBindingDescription> bindings;
-    std::vector<VkVertexInputAttributeDescription> attributes;
+    eastl::vector<VkVertexInputBindingDescription> bindings;
+    eastl::vector<VkVertexInputAttributeDescription> attributes;
 
     VkPipelineVertexInputStateCreateFlags flags = 0;
 };
@@ -48,8 +49,8 @@ struct GPUMeshBuffers {
 };
 
 struct MeshAsset {
-    std::string name;
-    std::vector<GeoSurface> surfaces;
+    eastl::string name;
+    eastl::vector<GeoSurface> surfaces;
     GPUMeshBuffers mesh_buffers;
 };
 
@@ -57,4 +58,3 @@ struct GPUDrawPushConstants {
     glm::mat4 world_matrix;
     VkDeviceAddress vertex_buffer;
 };
-

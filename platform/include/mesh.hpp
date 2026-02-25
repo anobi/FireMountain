@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vector>
+#include <EASTL/vector.h>
 #include <glm/vec3.hpp>
 
 struct Vertex {
@@ -10,6 +10,6 @@ struct Vertex {
 };
 
 struct LoaderMesh {
-    std::vector<Vertex> vertices;
+    eastl::vector<Vertex> vertices;
     bool load_from_obj(const char* path);
 };

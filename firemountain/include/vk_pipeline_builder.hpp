@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vector>
+#include <EASTL/vector.h>
 
 #include "vk_types.hpp"
 
@@ -31,7 +31,7 @@ namespace fmvk {
         void enable_blending_additive();
         void enable_blending_alphablend();
 
-        std::vector<VkPipelineShaderStageCreateInfo> _shader_stages;
+        eastl::vector<VkPipelineShaderStageCreateInfo> _shader_stages;
         VkPipelineLayout _pipeline_layout;
         VkPipelineInputAssemblyStateCreateInfo _input_assembly;
         VkPipelineRasterizationStateCreateInfo _rasterizer;

@@ -1,6 +1,6 @@
 #include <iostream>
 #include <fstream>
-#include <string>
+#include <EASTL/string.h>
 #include <fmt/core.h>
 #include <VkBootstrap.h>
 
@@ -21,7 +21,7 @@ bool fmvk::load_shader_module(const char *file_path, const VkDevice device, VkSh
     }
 
     size_t file_size = (size_t) file.tellg();
-    std::vector<uint32_t> buffer(file_size / sizeof(uint32_t));
+    eastl::vector<uint32_t> buffer(file_size / sizeof(uint32_t));
 
     file.seekg(0);
     file.read((char*) buffer.data(), file_size);
@@ -59,14 +59,14 @@ int fmvk::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, 
 
     if (!load_shader_module("shaders/mesh_vertex.spv", device, &this->vertex_shader)) {
         fmt::println("Error building vertex shader module");
-    } 
+    }
     else {
         fmt::println("Vertex shader module loaded.");
     }
 
     // Pipeline layout
     // -------------------------------------------------------------------------
-    
+
     VkPushConstantRange push_constant_range = {
         .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
         .offset = 0,
@@ -107,7 +107,7 @@ int fmvk::Pipeline::Init(const VkDevice device, const VkExtent2D window_extent, 
     pipeline_builder.enable_depth_test(true, VK_COMPARE_OP_GREATER_OR_EQUAL);
     pipeline_builder.set_color_attachment_format(alloc_image.format);
     pipeline_builder.set_depth_format(VK_FORMAT_D32_SFLOAT);
-   
+
     this->pipeline = pipeline_builder.build_pipeline(device);
 
     vkDestroyShaderModule(device, this->fragment_shader, nullptr);

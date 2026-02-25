@@ -1,13 +1,15 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 4.0)
 project(FireMountain)
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -Wno-deprecated-literal-operator -Wno-tautological-compare")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 include(FetchContent)
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 
 FetchContent_Declare(
     vk-bootstrap
@@ -45,6 +47,21 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
     GIT_TAG        v1.91.8
 )
+FetchContent_Declare(
+    snmalloc
+    GIT_REPOSITORY https://github.com/microsoft/snmalloc.git
+    GIT_TAG        0.7.3
+)
+FetchContent_Declare(
+    EASTL
+    GIT_REPOSITORY https://github.com/electronicarts/EASTL.git
+    GIT_TAG        3.27.01
+)
+FetchContent_Declare(
+    unordered_dense
+    GIT_REPOSITORY https://github.com/martinus/unordered_dense.git
+    GIT_TAG        v4.8.1
+)
 FetchContent_MakeAvailable(
     SDL3
     vk-bootstrap
@@ -53,6 +70,9 @@ FetchContent_MakeAvailable(
     glm
     fmt
     imgui
+    snmalloc
+    EASTL
+    unordered_dense
 )
 
 find_package(Vulkan REQUIRED)

@@ -10,8 +10,8 @@ public:
 
     GameScene scene;
 
-    std::vector<RenderSceneObj> GetRenderScene() {
-        std::vector<RenderSceneObj> render_scene;
+    eastl::vector<RenderSceneObj> GetRenderScene() {
+        eastl::vector<RenderSceneObj> render_scene;
 
         // Send meshes with updated transforms to renderer
         for (auto& [key, obj] : this->scene.objects) {

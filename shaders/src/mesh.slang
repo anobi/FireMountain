@@ -27,7 +27,8 @@ struct SceneData
     Light lights[32];
 };
 layout(set = 0, binding = 0) ConstantBuffer<SceneData> scene_data;
-layout(set = 0, binding = 1) Sampler2D textures[];
+
+layout(set = 2, binding = 0) Sampler2D textures[];  // Bindless textures
 
 struct GLTFmaterial_data
 {
@@ -47,6 +48,8 @@ struct GLTFmaterial_data
     int emissive_texture_id;
 };
 layout(set = 1, binding = 0) ConstantBuffer<GLTFmaterial_data> material_data;
+
+
 
 struct PushConstants
 {

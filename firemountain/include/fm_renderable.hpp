@@ -17,8 +17,8 @@ struct RenderObject {
 };
 
 struct DrawContext {
-    std::vector<RenderObject> opaque_surfaces;
-    std::vector<RenderObject> transparent_surfaces;
+    eastl::vector<RenderObject> opaque_surfaces;
+    eastl::vector<RenderObject> transparent_surfaces;
 };
 
 class IRenderable {
@@ -33,7 +33,7 @@ private:
 // Render graph stuff
 struct Node : public IRenderable {
     std::weak_ptr<Node> parent;
-    std::vector<std::shared_ptr<Node>> children;
+    eastl::vector<std::shared_ptr<Node>> children;
 
     glm::mat4 local_transform;
     glm::mat4 world_transform;

@@ -1,11 +1,8 @@
 #pragma once
 
 #include <optional>
-#include <filesystem>
-#include <vector>
-#include <span>
+#include <EASTL/vector.h>
 #include <glm/vec3.hpp>
-#include "vk_types.hpp"
 #include "vk_buffer.hpp"
 #include "vk_image.hpp"
 #include "vk_mesh.hpp"
@@ -13,14 +10,14 @@
 
 
 struct LoadedGLTF : public IRenderable {
-    std::unordered_map<std::string, std::shared_ptr<MeshAsset>> meshes;
-    std::unordered_map<std::string, std::shared_ptr<Node>> nodes;
-    std::unordered_map<std::string, fmvk::Image::AllocatedImage> images;
-    std::unordered_map<std::string, std::shared_ptr<GLTFMaterial>> materials;
+    ankerl::unordered_dense::map<eastl::string, std::shared_ptr<MeshAsset>> meshes;
+    ankerl::unordered_dense::map<eastl::string, std::shared_ptr<Node>> nodes;
+    ankerl::unordered_dense::map<eastl::string, fmvk::Image::AllocatedImage> images;
+    ankerl::unordered_dense::map<eastl::string, std::shared_ptr<GLTFMaterial>> materials;
 
-    std::vector<std::shared_ptr<Node>> top_nodes;
+    eastl::vector<std::shared_ptr<Node>> top_nodes;
 
-    std::vector<VkSampler> samplers;
+    eastl::vector<VkSampler> samplers;
 
     DescriptorAllocatorGrowable descriptor_pool;
 
@@ -37,9 +34,9 @@ private:
 
 
 namespace MeshLoader {
-    bool LoadObj(const char* path, std::vector<Vertex> *vertices, std::vector<uint32_t> *indices);
-    std::optional<std::shared_ptr<LoadedGLTF>> load_GLTF(fmvk::Vulkan* engine, std::string_view file_path);
+    bool LoadObj(const char* path, eastl::vector<Vertex> *vertices, eastl::vector<uint32_t> *indices);
+    std::optional<std::shared_ptr<LoadedGLTF>> load_GLTF(fmvk::Vulkan* engine, eastl::string_view file_path);
 
-    // std::vector<std::shared_ptr<MeshAsset>> LoadGltf(std::filesystem::path file_path, fmvk::Vulkan *vk_engine);
+    // eastl::vector<std::shared_ptr<MeshAsset>> LoadGltf(std::filesystem::path file_path, fmvk::Vulkan *vk_engine);
 
 }
