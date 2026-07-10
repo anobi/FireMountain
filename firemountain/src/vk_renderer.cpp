@@ -973,7 +973,7 @@ void fmvk::Vulkan::init_descriptors() {
             { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_BINDLESS_RESOURCES }
         };
 
-        VkDescriptorPoolCreateFlags bindless_pool_flags = 0; // VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT_EXT;
+        VkDescriptorPoolCreateFlags bindless_pool_flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
         this->bindless_descriptor_allocator.init(
             this->_device,
             1,
@@ -1005,14 +1005,14 @@ void fmvk::Vulkan::init_descriptors() {
             this->_device,
             VK_SHADER_STAGE_FRAGMENT_BIT,
             &binding_flags,
-            0 //VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT
+            VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT
         );
         this->_deletion_queue.push_function([&]() {
             vkDestroyDescriptorSetLayout(this->_device, this->bindless_descriptor_layout, nullptr);
         });
 
         // Allocate the persistent bindless descriptor set
-        uint32_t max_binding = MAX_BINDLESS_RESOURCES;
+        uint32_t max_binding = INITIAL_BINDLESS_RESOURCES;
         VkDescriptorSetVariableDescriptorCountAllocateInfo variable_count_info = {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO,
             .pNext = nullptr,

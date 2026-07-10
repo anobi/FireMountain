@@ -120,8 +120,9 @@ namespace fmvk {
         DeletionQueue _deletion_queue;
     };
 
-    constexpr int FRAME_OVERLAP = 2;
-    constexpr int MAX_BINDLESS_RESOURCES = 65536;
+    constexpr uint8_t FRAME_OVERLAP = 2;
+    constexpr uint32_t MAX_BINDLESS_RESOURCES = 65536;
+    constexpr uint32_t INITIAL_BINDLESS_RESOURCES = 1024;
 
     class Vulkan {
     public:
